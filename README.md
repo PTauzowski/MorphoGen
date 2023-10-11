@@ -1,1 +1,3 @@
-# COMORTOS
+# CoMorGenS
+
+Computational MorphoGenesis System
