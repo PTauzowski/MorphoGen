@@ -160,7 +160,7 @@ classdef TopologyOptimization < ConstrainedOptimization
                     active_el = elem_inds{i};
                     active_el(ip) = [];
                     obj.FEproblem.felems{i}.plotSolidSelected(obj.FEproblem.mesh.nodes,x(elem_inds{i})>0.5);
-                    obj.FEproblem.felems{i}.plotSolidSelected([200-obj.FEproblem.mesh.nodes(:,1) obj.FEproblem.mesh.nodes(:,2:3)],x(elem_inds{i})>0.5);
+                    %obj.FEproblem.felems{i}.plotSolidSelected([200-obj.FEproblem.mesh.nodes(:,1) obj.FEproblem.mesh.nodes(:,2:3)],x(elem_inds{i})>0.5);
                     obj.FEproblem.felems{i}.plotSolidSelected(obj.FEproblem.mesh.nodes,obj.const_elems,[0.8,0.1,0.1]);
                 end
             else

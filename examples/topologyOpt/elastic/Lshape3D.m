@@ -1,9 +1,9 @@
 clear;
 close all;
-res = 8;
+res = 10;
 l = 1;
 
-Rfilter = 2*l/res;
+Rfilter = l/res;
 
 %Removal intensity threshold
 cutTreshold = 0.005;
@@ -13,7 +13,7 @@ penal = 3;
 
 sfL8 = ShapeFunctionL8;
 mesh = Mesh();
-mesh.addLshape3D( 2*l, 0.8*l, 2*res, sfL8.pattern);
+mesh.addLshape3D( 2*l, 0.8*l, 2*res, sfL8.localNodes);
 fe=SolidElasticElem( sfL8, mesh.elems );
 
 material = SolidMaterial('mat1');

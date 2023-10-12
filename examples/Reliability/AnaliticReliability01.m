@@ -3,6 +3,10 @@ g=SinCosG();
 N=100000;
 mc = MonteCarlo(g,randomVariables,N);
 form = FORM(g,randomVariables);
-Pfmc = mc.solve()
+[Pfmc p] = mc.solve()
 Pform = mc.solve()
+
+figure, hold on;
+scatter3(mc.x(p>0,1),mc.x(p>0,2),p(p>0),'MarkerEdgeColor',[0 .8 .8],'Marker','.');
+scatter3(mc.x(p<=0,1),mc.x(p<=0,2),p(p<=0),'filled','MarkerEdgeColor',[0.5 0 .5],'Marker','o');
 
