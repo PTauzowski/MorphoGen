@@ -1,3 +1,3 @@
-# CoMorGenS
+# MorphoGen
 
 Computational MorphoGenesis System
