@@ -2,10 +2,10 @@ clear;
 close all;
 
 R=5;
-Th=2;
+Th=0.2;
 Length=30;
 
-resLen=50;
+resLen=100;
 resCirc = ceil(resLen/Length*2*pi*R);
 resTh = ceil(resLen/Length*Th);
 
@@ -13,12 +13,12 @@ resTh = ceil(resLen/Length*Th);
 % Filtering radius
 Rfilter = R*3*pi/resCirc;
 penal=3;
-cutTreshold = 0.005;
+cutTreshold = 0.05;
 
 ShapeFn = ShapeFunctionL8;
 mesh = Mesh();
 mesh.addRectMesh3D( R-Th, 0, 0, Th, 2*pi, Length, resTh, resCirc, resLen, ShapeFn.localNodes);
-mesh.transformToCylindrical3D( 0, 0 );
+mesh.transformToCylindrical3D( [0 0] );
 fe = SolidElasticElem( ShapeFn, mesh.elems );
 
 fe.props.h=1;
