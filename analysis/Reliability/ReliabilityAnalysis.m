@@ -25,7 +25,7 @@ classdef ReliabilityAnalysis < handle
             dim = obj.getDim();
             u = zeros( 1, dim );
             for k=1:size(obj.randVars, 2)
-               u(k)=obj.randVars(k).toU(x(k)); 
+               u(k)=obj.randVars{k}.toU(x(k)); 
             end
         end
         
@@ -33,7 +33,7 @@ classdef ReliabilityAnalysis < handle
             dim = obj.getDim();
             x = zeros( 1, dim );
             for k=1:size(obj.randVars,2)
-               x(k)=obj.randVars(k).fromU(u(k)); 
+               x(k)=obj.randVars{k}.fromU(u(k)); 
             end
         end
         
