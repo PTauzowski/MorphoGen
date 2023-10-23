@@ -11,6 +11,9 @@ classdef (Abstract) ShapeFunctions < Function
     end
     
     methods
+        function obj = ShapeFunctions(dim)
+            obj = obj@Function(dim,0.00001);
+        end
         function isCorrect = selfTest( obj )
             isCorrect = isdiag( computeValue( obj.localNodes ) );
         end

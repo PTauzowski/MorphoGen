@@ -6,8 +6,8 @@ classdef (Abstract) StressIntensityTopologyOptimization < TopologyOptimization
 
     methods
             
-        function obj = StressIntensityTopologyOptimization(numberOfConstraints,Rmin,FEproblem,maxais,penal,is_const)
-            obj=obj@TopologyOptimization(numberOfConstraints,Rmin,FEproblem,is_const);
+        function obj = StressIntensityTopologyOptimization(numberOfConstraints,Rmin,FEAnalysis,maxais,penal,is_const)
+            obj=obj@TopologyOptimization(numberOfConstraints,Rmin,FEAnalysis,is_const);
             obj.maxais=maxais;
             obj.penal=penal;
             obj.x(:)=1;
@@ -45,14 +45,14 @@ classdef (Abstract) StressIntensityTopologyOptimization < TopologyOptimization
         end
 
         function ais = computeAverageIntensities(obj)
-            obj.qnodal = obj.FEproblem.solveWeighted((obj.x).^obj.penal);
-            obj.FEproblem.computeElementResults(obj.qnodal,obj.x.^obj.penal);
-            ais = zeros(obj.FEproblem.getTotalElemsNumber(),1);
-            for i=1:size(obj.FEproblem.felems,1)
-               hmIndex=find(obj.FEproblem.felems{i}.results.names == "sHM");
-               for j=1:size(obj.FEproblem.felems{i}.elems,1)
+            obj.qnodal = obj.FEAnalysis.solveWeighted((obj.x).^obj.penal);
+            obj.FEAnalysis.computeElementResults(obj.qnodal,obj.x.^obj.penal);
+            ais = zeros(obj.FEAnalysis.getTotalElemsNumber(),1);
+            for i=1:size(obj.FEAnalysis.felems,1)
+               hmIndex=find(obj.FEAnalysis.felems{i}.results.names == "sHM");
+               for j=1:size(obj.FEAnalysis.felems{i}.elems,1)
                     %ais(obj.elem_inds{i}(j)) = mean( obj.linearElasticProblem.felems{i}.results.GPvalues(hmIndex,j,:) );
-                    ais(obj.elem_inds{i}(j)) = mean( obj.FEproblem.felems{i}.results.nodal(obj.FEproblem.felems{i}.elems(j,:),hmIndex) );
+                    ais(obj.elem_inds{i}(j)) = mean( obj.FEAnalysis.felems{i}.results.nodal(obj.FEAnalysis.felems{i}.elems(j,:),hmIndex) );
                end
             end
             obj.maxstress = [ obj.maxstress max(ais) ];

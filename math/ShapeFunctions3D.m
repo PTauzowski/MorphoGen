@@ -5,5 +5,11 @@ classdef (Abstract) ShapeFunctions3D < ShapeFunctions
         faces, fcontours, facesf;
     end
     
+    methods
+        function obj = ShapeFunctions3D()
+            obj = obj@ShapeFunctions(3);
+        end
+    end
+    
 end
 
