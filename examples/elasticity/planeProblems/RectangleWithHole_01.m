@@ -19,11 +19,11 @@ fe.plotSolid(mesh.nodes);
 
 analysis = LinearElasticity( fe, mesh );
 
-loadedEdge1 = Selector( @(x)( x(:,1) -(x0 - a) ) );
-loadedEdge2 = Selector( @(x)( x(:,1) -(x0 + a) ) );
-loadedEdge3 = Selector( @(x)( x(:,2) -(y0 - a)  ) );
-loadedEdge4 = Selector( @(x)( x(:,2) -(y0 + a)  ) );
-circleSelector = Selector( @(x)( ((x(:,1) - x0).^2 + (x(:,2) - y0).^2 ) - (a*hf)^2 ), 0.01 );
+loadedEdge1 = Selector( @(x)( abs(x(:,1) -(x0 - a) ) < 0.001 ) );
+loadedEdge2 = Selector( @(x)( abs(x(:,1) -(x0 + a) ) < 0.001) );
+loadedEdge3 = Selector( @(x)( abs(x(:,2) -(y0 - a) ) < 0.001 ) );
+loadedEdge4 = Selector( @(x)( abs(x(:,2) -(y0 + a) ) < 0.001 ) );
+circleSelector = Selector( @(x)( abs(((x(:,1) - x0).^2 + (x(:,2) - y0).^2 ) - (a*hf)^2 )) < 0.01 );
 %problem.plotSelectedNodeNumbers( loadedEdgeSelector );
 analysis.elementLoadLineIntegral( "global", loadedEdge1,  "ux", @(x)( x(:,1)*0 + 100 ));
 analysis.elementLoadLineIntegral( "global", loadedEdge2,  "ux", @(x)( x(:,1)*0 - 100 ));

@@ -1,6 +1,7 @@
 classdef ShapeFunctionL16 < ShapeFunctions2D
     methods
         function obj = ShapeFunctionL16() 
+            obj=obj@ShapeFunctions2D()
             obj.localNodes = [-1 -1/3 1/3 1 -1   -1/3  1/3  1    -1 -1/3 1/3 1   -1 -1/3 1/3 1; ...
                               -1 -1  -1   1 -1/3 -1/3 -1/3 -1/3  1/3 1/3 1/3 1/3  1   1   1  1]';
             obj.vertices=[1 4 13 16]';

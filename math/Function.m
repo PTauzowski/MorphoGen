@@ -29,7 +29,7 @@ classdef (Abstract) Function < handle
         function grad = computeGradient( obj, x )
             n=size(x,1);
             y=obj.computeValue(x);
-            grad=reshape((obj.computeValue(repelem(x,obj.dim,1)+repmat(obj.dx,n,1))-repmat(y,n,1))./repmat(obj.eps,n,1),n,dim);
+            grad=reshape((obj.computeValue(repelem(x,obj.dim,1)+repmat(obj.dx,n,1))-repmat(y,n,1))./repmat(obj.eps,n,1),n,obj.dim);
         end
     end
 end

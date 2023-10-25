@@ -10,7 +10,7 @@ mesh.addRectMesh2D(0, 0, 2*l, l, 2*res, res, sf.pattern);
 mesh2 = Mesh();
 mesh2.addRectMesh2D(0, l, 2*l, l, 2*res, res, sf.pattern);
 elems1 = mesh.elems;
-connectionSelector = Selector( @(x)( not( ( abs( x(:,2) - l ) < 1.0E-04) & (( x(:,1) <= conn ) | ( 2*l - x(:,1) <= conn )  )  )  ) );
+connectionSelector = Selector( @(x)( ( abs( x(:,2) - l ) < 1.0E-04) & (( x(:,1) <= conn ) | ( 2*l - x(:,1) <= conn )  )  ) );
 elems2 = mesh.connect( connectionSelector, mesh2.nodes, mesh2.elems );
 
 fe1=PlaneStressElem( sf, elems1 );
@@ -28,8 +28,8 @@ material.setElasticIzo(81000, 0.3);
 fe2.setMaterial( material );
 
 analysis = LinearElasticity( {fe1 fe2}, mesh );
-loadedEdgeSelector1 = Selector( @(x)( x(:,2) ) );
-loadedEdgeSelector2 = Selector( @(x)( (x(:,2) - 2*l ) ) );
+loadedEdgeSelector1 = Selector( @(x)( abs(x(:,2))<0.001 ) );
+loadedEdgeSelector2 = Selector( @(x)( abs(x(:,2) - 2*l ) <0.001 ) );
 analysis.elementLoadLineIntegral( "global", loadedEdgeSelector1, ["ux" "uy"], @(x)( x*0 + [0  -100] ));
 analysis.elementLoadLineIntegral( "global", loadedEdgeSelector2, ["ux" "uy"], @(x)( x*0 + [0   100] ));
 

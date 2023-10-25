@@ -21,10 +21,10 @@ fe.props.h=1;
 fe.plotSolid(mesh.nodes);
 
 analysis = LinearElasticity( fe, mesh );
-fixedEdgeSelector = Selector( @(x)( x(:,1) ) );
-inclinedSupportEdgeSelector = Selector( @(x)( x(:,1)-(segmentLength+2*segmentShortening.*x(:,2)./segmentHeigh ) ) );
-loadedEdgeSelector = Selector( @(x)( x(:,2) - segmentHeigh/2 ) );
-circleSelector = Selector( @(x)( ((x(:,1) - 1.5).^2 + (x(:,2) - 1.5).^2 )-1.5 ), 0.2 );
+fixedEdgeSelector = Selector( @(x)( abs(x(:,1)) == 0 ) );
+inclinedSupportEdgeSelector = Selector( @(x)( abs(x(:,1)-(segmentLength+2*segmentShortening.*x(:,2)./segmentHeigh ) ) < 0.001 ) );
+loadedEdgeSelector = Selector( @(x)( abs(x(:,2) - segmentHeigh/2) < 0.001 ) );
+%circleSelector = Selector( @(x)( ((x(:,1) - 1.5).^2 + (x(:,2) - 1.5).^2 )-1.5 ), 0.2 );
 %fedges = fe.findEdges( problem.findNodes( loadedEdgeSelector ));
 %problem.plotSelectedNodeNumbers( loadedEdgeSelector );
 analysis.elementLoadLineIntegral("global",loadedEdgeSelector, ["ux" "uy"], @(x)( x*0 + [0 -150] ));

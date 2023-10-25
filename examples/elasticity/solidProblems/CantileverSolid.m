@@ -18,8 +18,8 @@ fe.setMaterial(material)
 
 analysis = LinearElasticity( fe, mesh );
 
-fixedFaceSelector = Selector( @(x)( x(:,1) ) );
-loadedFaceSelector = Selector( @(x)( x(:,1) - 2*l ) );
+fixedFaceSelector = Selector( @(x)( abs(x(:,1) )<0.001 ) );
+loadedFaceSelector = Selector( @(x)( abs(x(:,1) - 2*l )<0.001 ) );
 analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy"], @(x)( x(:,1:2)*0 + [0 -100] ));
 analysis.fixNodes( fixedFaceSelector, ["ux" "uy" "uz"] );
 

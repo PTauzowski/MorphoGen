@@ -29,7 +29,7 @@ classdef FORM < GradientBasedReliabilityAnalysis
                      return;
                 end
 
-                unp  = 1.0 / norm( dg )^2 * ( dg * un' - gn ) * dg;
+                unp  = 1.0 / norm( dg )^2 * ( dg * un' - g ) * dg;
                 du   = unp - un;
                 conv = norm( du );
 

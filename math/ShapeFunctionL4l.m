@@ -1,6 +1,7 @@
 classdef ShapeFunctionL4l < ShapeFunctions
     methods
         function obj = ShapeFunctionL4l() 
+            obj=obj@ShapeFunctions(1)
             obj.localNodes = [-1; -1/3; 1/3; 1];
             obj.vertices=[1 4]';
             obj.pattern = [0 1 2 3]';

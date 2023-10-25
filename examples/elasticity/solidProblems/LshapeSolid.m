@@ -5,7 +5,10 @@ l = 3;
 tic
 ShapeFn = ShapeFunctionL8;
 mesh = Mesh();
-mesh.addLshape3D( 2*l, 0.8*l, res, ShapeFn.localNodes )
+mesh.addLshape3D( 2*l, 0.8*l, res, ShapeFn.localNodes );
+fixedFaceSelector = Selector( @(x)( abs(x(:,3) - 2*l)<0.001 ) );
+loadedFaceSelector = Selector( @(x)( abs(x(:,1) - 2*l)<0.001 ) );
+
 fe = SolidElasticElem( ShapeFn, mesh.elems );
 mX = max(mesh.nodes(:,1));
 
@@ -18,9 +21,6 @@ fe.setMaterial(material)
 
 analysis = LinearElasticity( fe, mesh );
 
-fixedFaceSelector = Selector( @(x)( x(:,3) - 2*l ) );
-loadedFaceSelector = Selector( @(x)( x(:,1) - 2*l ) );
-circleSelector = Selector( @(x)( ((x(:,1) - 1.5).^2 + (x(:,2) - 1.5).^2 )-1.5 ), 0.2 );
 analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy"], @(x)( x(:,1:2)*0 + [0 -100] ));
 analysis.fixNodes( fixedFaceSelector, ["ux" "uy" "uz"] );
 
@@ -31,8 +31,6 @@ analysis.plotSupport();
 tic
 q = analysis.solve();
 toc
-
-
 
 analysis.plotMaps([ "sxx" "szz" "sHM"],0.3);
 fe.plotWired(mesh.nodes,analysis.qnodal,0.3);

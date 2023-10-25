@@ -20,11 +20,9 @@ material.setElasticIzoGrad();
 fe.setMaterial(material)
 
 analysis = LinearElasticityWeighted( fe, mesh, true );
-fixedEdgeSelector = Selector( @(x)(  not((x(:,1)==0) & (x(:,3)==0) ) ) );
-lengthSymmetrySelector = Selector( @(x)( x(:,1) - 2*l ) );
-depthSymmetrySelector = Selector( @(x)( x(:,2) - l/2 ) );
-circleSelector = Selector( @(x)( ((x(:,1) - 1.5).^2 + (x(:,2) - 1.5).^2 )-1.5 ), 0.2 );
-
+fixedEdgeSelector = Selector( @(x)( (x(:,1)==0) & (x(:,3)==0) ) );
+lengthSymmetrySelector = Selector( @(x)( abs(x(:,1) - 2*l) < 0.001 ) );
+depthSymmetrySelector = Selector( @(x)( abs(x(:,2) - l/2) < 0.001 ) );
 analysis.loadClosestNode( [2*l 0 0], "uz", -1 );
 analysis.loadClosestNode( [2*l 0 l], "uy", 0.5 );
 analysis.loadClosestNode( [l 0 0], "uz", -1 );

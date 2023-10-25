@@ -45,7 +45,7 @@ fe.setMaterial( material );
 analysis = LinearElasticityWeighted( fe, mesh, true );
 
 % Creating node selector object to select fixed edge (left)
-fixedEdgeSelector = Selector( @(x)( x(:,1) ) );
+fixedEdgeSelector = Selector( @(x)( abs(x(:,1)) < 0.001 ) );
 
 % Fixing structure according to above defined node selector object
 analysis.fixNodes( fixedEdgeSelector, ["ux" "uy"] );

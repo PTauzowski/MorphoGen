@@ -22,8 +22,8 @@ fe.setMaterial( material );
 plot(mesh.nodes(:,1),mesh.nodes(:,2),'.');
 
 analysis = LinearElasticity( fe, mesh );
-circleSelectorInt = Selector( @(x)( ((x(:,1) - x0).^2 + (x(:,2) - y0).^2 ) - (r1)^2 ), 0.01 );
-circleSelectorOut = Selector( @(x)( ((x(:,1) - x0).^2 + (x(:,2) - y0).^2 ) - (r2)^2 ), 0.01 );
+circleSelectorInt = Selector( @(x)( abs(((x(:,1) - x0).^2 + (x(:,2) - y0).^2 ) - (r1)^2 ))< 0.01 );
+circleSelectorOut = Selector( @(x)( abs(((x(:,1) - x0).^2 + (x(:,2) - y0).^2 ) - (r2)^2 ))< 0.01 );
 analysis.elementLoadLineIntegral( "local", circleSelectorOut,  ["ux" "uy"], @(x)( x*0 + [ 0 -15 ] ));
 analysis.fixClosestNode( [ x0-r1 y0], ["ux" "uy"], [0 0] );
 analysis.fixClosestNode([ x0+r1 y0],"uy", 0 );
