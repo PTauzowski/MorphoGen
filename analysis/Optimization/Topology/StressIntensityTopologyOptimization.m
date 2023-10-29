@@ -1,7 +1,7 @@
 classdef (Abstract) StressIntensityTopologyOptimization < TopologyOptimization
     
     properties
-        maxstress, ais, elem_list, maxais, penal, xr, xfat, pnormfat;
+        maxstress, ais, elem_list, maxais, penal, xr, xfat, pnormfat, allx;
     end
 
     methods
@@ -31,6 +31,7 @@ classdef (Abstract) StressIntensityTopologyOptimization < TopologyOptimization
             obj.x(obj.erased_elems) = min(1, max( 0.001, obj.x(obj.erased_elems) .* wais(obj.erased_elems) .^ obj.penal)); 
             obj.x( not(obj.erased_elems) ) = 1; 
             obj.x( obj.const_elems ) = 1;
+            obj.allx=[obj.allx obj.x];
         end
 
         function removeStressed( obj )
@@ -57,6 +58,53 @@ classdef (Abstract) StressIntensityTopologyOptimization < TopologyOptimization
             end
             obj.maxstress = [ obj.maxstress max(ais) ];
             ais = ais / max(ais);
+        end
+
+        function setFrame( obj, k )
+            if k > 0 && k <= size( obj.allx,2 )
+                obj.x=obj.allx(:,k);
+                return;
+            end
+            fprintf("The specified iteration number %d is outside the allowed range %d - %d\n",k,1,size( obj.allx,2 ));
+        end
+
+        function ifound = findFrame(obj, vol )
+            i1=1; 
+            i2=size(obj.allx,2);
+            v1 = sum(obj.allx(:,1))/size(obj.allx,1);
+            v2 = sum(obj.allx(:,end))/size(obj.allx,1);
+            if vol > v1 || vol < v2
+                fprintf("The specified volume fraction %1.3f is outside the existing range %1.3f - %1.3f\n",vol,v1,v2);
+            else
+                while true
+                    i=round((i1+i2)/2);
+                    v=sum(obj.allx(:,i))/size(obj.allx,1);
+                    %fprintf("Mid point i=%d, v=%1.3f\n",i,v);
+                    if i2-i1==1
+                        ifound=i1;
+                        break;
+                    end
+                    if v>vol
+                        v1=v;
+                        i1=i;
+                    else
+                        v2=v;
+                        i2=i;
+                    end
+                end
+            end
+            
+        end
+
+        function printVolumeFractionRanges(obj)
+            i1=1; 
+            i2=size(obj.allx,2);
+            obj.setFrame(i1);
+            [v1, va1, vc1] = obj.computeVolumeFraction();
+            obj.setFrame(i2);
+            [v2, va2, vc2] = obj.computeVolumeFraction();
+            fprintf("Frame %5d, VolFr=%1.3f, VolFr_active=%1.3f, VolFr_const=%1.3f\n",i1,v1,va1,vc1);
+            fprintf("Frame %5d, VolFr=%1.3f, VolFr_active=%1.3f, VolFr_const=%1.3f\n",i2,v2,va2,vc2);
         end
 
     end

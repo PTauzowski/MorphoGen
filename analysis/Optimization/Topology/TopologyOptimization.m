@@ -49,7 +49,7 @@ classdef TopologyOptimization < ConstrainedOptimization
                 obj.printIterationInfo();                
                 obj.iteration = obj.iteration + 1;
             end
-            obj.plotFrame();
+            obj.plotCurrentFrame();
             obj.computeObjectiveFunction();
             xopt = obj.x;
             objF = obj.FobjValue;
@@ -141,8 +141,11 @@ classdef TopologyOptimization < ConstrainedOptimization
         end
         function plotFrame(obj)
             if obj.iteration < 10 || (mod(obj.iteration,10)==0)
-                obj.plotMeshTopology( obj.x, obj.elem_inds )
+                obj.plotCurrentFrame();
             end
+        end
+        function plotCurrentFrame(obj)
+                obj.plotMeshTopology( obj.x, obj.elem_inds )
         end
         function plotMeshTopology( obj, x, elem_inds )
             clf;
@@ -178,6 +181,7 @@ classdef TopologyOptimization < ConstrainedOptimization
             pause(0.01);
             drawnow;
         end
+        
         function iv = intervals(obj, Csort )
             np = max(size(Csort,1));
             iv = zeros( np, 2 );
@@ -211,6 +215,12 @@ classdef TopologyOptimization < ConstrainedOptimization
                    k=k+1;
                 end
             end
+        end
+        
+        function [volfr, activeVolFr, constVolFr] = computeVolumeFraction(obj)
+            volfr = sum(obj.x(:))/size(obj.x,1);
+            constVolFr = sum(obj.x(obj.const_elems))/size(obj.x,1);
+            activeVolFr = volfr - constVolFr;
         end
 
         function mesh = exportOptimalMesh(obj)
