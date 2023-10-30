@@ -85,7 +85,7 @@ classdef Mesh < handle
         function felems = findElems( obj, selector )
               fnodes = obj.findNodes( selector)';
               found = ismember(obj.elems, fnodes);
-              felems = find(sum(found,2));
+              felems = find(sum(found,2)==size(obj.elems,2));
         end
         function obj = addRectMesh2D( obj, x1, y1, dx, dy, nx, ny, pattern )
             dim = max(max( pattern ));
@@ -462,9 +462,12 @@ classdef Mesh < handle
             obj.nodes=mesh.Nodes';
             obj.elems=mesh.Elements';
         end
-        function exportMeshToFile(obj, filename)
-            dlmwrite(filename,obj.nodes,'delimiter','\t','precision','%7.3f');
-            dlmwrite(filename,obj.elems,'delimiter','\t','precision',6,'-append');
+        function exportMeshToFile(obj, filenamebase)
+            nodes=obj.nodes;
+            elems=obj.elems;
+            save([filenamebase '_mesh.mat'],"nodes","elems");
+            dlmwrite([filenamebase '_nodes.txt'],obj.nodes,'delimiter','\t','precision','%7.3f');
+            dlmwrite([filenamebase '_elems.txt'],obj.elems,'delimiter','\t','precision',6,'-append');
         end
     end
 end

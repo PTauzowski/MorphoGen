@@ -223,13 +223,14 @@ classdef TopologyOptimization < ConstrainedOptimization
             activeVolFr = volfr - constVolFr;
         end
 
-        function mesh = exportOptimalMesh(obj)
+        function mesh = exportOptimalMesh(obj,filenamebase)
             mesh2=Mesh();
             mesh2.mergeMesh(obj.FEAnalysis.mesh);
             mesh2.removeElemsByNumbers(find(obj.x(obj.elem_inds{1})<=0.5) );
             mesh=Mesh();
             mesh.mergeMesh(mesh2);
-            mesh.merge([200-mesh2.nodes(:,1) mesh2.nodes(:,2:3)] ,mesh2.elems);
+            %mesh.merge([200-mesh2.nodes(:,1) mesh2.nodes(:,2:3)] ,mesh2.elems);
+            mesh.exportMeshToFile(filenamebase);
         end
         
     end

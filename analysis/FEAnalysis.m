@@ -265,6 +265,9 @@ classdef (Abstract) FEAnalysis < handle
                 plot3( X, Y, Z, 'm', 'LineWidth', 4 );
              end
         end
+        function clearCurrentLoad(obj)
+                obj.Pnodal(:)=0;
+        end
         function plotSupport(obj)
               dim    = size(obj.mesh.nodes,2);
               dg     = norm( max(obj.mesh.nodes) - min(obj.mesh.nodes) );
