@@ -9,7 +9,7 @@ classdef ShapeObjectRectangular < SpatialObject
     methods
         
         function obj = ShapeObjectRectangular(shapeFunctions,points)
-            obj = obj@SpatialObject(20);
+            obj = obj@SpatialObject(shapeFunctions.dim,20);
             obj.shapeFunctions = shapeFunctions;
             obj.points = points;
             if size(shapeFunctions.localNodes,2)==3
