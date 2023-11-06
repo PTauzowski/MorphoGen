@@ -20,7 +20,8 @@ classdef (Abstract) Function < handle
                 obj.eps=zeros(obj.dim,1);
                 obj.eps=eps;
             elseif size(eps,2)==obj.dim
-                obj.eps=diag(eps);
+                %obj.eps=diag(eps);
+                obj.eps=eps';
             else
                 error(['Incompatibile dimensions. Function dimension:' num2str(obj.dim) ' perturbation dimmension :' num2str(size(eps,2))]);
             end

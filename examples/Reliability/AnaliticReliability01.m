@@ -1,8 +1,8 @@
 randomVariables={RandomVariable("Normal",0.7,0.25) RandomVariable("Normal",0.7,0.25)};
 g=SinCosApr();
 N=100000;
-mc = MonteCarlo(g,randomVariables,N);
-form = FORM(g,randomVariables);
+mc = MonteCarlo(randomVariables,g,N);
+form = FORM(randomVariables,g);
 [Pfmc p] = mc.solve();
 Pfmc
 Pform = form.solve()

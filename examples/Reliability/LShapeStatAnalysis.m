@@ -43,7 +43,17 @@ g=loadPerformanceFunction(analysis,material,mesh.findClosestNode([c*l c*l]),1,17
 g.loadedEdgeSelectorX=loadedEdgeSelectorX;
 g.loadedEdgeSelectorY=loadedEdgeSelectorY;
 
-N=1000;
-stat = StatisticalAnalysis(randomVariables,g);
-sc = stat.solve(N);
-scatter(sc(:,1),sc(:,2),'.');
+ N=2000;
+% stat = StatisticalAnalysis(randomVariables,g);
+% sc = stat.solve(N);
+% scatter(sc(:,1),sc(:,2),'.');
+
+mc= MonteCarlo(randomVariables,g,N);
+[ Pf, p ] = mc.solve();
+figure, hold on;
+scatter3(mc.x(p>0,1),mc.x(p>0,2),p(p>0),'MarkerEdgeColor',[0 .8 .8],'Marker','.');
+scatter3(mc.x(p<=0,1),mc.x(p<=0,2),p(p<=0),'filled','MarkerEdgeColor',[0.5 0 .5],'Marker','o');
+
+form = FORM(randomVariables,g);
+Pform = form.solve()
+

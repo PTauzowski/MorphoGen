@@ -12,11 +12,12 @@ classdef FORM < GradientBasedReliabilityAnalysis
             pert = 0.0001;
 
             dim = obj.getDim();
+            J=zeros(dim);
             un  = zeros( 1, dim );
             xn  = ones( 1, dim );
             dg  = zeros( 1, dim );
             x1  = zeros( 1, dim );
-            convP = 1.0E100;
+            %convP = 1.0E100;
 
             for iter=1:100000
                xn = obj.transformFromU( un );
@@ -27,7 +28,11 @@ classdef FORM < GradientBasedReliabilityAnalysis
                      beta = -1;
                      mpp=dg;
                      return;
-                end
+               end
+               for k=1:size(obj.randVars,2)
+                        J(k,k)=normpdf(un(k))/pdf(obj.randVars{k}.pd,xn(k));
+               end
+               dg=dg*J;
 
                 unp  = 1.0 / norm( dg )^2 * ( dg * un' - g ) * dg;
                 du   = unp - un;

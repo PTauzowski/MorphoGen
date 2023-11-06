@@ -1,8 +1,8 @@
 classdef ReliabilityAnalysis < handle
     
     properties
-        g;
         randVars;
+        g;
         Pf;
         beta;
     end
@@ -12,9 +12,9 @@ classdef ReliabilityAnalysis < handle
     end
     
     methods
-        function obj = ReliabilityAnalysis( g, randVars )
-            obj.g = g;
+        function obj = ReliabilityAnalysis( randVars, g  )
             obj.randVars = randVars;
+            obj.g = g;
         end
         
         function dim = getDim(obj)
@@ -41,7 +41,7 @@ classdef ReliabilityAnalysis < handle
             dim = obj.getDim();
             x=zeros(nsamples,dim);
             for k=1:dim
-                x(:,k) = obj.randVars{k}.random(nsamples);
+                x(:,k) = obj.randVars{k}.randomize(nsamples);
             end
         end
         

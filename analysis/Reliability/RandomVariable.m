@@ -9,7 +9,7 @@ classdef RandomVariable < handle
             obj.pd = makedist(name,m,s);
         end
         
-        function x = random(obj,nsamples)
+        function x = randomize(obj,nsamples)
             x = random(obj.pd,nsamples,1);
         end
         
