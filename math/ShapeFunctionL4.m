@@ -1,6 +1,6 @@
 classdef ShapeFunctionL4 < ShapeFunctions2D
     methods
-        function obj = ShapeFunctionL4() 
+        function obj = ShapeFunctionL4()
             obj.localNodes = [-1 -1; 1 -1; -1 1; 1 1 ];
             obj.vertices=[1 2 3 4]';
             obj.edges = [1 2; 2 4; 4 3; 3 1 ]';

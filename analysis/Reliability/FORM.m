@@ -38,7 +38,7 @@ classdef FORM < GradientBasedReliabilityAnalysis
                 du   = unp - un;
                 conv = norm( du );
 
-                if  size(find( abs(conv) > 50 ),1 ) || iter > 50 
+                if  size(find( abs(conv) > 50 ),1 ) || iter > 150 
                      Pf = -1;
                      beta = -1;
                      return;
