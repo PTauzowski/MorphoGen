@@ -6,6 +6,9 @@ tic
 sfL9 = ShapeFunctionT3;
 mesh = Mesh();
 mesh.addRectMeshTriangular2D( 'quad', 0, 0, 2*l, l, 2*res, res );
+fixedEdgeSelector = Selector( @(x)( abs(x(:,1))<0.001 ) );
+loadedEdgeSelector = Selector( @(x)( abs(x(:,1) - 2*l)<0.001 ) );
+
 fe=PlaneStressElem( sfL9, mesh.elems );
 fe.plotSolid(mesh.nodes);
 fe.props.h=1;
@@ -15,12 +18,6 @@ fe.setMaterial( material );
 plot(mesh.nodes(:,1),mesh.nodes(:,2),'.');
 
 analysis = LinearElasticity( fe, mesh );
-fixedEdgeSelector = Selector( @(x)( x(:,1) ) );
-loadedEdgeSelector = Selector( @(x)( x(:,1) - 2*l ) );
-circleSelector = Selector( @(x)( ((x(:,1) - 1.5).^2 + (x(:,2) - 1.5).^2 )-1.5 ), 0.2 );
-%fedges = fe.findEdges( problem.findNodes( loadedEdgeSelector ));
-%problem.plotSelectedNodeNumbers( loadedEdgeSelector );
-%P = problem.loadEdgesGlobal( loadedEdgeSelector, "ux", @(x)( x*0 + [-150 0 ] ));
 analysis.elementLoadLineIntegral( "global", loadedEdgeSelector,  ["ux" "uy"], @(x)( x*0 + [ -100 0 ] ));
 analysis.fixNodes( fixedEdgeSelector, ["ux" ] );
 analysis.fixClosestNode([0 0],["uy"], 0);

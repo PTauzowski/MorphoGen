@@ -1,7 +1,7 @@
 classdef TopologyOptimization < ConstrainedOptimization
     
     properties
-        FEproblem,
+        FEAnalysis,
         qnodal,
         weights;
         distances;
@@ -27,9 +27,9 @@ classdef TopologyOptimization < ConstrainedOptimization
             % Supressing singularity warning.
             warning('off','MATLAB:nearlySingularMatrix');
             obj.Rmin = Rmin;
-            obj.FEproblem=FEproblem;
+            obj.FEAnalysis=FEproblem;
             obj.is_const=is_const;
-            obj.totalFENumber = obj.FEproblem.getTotalElemsNumber();
+            obj.totalFENumber = obj.FEAnalysis.getTotalElemsNumber();
             obj.const_elems=[];
             obj.erased_elems = false(obj.totalFENumber,1);
             obj.xmin(:)=0.01;
@@ -49,7 +49,7 @@ classdef TopologyOptimization < ConstrainedOptimization
                 obj.printIterationInfo();                
                 obj.iteration = obj.iteration + 1;
             end
-            obj.plotFrame();
+            obj.plotCurrentFrame();
             obj.computeObjectiveFunction();
             xopt = obj.x;
             objF = obj.FobjValue;
@@ -70,7 +70,7 @@ classdef TopologyOptimization < ConstrainedOptimization
             end
         end
         function createFilteringCells2(obj)
-            problem=obj.FEproblem;
+            problem=obj.FEAnalysis;
             celemsi = cell( problem.getTotalElemsNumber(), size(problem.mesh.nodes,2) );
             xs = obj.midElems( problem );
             np = size(xs,1);
@@ -111,7 +111,7 @@ classdef TopologyOptimization < ConstrainedOptimization
             elemValue = obj.weights * elemValue;
         end
         function createFilteringMatrix(obj)
-            problem=obj.FEproblem;
+            problem=obj.FEAnalysis;
             tne = problem.getTotalElemsNumber();
             centroids = zeros( tne, size( problem.mesh.nodes, 2 ) );
             obj.neighbours = cell( tne, 1 );
@@ -141,8 +141,11 @@ classdef TopologyOptimization < ConstrainedOptimization
         end
         function plotFrame(obj)
             if obj.iteration < 10 || (mod(obj.iteration,10)==0)
-                obj.plotMeshTopology( obj.x, obj.elem_inds )
+                obj.plotCurrentFrame();
             end
+        end
+        function plotCurrentFrame(obj)
+                obj.plotMeshTopology( obj.x, obj.elem_inds )
         end
         function plotMeshTopology( obj, x, elem_inds )
             clf;
@@ -150,27 +153,27 @@ classdef TopologyOptimization < ConstrainedOptimization
             colorbar();
             daspect([1 1 1]);
             colormap(gray);
-            if  size(obj.FEproblem.mesh.nodes,2) == 3
+            if  size(obj.FEAnalysis.mesh.nodes,2) == 3
                 view(45, 45);
                 %view(135, 25);
                 %plotMeshTopology( nodes, multiObjectList( faces, elemClass.paths ), nres(:,elemClass.iHM), [ elemClass.rnames{elemClass.iHM} ',  volume '  num2str(V/V0*100,3) '%'], 1  );
                 
-                for i=1:size( obj.FEproblem.felems, 1)
+                for i=1:size( obj.FEAnalysis.felems, 1)
                     ip = ismember(elem_inds{i},obj.const_elems);
                     active_el = elem_inds{i};
                     active_el(ip) = [];
-                    obj.FEproblem.felems{i}.plotSolidSelected(obj.FEproblem.mesh.nodes,x(elem_inds{i})>0.5);
+                    obj.FEAnalysis.felems{i}.plotSolidSelected(obj.FEAnalysis.mesh.nodes,x(elem_inds{i})>0.5);
                     %obj.FEproblem.felems{i}.plotSolidSelected([200-obj.FEproblem.mesh.nodes(:,1) obj.FEproblem.mesh.nodes(:,2:3)],x(elem_inds{i})>0.5);
-                    obj.FEproblem.felems{i}.plotSolidSelected(obj.FEproblem.mesh.nodes,obj.const_elems,[0.8,0.1,0.1]);
+                    obj.FEAnalysis.felems{i}.plotSolidSelected(obj.FEAnalysis.mesh.nodes,obj.const_elems,[0.6,0.6,0.6]);
                 end
             else
-                for i=1:size( obj.FEproblem.felems, 1)
+                for i=1:size( obj.FEAnalysis.felems, 1)
                     %faces = x(elem_inds{i})>0.5;
                     faces = elem_inds{i};
                     %patch('Vertices', problem.nodes, 'Faces', problem.felems{i}.elems(faces,problem.felems{i}.sf.contour),'FaceColor','none','EdgeColor','k');
                     %patch('Vertices', problem.nodes, 'Faces', problem.felems{i}.elems(faces,problem.felems{i}.sf.contour),'FaceColor',[0.8 0.8 0.8],'EdgeColor','none');
-                    C = 1-obj.FEproblem.felems{i}.results.nodal(:,18);
-                    patch('Vertices', obj.FEproblem.mesh.nodes, 'Faces', obj.FEproblem.felems{i}.elems(faces,obj.FEproblem.felems{i}.sf.contour), 'FaceVertexCData',C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
+                    C = 1-obj.FEAnalysis.felems{i}.results.nodal(:,18);
+                    patch('Vertices', obj.FEAnalysis.mesh.nodes, 'Faces', obj.FEAnalysis.felems{i}.elems(faces,obj.FEAnalysis.felems{i}.sf.contour), 'FaceVertexCData',C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
                    % patch('Vertices', [100-obj.FEproblem.mesh.nodes(:,1) obj.FEproblem.mesh.nodes(:,2:3)], 'Faces', obj.FEproblem.felems{i}.elems(faces,obj.FEproblem.felems{i}.sf.contour), 'FaceVertexCData',C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
                 %title(obj.results.descriptions(valueIndex));
                 end
@@ -178,6 +181,7 @@ classdef TopologyOptimization < ConstrainedOptimization
             pause(0.01);
             drawnow;
         end
+        
         function iv = intervals(obj, Csort )
             np = max(size(Csort,1));
             iv = zeros( np, 2 );
@@ -203,23 +207,30 @@ classdef TopologyOptimization < ConstrainedOptimization
         end
   
         function xs = midElems( obj )
-            xs = zeros( obj.totalFENumber, size( obj.FEproblem.mesh.nodes, 2 ) );
+            xs = zeros( obj.totalFENumber, size( obj.FEAnalysis.mesh.nodes, 2 ) );
             k=1;
-            for i=1:size(obj.FEproblem.felems,1)
-                for j=1:size(obj.FEproblem.felems{i}.elems,1)
-                   xs(k,:) = mean( obj.FEproblem.mesh.nodes( obj.FEproblem.felems{i}.elems(j,:),:));
+            for i=1:size(obj.FEAnalysis.felems,1)
+                for j=1:size(obj.FEAnalysis.felems{i}.elems,1)
+                   xs(k,:) = mean( obj.FEAnalysis.mesh.nodes( obj.FEAnalysis.felems{i}.elems(j,:),:));
                    k=k+1;
                 end
             end
         end
+        
+        function [volfr, activeVolFr, constVolFr] = computeVolumeFraction(obj)
+            volfr = sum(obj.x(:))/size(obj.x,1);
+            constVolFr = sum(obj.x(obj.const_elems))/size(obj.x,1);
+            activeVolFr = volfr - constVolFr;
+        end
 
-        function mesh = exportOptimalMesh(obj)
+        function mesh = exportOptimalMesh(obj,filenamebase)
             mesh2=Mesh();
-            mesh2.mergeMesh(obj.FEproblem.mesh);
+            mesh2.mergeMesh(obj.FEAnalysis.mesh);
             mesh2.removeElemsByNumbers(find(obj.x(obj.elem_inds{1})<=0.5) );
             mesh=Mesh();
             mesh.mergeMesh(mesh2);
-            mesh.merge([200-mesh2.nodes(:,1) mesh2.nodes(:,2:3)] ,mesh2.elems);
+            %mesh.merge([200-mesh2.nodes(:,1) mesh2.nodes(:,2:3)] ,mesh2.elems);
+            mesh.exportMeshToFile(filenamebase);
         end
         
     end

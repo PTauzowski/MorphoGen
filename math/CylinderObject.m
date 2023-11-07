@@ -7,7 +7,7 @@ classdef CylinderObject < SpatialObject
     
     methods
         function obj = CylinderObject(x0,R,fi1,fi2,z1,z2)
-            obj = obj@SpatialObject(20);
+            obj = obj@SpatialObject(3,20);
             obj.x0=x0;
             obj.R=R;
             obj.fi1=pi*fi1/180;

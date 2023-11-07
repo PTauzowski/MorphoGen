@@ -8,34 +8,34 @@ classdef SIMP_MMA_TopologyOptimizationElasticCompliance < SIMP_MMA_TopologyOptim
 
         function obj = SIMP_MMA_TopologyOptimizationElasticCompliance(Rmin,problem,penal,VolConstr,is_const)
             obj = obj@SIMP_MMA_TopologyOptimization(1,Rmin,problem,penal,is_const);
-            tne=obj.FEproblem.getTotalElemsNumber();
+            tne=obj.FEAnalysis.getTotalElemsNumber();
             obj.gradConstrValues = zeros(1,1);
             obj.V0=tne*VolConstr;
             obj.VolConstr=VolConstr;
-            obj.x(1:obj.totalFENumber,1)=1;
+            obj.x(1:obj.totalFENumber,1)=0.5;
             obj.is_const=is_const;
         end
 
         function computeObjectiveFunctonWithGradient( obj, x )
-            tne=obj.FEproblem.getTotalElemsNumber();
+            tne=obj.FEAnalysis.getTotalElemsNumber();
             c=0;
             dc = zeros(tne,1);
             x_ones = ones(tne,1);
             ind=1;
-            for i=1:size(obj.FEproblem.felems,1)
+            for i=1:size(obj.FEAnalysis.felems,1)
                if obj.is_const
                    fsName='computeStifnessMatrixConst';
                else
                    fsName='computeStifnessMatrix';
                end
-               nelems = size(obj.FEproblem.felems{i}.elems,1);
-               nnodes = size(obj.FEproblem.felems{i}.elems,2);
-               ndofs = size( obj.FEproblem.felems{i}.ndofs,2);
+               nelems = size(obj.FEAnalysis.felems{i}.elems,1);
+               nnodes = size(obj.FEAnalysis.felems{i}.elems,2);
+               ndofs = size( obj.FEAnalysis.felems{i}.ndofs,2);
                dim = nnodes*ndofs;
-               K = reshape(obj.FEproblem.felems{i}.(fsName)(obj.FEproblem.mesh.nodes,x_ones),dim,dim,nelems);
-               obj.qnodal = obj.FEproblem.solveWeighted((obj.x).^obj.penal);
-               obj.FEproblem.computeElementResults(obj.qnodal,obj.x);
-               qelems = obj.FEproblem.felems{i}.createElemSolutionVectors(obj.qnodal);
+               K = reshape(obj.FEAnalysis.felems{i}.(fsName)(obj.FEAnalysis.mesh.nodes,x_ones),dim,dim,nelems);
+               obj.qnodal = obj.FEAnalysis.solveWeighted((obj.x).^obj.penal);
+               obj.FEAnalysis.computeElementResults(obj.qnodal,obj.x);
+               qelems = obj.FEAnalysis.felems{i}.createElemSolutionVectors(obj.qnodal);
                for j=1:nelems
                     c = c + obj.x(ind)^obj.penal*qelems(:,j)'*K(:,:,j)*qelems(:,j);
                     dc(ind) = -obj.penal*obj.x(ind)^(obj.penal-1)*qelems(:,j)'*K(:,:,j)*qelems(:,j);

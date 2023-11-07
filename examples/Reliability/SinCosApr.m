@@ -6,7 +6,7 @@ classdef SinCosApr < Function
          end
 
          function g=computeValue( obj, x )                
-                g = sin(x(:,1)).*cos(x(:,2));
+                g = sin(x(:,1)).*cos(x(:,2))-0.1;
          end
      end
     

@@ -16,9 +16,9 @@ fe.plotSolid(mesh.nodes);
 plot(mesh.nodes(:,1),mesh.nodes(:,2),'.');
 
 analysis = LinearElasticity( fe, mesh );
-fixedEdgeSelector = Selector( @(x)( x(:,1) ) );
-loadedEdgeSelector = Selector( @(x)( x(:,1) - 2*l ) );
-circleSelector = Selector( @(x)( ((x(:,1) - 1.5).^2 + (x(:,2) - 1.5).^2 )-1.5 ), 0.2 );
+fixedEdgeSelector = Selector( @(x)( abs(x(:,1) ) ) < 0.001 );
+loadedEdgeSelector = Selector( @(x)( abs(x(:,1) - 2*l ) < 0.001 ) );
+circleSelector = Selector( @(x)( abs(((x(:,1) - 1.5).^2 + (x(:,2) - 1.5).^2 )-1.5 )) < 0.2 );
 %fedges = fe.findEdges( problem.findNodes( loadedEdgeSelector ));
 %problem.plotSelectedNodeNumbers( loadedEdgeSelector );
 %P = problem.loadEdgesGlobal( loadedEdgeSelector, "ux", @(x)( x*0 + [-150 0 ] ));

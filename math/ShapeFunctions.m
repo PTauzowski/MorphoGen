@@ -12,7 +12,8 @@ classdef (Abstract) ShapeFunctions < Function
     
     methods
         function obj = ShapeFunctions(dim)
-            obj=obj@Function(dim,0.0001);
+
+            obj = obj@Function(dim,0.00001);
         end
 
         function isCorrect = selfTest( obj )

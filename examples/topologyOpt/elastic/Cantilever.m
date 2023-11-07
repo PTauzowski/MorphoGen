@@ -24,8 +24,8 @@ fe.setMaterial( material );
 fe.props.h=1;
 
 analysis = LinearElasticityWeighted( fe, mesh, true );
-fixedEdgeSelector = Selector( @(x)( x(:,1) ) );
-loadedEdgeSelector = Selector( @(x)( not( (abs( x(:,1) - aspect*l) < 1.0E-4) & ( abs(x(:,2)-l)<l/15 ) ) ) );
+fixedEdgeSelector = Selector( @(x)( abs(x(:,1)) < 0.001 ) );
+loadedEdgeSelector = Selector( @(x)( (abs( x(:,1) - aspect*l) < 1.0E-4) & ( abs(x(:,2)-l)<l/15 )  ) );
 analysis.loadClosestNode([aspect*l, l/2 ], ["ux" "uy"], [0 -1] );
 analysis.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
 

@@ -22,6 +22,7 @@ classdef (Abstract) FiniteElement < handle
         function obj = FiniteElement(sf, elems)
                      obj.sf=sf;
                      obj.elems = elems;
+                     obj.props.h=1;
         end
         function setMaterial(obj, mat)
                      obj.mat=mat;

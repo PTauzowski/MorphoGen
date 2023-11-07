@@ -6,6 +6,7 @@ classdef MorphSpace < Function
     
     methods
         function obj = MorphSpace(ss1,ss2)
+            obj=obj@Function(ss1.dim+1,0.0001)
             obj.ss1 = ss1;
             obj.ss2 = ss2;
             obj.ndiv=10;

@@ -82,6 +82,11 @@ classdef Mesh < handle
         function fnodes = findNodes(obj, selector)
             fnodes=find(selector.select(obj.nodes));
         end
+        function felems = findElems( obj, selector )
+              fnodes = obj.findNodes( selector)';
+              found = ismember(obj.elems, fnodes);
+              felems = find(sum(found,2)==size(obj.elems,2));
+        end
         function obj = addRectMesh2D( obj, x1, y1, dx, dy, nx, ny, pattern )
             dim = max(max( pattern ));
             nn = ( dim *  nx + 1 ) * ( dim *  ny + 1 );
@@ -166,7 +171,7 @@ classdef Mesh < handle
             end
             obj.merge( newNodes, newElems );
         end
-        function obj = addRectMesh3D( obj, x1, y1, z1, dx, dy, dz, nx, ny, nz, lnodes)
+        function obj = addRectMesh3D( obj, x1, y1, z1, dx, dy, dz, nx, ny, nz, lnodes )
             ddx=dx/nx;
             ddy=dy/ny;
             ddz=dz/nz;
@@ -334,6 +339,22 @@ classdef Mesh < handle
             obj.mergeMesh(mesh);
         end
 
+        function obj = addrectPipe(obj,w,h,l1,th,nth,lnodes)
+            nx=round(l1/th)*nth;
+            ny=round((w-2*th)/th)*nth;
+            nz=round((h-2*th)/th)*nth;
+            obj.addRectMesh3D( 0, 0, 0, l1, th, th, nx, nth, nth, lnodes );
+            obj.addRectMesh3D( 0, 0, h-th, l1, th, th, nx, nth, nth, lnodes );
+            obj.addRectMesh3D( 0, w-th, h-th, l1, th, th, nx, nth, nth, lnodes );
+            obj.addRectMesh3D( 0, w-th, 0, l1, th, th, nx, nth, nth, lnodes );
+
+            obj.addRectMesh3D( 0, 0, th, l1, th, h-2*th, nx, nth, nz, lnodes );
+            obj.addRectMesh3D( 0, w-th, th, l1, th, h-2*th, nx, nth, nz, lnodes );
+
+            obj.addRectMesh3D( 0, th, 0, l1, w-2*th, th, nx, ny, nth, lnodes );
+            obj.addRectMesh3D( 0, th, h-th, l1, w-2*th, th, nx, ny, nth, lnodes );
+        end
+
         function obj = addLshape( obj, l, h, nh, pattern )
             nl = round(l/h*nh+0.5);
             obj.addRectMesh2D( 0, 0, h, h, nh, nh, pattern );
@@ -441,9 +462,12 @@ classdef Mesh < handle
             obj.nodes=mesh.Nodes';
             obj.elems=mesh.Elements';
         end
-        function exportMeshToFile(obj, filename)
-            dlmwrite(filename,obj.nodes,'delimiter','\t','precision','%7.3f');
-            dlmwrite(filename,obj.elems,'delimiter','\t','precision',6,'-append');
+        function exportMeshToFile(obj, filenamebase)
+            nodes=obj.nodes;
+            elems=obj.elems;
+            save([filenamebase '_mesh.mat'],"nodes","elems");
+            dlmwrite([filenamebase '_nodes.txt'],obj.nodes,'delimiter','\t','precision','%7.3f');
+            dlmwrite([filenamebase '_elems.txt'],obj.elems,'delimiter','\t','precision',6,'-append');
         end
     end
 end

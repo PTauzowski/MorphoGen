@@ -1,6 +1,7 @@
 classdef ShapeFunctionL3 < ShapeFunctions
     methods
         function obj = ShapeFunctionL3() 
+            obj=obj@ShapeFunctions(1)
             obj.localNodes = [-1; 0; 1];
             obj.vertices=[1 2 3]';
             obj.pattern = [0 1 2]';

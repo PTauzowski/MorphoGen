@@ -15,7 +15,7 @@ classdef Selector
         end
         
         function s = select( obj, points )
-            s = abs(obj.fn(points)) < obj.tolerance;
+            s = abs(obj.fn(points)) > obj.tolerance;
         end
         
     end

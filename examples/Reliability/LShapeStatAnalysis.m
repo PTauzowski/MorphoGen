@@ -2,7 +2,9 @@ clear;
 close all;
 l=3;
 c=0.4;
-res = 24;
+res = 12;
+E=210000;
+nu=0.3;
 sf = ShapeFunctionL4;
 mesh = Mesh();
 mesh.addRectMesh2D(0, 0, l, c*l, round(1/c*res), res, sf.pattern);
@@ -10,7 +12,7 @@ mesh.addRectMesh2D(0, c*l, c*l, (1-c)*l, res, 1/(1-c)*res, sf.pattern);
 fe=PlaneStressElem( sf, mesh.elems );
 fe.props.h=1;
 material = PlaneStressMaterial('mat1');
-material.setElasticIzo(210000, 0.3);
+material.setElasticIzo(E, nu);
 fe.setMaterial( material );
 
 fe.plotSolid(mesh.nodes);
@@ -19,7 +21,7 @@ fixedEdgeSelectorX = Selector( @(x)( abs(x(:,1))<0.001 ) );
 fixedEdgeSelectorY = Selector( @(x)( abs(x(:,2)) )<0.001 );
 loadedEdgeSelectorX = Selector( @(x)( abs(x(:,1) - l)<0.001 ) );
 loadedEdgeSelectorY = Selector( @(x)( abs(x(:,2) - l)<0.001 ) );
-%problem.plotSelectedNodeNumbers( loadedEdgeSelector );
+
 analysis.elementLoadLineIntegral( "global", loadedEdgeSelectorX, ["ux" "uy"], @(x)( x*0 + [ 100 0 ] ));
 analysis.elementLoadLineIntegral( "global", loadedEdgeSelectorY, ["ux" "uy"], @(x)( x*0 + [ 0 100 ] ));
 analysis.fixNodes( fixedEdgeSelectorX, "ux");
@@ -28,7 +30,21 @@ analysis.plotCurrentLoad();
 analysis.plotSupport();
 
 analysis.printProblemInfo();
-analysis.solve();
 
-analysis.plotMaps(["uy" "ux" "sxx" "sxy" "syy" "sHM"],0.1);
-fe.plotWired(mesh.nodes,analysis.qnodal,0.1);
+figure;
+randomVariables={RandomVariable("Normal",100,20) RandomVariable("Normal",100,20)};
+g=loadPerformanceFunction(analysis,material,mesh.findClosestNode([c*l c*l]),1,17);
+g.loadedEdgeSelectorX=loadedEdgeSelectorX;
+g.loadedEdgeSelectorY=loadedEdgeSelectorY;
+
+N=2000;
+mc= MonteCarlo(randomVariables,g,N);
+[ Pf_mc, p ] = mc.solve();
+figure, hold on;
+scatter3(mc.x(p>0,1),mc.x(p>0,2),p(p>0),'MarkerEdgeColor',[0 .8 .8],'Marker','.');
+scatter3(mc.x(p<=0,1),mc.x(p<=0,2),p(p<=0),'filled','MarkerEdgeColor',[0.5 0 .5],'Marker','o');
+
+form = FORM(randomVariables,g);
+Pf_mc
+Pf_form = form.solve()
+

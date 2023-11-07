@@ -16,7 +16,7 @@ classdef StatisticalAnalysis < handle
             
             x=zeros(N,obj.dim);
             for k=1:obj.dim
-                x(:,k)=obj.randVars{k}.random(N);
+                x(:,k)=obj.randVars{k}.randomize(N);
             end
             scatter=obj.perfFn.computeValue(x);
 

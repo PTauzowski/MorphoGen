@@ -7,8 +7,8 @@ classdef MonteCarlo < ReliabilityAnalysis
     end
     
     methods
-        function obj = MonteCarlo(g,randVars,nsamples)
-            obj = obj@ReliabilityAnalysis(g,randVars);
+        function obj = MonteCarlo(randVars, g, nsamples)
+            obj = obj@ReliabilityAnalysis(randVars,g);
             obj.nsamples=nsamples;
         end
         
