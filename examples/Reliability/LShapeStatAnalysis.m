@@ -21,7 +21,7 @@ fixedEdgeSelectorX = Selector( @(x)( abs(x(:,1))<0.001 ) );
 fixedEdgeSelectorY = Selector( @(x)( abs(x(:,2)) )<0.001 );
 loadedEdgeSelectorX = Selector( @(x)( abs(x(:,1) - l)<0.001 ) );
 loadedEdgeSelectorY = Selector( @(x)( abs(x(:,2) - l)<0.001 ) );
-%problem.plotSelectedNodeNumbers( loadedEdgeSelector );
+
 analysis.elementLoadLineIntegral( "global", loadedEdgeSelectorX, ["ux" "uy"], @(x)( x*0 + [ 100 0 ] ));
 analysis.elementLoadLineIntegral( "global", loadedEdgeSelectorY, ["ux" "uy"], @(x)( x*0 + [ 0 100 ] ));
 analysis.fixNodes( fixedEdgeSelectorX, "ux");
@@ -30,30 +30,21 @@ analysis.plotCurrentLoad();
 analysis.plotSupport();
 
 analysis.printProblemInfo();
-% analysis.solve();
-% 
-% analysis.plotMaps(["uy" "ux" "sxx" "sxy" "syy" "sHM"],0.1);
-% fe.plotWired(mesh.nodes,analysis.qnodal,0.1);
 
-%randomVariables={RandomVariable("Normal",E,0.1*E) RandomVariable("Normal",nu,0.2*nu)};
-%g=matPerformanceFunction(analysis,material,mesh.findClosestNode([c*l c*l]),1,17);
 figure;
 randomVariables={RandomVariable("Normal",100,20) RandomVariable("Normal",100,20)};
 g=loadPerformanceFunction(analysis,material,mesh.findClosestNode([c*l c*l]),1,17);
 g.loadedEdgeSelectorX=loadedEdgeSelectorX;
 g.loadedEdgeSelectorY=loadedEdgeSelectorY;
 
- N=2000;
-% stat = StatisticalAnalysis(randomVariables,g);
-% sc = stat.solve(N);
-% scatter(sc(:,1),sc(:,2),'.');
-
+N=2000;
 mc= MonteCarlo(randomVariables,g,N);
-[ Pf, p ] = mc.solve();
+[ Pf_mc, p ] = mc.solve();
 figure, hold on;
 scatter3(mc.x(p>0,1),mc.x(p>0,2),p(p>0),'MarkerEdgeColor',[0 .8 .8],'Marker','.');
 scatter3(mc.x(p<=0,1),mc.x(p<=0,2),p(p<=0),'filled','MarkerEdgeColor',[0.5 0 .5],'Marker','o');
 
 form = FORM(randomVariables,g);
-Pform = form.solve()
+Pf_mc
+Pf_form = form.solve()
 
