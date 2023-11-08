@@ -37,9 +37,11 @@ g=loadPerformanceFunction(analysis,material,mesh.findClosestNode([c*l c*l]),1,17
 g.loadedEdgeSelectorX=loadedEdgeSelectorX;
 g.loadedEdgeSelectorY=loadedEdgeSelectorY;
 
-N=2000;
+N=5000;
 mc= MonteCarlo(randomVariables,g,N);
+tic;
 [ Pf_mc, p ] = mc.solve();
+toc
 figure, hold on;
 scatter3(mc.x(p>0,1),mc.x(p>0,2),p(p>0),'MarkerEdgeColor',[0 .8 .8],'Marker','.');
 scatter3(mc.x(p<=0,1),mc.x(p<=0,2),p(p<=0),'filled','MarkerEdgeColor',[0.5 0 .5],'Marker','o');
