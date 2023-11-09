@@ -23,8 +23,8 @@ material.setElasticIzo(1, 0.3);
 fe.setMaterial( material );
 
 analysis = LinearElasticityWeighted( fe, mesh, true );
-fixedEdgeSelector = Selector( @(x)( x(:,2) - 2*l ) );
-loadedEdgeSelector = Selector( @(x)( not( (abs( x(:,1) - 2*l) < 1.0E-4) & ( abs(x(:,2)-0.4*l)<l/30 ) ) ) );
+fixedEdgeSelector = Selector( @(x)( abs(x(:,2) - 2*l) < 0.001 ) );
+loadedEdgeSelector = Selector( @(x)( (abs( x(:,1) - 2*l) < 1.0E-4) & ( abs(x(:,2)-0.4*l)<l/30 ) ) );
 
 analysis.loadClosestNode([ 2*l, 0.4*l ], ["ux" "uy"], [0 -1.0] );
 analysis.fixNodes( fixedEdgeSelector, ["ux" "uy"] );

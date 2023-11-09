@@ -35,7 +35,6 @@ fe=PlaneStressElem( sfL4, mesh.elems );
 
 % Create isotropic material object
 material = PlaneStressMaterial('mat1');
-fe.props.h=1;
 material.setElasticIzo(1, 0.3);
 
 % Assigning material to finite element

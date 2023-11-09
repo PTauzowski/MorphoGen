@@ -37,7 +37,7 @@ g=loadPerformanceFunction(analysis,material,mesh.findClosestNode([c*l c*l]),1,17
 g.loadedEdgeSelectorX=loadedEdgeSelectorX;
 g.loadedEdgeSelectorY=loadedEdgeSelectorY;
 
-N=2000;
+N=10000;
 mc= MonteCarlo(randomVariables,g,N);
 [ Pf_mc, p ] = mc.solve();
 figure, hold on;

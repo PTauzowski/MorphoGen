@@ -1,7 +1,7 @@
 classdef SolidMaterial < Material
    
     properties
-        E, nu, D, dD, M;
+        E, nu, D, dD, M, at;
     end
     
     methods
@@ -19,6 +19,11 @@ classdef SolidMaterial < Material
             obj.E=E;
             obj.nu=nu;
             obj.D=D;
+        end
+
+        function D = setElasticIzoThermal( obj, E, nu, at )
+            D = setElasticIzo( obj, E, nu );
+            obj.at=at;
         end
 
         function dD = setElasticIzoGrad(obj)

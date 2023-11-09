@@ -6,12 +6,6 @@ classdef (Abstract) ShapeFunctions3D < ShapeFunctions
     end
 
     methods
-        function obj = ShapeFunctions()
-            obj = obj@ShapeFunctions(3);
-        end
-    end
-    
-    methods
         function obj = ShapeFunctions3D()
             obj = obj@ShapeFunctions(3);
         end
