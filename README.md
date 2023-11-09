@@ -38,11 +38,10 @@ The system is currently written and tested in MATLAB R2023a. So it is recommende
 We will present here a file with the definition of an example topological optimization of a cantilever using two methods:
 
 ```matlab
-clear;
-close all;
+% Cantilever topology optimization elastic task
+clear; close all;
 
-% Cantilever topology optimization elastic task.
-
+% Initialization 
 res = 50; % resolution of shortest (vertical) edge
 h = 1; % height of the cantilever
 aspect = 2; % aspect ratio length/height
@@ -50,32 +49,26 @@ Rfilter = 2*h/res; % filtering radius
 cutTreshold = 0.005; % paramter selecting the removal intensity threshold
 penal = 3; % penalty factor
 
-% Type of shape function to be used (here: four node Langrange)
-sfL4 = ShapeFunctionL4;
-
-% Creating FE mesh object
+% MESH layer (creating FE mesh object)
 mesh = Mesh();
-mesh.addRectMesh2D(0, 0, aspect*h, h, aspect*res, res, sfL4.pattern); % Generating rectangular mesh ( aspect times h by h )
+mesh.addRectMesh2D(0, 0, aspect*h, h, aspect*res, res, sfL4.pattern); % generating rectangular mesh ( aspect times h by h )
 
-% Creating node selector object to select fixed edge (left)
-fixedEdgeSelector = Selector( @(x)( abs(x(:,1)) < 0.001 ) );
-
-% Create plane stress finite element object
-fe = PlaneStressElem( sfL4, mesh.elems );
-
-% Create isotropic material object
+% MATERIAL layer (creating isotropic material object)
 material = PlaneStressMaterial('mat1');
 material.setElasticIzo(1, 0.3);
+fe.setMaterial( material ); % assigning material to finite element
 
-% Assigning material to finite element
-fe.setMaterial( material );
+% ELEMENT layer (creating node selector object to select fixed edge (left))
+fixedEdgeSelector = Selector( @(x)( abs(x(:,1)) < 0.001 ) );
+sfL4 = ShapeFunctionL4; % type of shape function to be used (here: four node Langrange)
+fe = PlaneStressElem( sfL4, mesh.elems ); % create plane stress finite element object
 
-% Creating linear elastic finite element analysis object with weighted matrix feature, weighted by element density
+% ANALYSIS layer (creating linear elastic finite element analysis object with weighted matrix feature, weighted by element density)
 analysis = LinearElasticityWeighted( fe, mesh, true );
-analysis.fixNodes( fixedEdgeSelector, ["ux" "uy"] ); % Fixing structure according to above defined node selector object
-analysis.loadClosestNode([aspect*h, h/2 ], ["ux" "uy"], [0 -1] ); % Creating load vector with one node loaded at the middle of right edge
+analysis.fixNodes( fixedEdgeSelector, ["ux" "uy"] ); % fixing structure according to above defined node selector object
+analysis.loadClosestNode([aspect*h, h/2 ], ["ux" "uy"], [0 -1] ); % creating load vector with one node loaded at the middle of right edge
 
-% Defining an object for stress intensity based topology optimization with volume constraint
+% DESIGN layer (defining an object for stress intensity based topology optimization with volume constraint)
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.4, true );
-[objF, xopt]  = topOpt.solve(); % Executing the above mentioned algorithm 
+[objF, xopt]  = topOpt.solve(); % executing the above mentioned algorithm 
 ```
