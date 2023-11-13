@@ -1,7 +1,7 @@
 classdef PlaneStressMaterial < Material
 
     properties
-        E, nu, D, dD, M;
+        E, nu, D, invD, dD, M, sy;
     end
 
     methods
@@ -22,6 +22,24 @@ classdef PlaneStressMaterial < Material
             obj.nu=nu;
             obj.E=E;
 
+        end
+
+        function D = setElastoPlasticIzo( obj, E, nu, sy )
+            obj.setElasticIzo(E,nu);
+            obj.sy=sy;
+            obj.invD=inv(obj.D)
+        end
+
+        function [ Dt ] = tangentD( obj, s, dg )
+            if  dg == 0
+                Dt = mat.D;
+                return;
+            end                
+            P   = 1/3 * [ 2 -1 0; -1 2 0; 0 0 6];
+            Em  = inv( obj.invD + dg * P );
+            n   = Em * P * s;
+            alpha = 1 / ( s' * P * n );
+            Dt = Em - alpha * ( n * n' );        
         end
 
         function dD = setElasticIzoGrad(obj)

@@ -37,14 +37,16 @@ g=loadPerformanceFunction(analysis,material,mesh.findClosestNode([c*l c*l]),1,17
 g.loadedEdgeSelectorX=loadedEdgeSelectorX;
 g.loadedEdgeSelectorY=loadedEdgeSelectorY;
 
-N=10000;
-mc= MonteCarlo(randomVariables,g,N);
-[ Pf_mc, p ] = mc.solve();
-figure, hold on;
-scatter3(mc.x(p>0,1),mc.x(p>0,2),p(p>0),'MarkerEdgeColor',[0 .8 .8],'Marker','.');
-scatter3(mc.x(p<=0,1),mc.x(p<=0,2),p(p<=0),'filled','MarkerEdgeColor',[0.5 0 .5],'Marker','o');
+% N=10000;
+% mc= MonteCarlo(randomVariables,g,N);
+% [ Pf_mc, p ] = mc.solve();
+% Pf_mc
+% figure, hold on;
+% scatter3(mc.x(p>0,1),mc.x(p>0,2),p(p>0),'MarkerEdgeColor',[0 .8 .8],'Marker','.');
+% scatter3(mc.x(p<=0,1),mc.x(p<=0,2),p(p<=0),'filled','MarkerEdgeColor',[0.5 0 .5],'Marker','o');
 
 form = FORM(randomVariables,g);
-Pf_mc
+hmv = HMV(randomVariables,g,3);
+[ Pf, mpp, betar ] = hmv.solve();
 Pf_form = form.solve()
 

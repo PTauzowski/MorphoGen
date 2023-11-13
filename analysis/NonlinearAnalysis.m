@@ -21,8 +21,8 @@ classdef NonlinearAnalysis < FEAnalysis
             [I,J,~,~] = obj.globalMatrixIndices();
             solver =  LinearEquationsSystem(I,J,obj.supports);
             obj.prepareRHSVectors();
-            obj.iteraton=1;
-            dP = obj.Pfem(:,0);
+            obj.iteration=1;
+            dP = obj.getCurrentNodalLoad();
             while conv > obj.convEnd
                 Kt = obj.globalSolutionDependendMatrixAggregation( obj.tangentMatrixProcedureName );
                 obj.qfem = solver.solve( Kt, dP );

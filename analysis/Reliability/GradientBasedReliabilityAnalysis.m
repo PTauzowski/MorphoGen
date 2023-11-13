@@ -13,27 +13,15 @@ classdef GradientBasedReliabilityAnalysis < ReliabilityAnalysis
                 pert = 0.0001;
 
                 x = obj.transformToU( u );
-               % gn  = LSF( data, xn );
-
-                for subiter=1:10
-                  g = obj.g.computeValue( x );
-                  if  corr == false
-                         x=0.5*x;
-                  else
-                    break;
-                  end
-                end
+                % gn  = LSF( data, xn );
+                g = obj.g.computeValue( x );
 
                 for k=1:dim
                         u1 = u;
                         u1( k )  = u1( k ) + pert;
                         x = obj.transformToU( u1 );
                         g = obj.g.computeValue( x );
-                        if  corr == false
-                            dg( k ) = 1;
-                        else
-                            dg( k ) = ( gk - g ) / pert;
-                        end
+                        dg( k ) = ( gk - g ) / pert
 
                 end
             end

@@ -17,6 +17,50 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
                  "maximal shear stress" "principal stress angle" "Huber-Mises stress" "Top opt density" "plastic zone"];
         end
 
+        function K = elastoPlasticTangentMatrix(obj, nodes, q, varargin)
+            nelems = size(obj.elems,1);
+            nnodes = size(obj.elems,2);
+            ndofs = size( obj.ndofs,2);
+            dim = nnodes * ndofs;
+            integrator = obj.sf.createIntegrator();
+            nip = size(integrator.points,1);
+            dN = obj.sf.computeGradient( integrator.points );
+            nnd = size(dN,1); 
+            dNtr = permute(dN,[2,1,3]);
+            dNtrc = cell(size(dNtr,3),1);
+            if ( nargin == 4 )
+                x=varargin{1};
+            else
+                x=ones(nelems,1);
+            end
+            for i=1:nip
+                dNtrc{i}=dNtr(:,:,i);
+            end
+            K = zeros( dim , dim, nelems );
+            B = zeros(3,dim);
+            weights = integrator.weights;
+            D = obj.mat.D;
+            h = obj.props.h;
+            for k=1:nelems
+                elemX = nodes(obj.elems(k,:),:);
+                Ke = zeros( dim , dim );
+                for i=1:nip
+                    J = dNtrc{i}*elemX;
+                    detJ = J(1,1) * J(2,2) - J(1,2) * J(2,1);
+                    dNx = (1 / detJ * [ J(2,2) -J(1,2); -J(2,1)  J(1,1) ]) * dNtrc{i};
+                    for j = 1:nnd
+                      B(1, 2*j-1) = dNx(1,j);
+                      B(2, 2*j)   = dNx(2,j);
+                      B(3, 2*j-1) = dNx(2,j);
+                      B(3, 2*j)   = dNx(1,j);
+                    end
+                    Ke = Ke + abs(detJ) * weights(i) * h * B'*D*B;
+                end
+                K(:,:,k) = x(k)*Ke;
+            end
+            K=K(:);
+        end
+
          function computeResults(obj)
             nelems = size(obj.elems,1);
             nip = size(integrator.points,1);
@@ -89,7 +133,7 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
                       B(3, 2*j-1) = dNx(2,j);
                       B(3, 2*j)   = dNx(1,j);
                     end
-                    e = %reshape( q(obj.elems(k,:),:)', nnodes * ndofs,1 );
+                    e = reshape( q(obj.elems(k,:),:)', nnodes * ndofs,1 );
                     s = x(k)*D*e;
                     strain(:,k,i) = B*qelems(:,k);
                 end

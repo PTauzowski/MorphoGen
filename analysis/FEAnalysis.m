@@ -92,13 +92,13 @@ classdef (Abstract) FEAnalysis < handle
                 end
             end
         end
-        function K = globalSolutionDependendMatrixAggregation(obj, fname, q)
+        function K = globalSolutionDependendMatrixAggregation(obj, fname )
             K = [];
             for k=1:max(size(obj.felems))
                 if ismethod(obj.felems{k},fname)
-                    K = [ K obj.felems{k}.(fname)(obj.mesh.nodes, q) ];
+                    K = [ K obj.felems{k}.(fname)(obj.mesh.nodes, obj.qnodal ) ];
                 else
-                    error("Class " + class(fe) + " or its predecessors not implements function :"+fname);
+                    error("Class " + class(obj.felems{k}) + " or its predecessors not implements function :"+fname);
                 end
             end
         end

@@ -5,8 +5,8 @@ classdef HMV < GradientBasedReliabilityAnalysis
     end
     
     methods
-        function obj = HMV(g,randVars,betat)
-            obj = obj@GradientBasedReliabilityAnalysis(g,randVars);
+        function obj = HMV(randVars,g,betat)
+            obj = obj@GradientBasedReliabilityAnalysis(randVars,g);
             obj.betat=betat;
         end
         

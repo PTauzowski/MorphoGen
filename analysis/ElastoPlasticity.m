@@ -1,4 +1,4 @@
-classdef ElastoPlasticity < NonlinearProblem  
+classdef ElastoPlasticity < NonlinearAnalysis 
     
     properties
        
@@ -7,7 +7,7 @@ classdef ElastoPlasticity < NonlinearProblem
     methods
         
         function obj = ElastoPlasticity(felems, mesh)
-           obj = obj@NonlinearProblem(felems,mesh,"elastoPlasticTangentMatrix");
+           obj = obj@NonlinearAnalysis(felems,mesh,"elastoPlasticTangentMatrix");
 
         end
 
