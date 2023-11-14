@@ -1,7 +1,7 @@
 classdef NonlinearAnalysis < FEAnalysis
     
     properties
-        convEnd, iteration;
+        convEnd, iteration, dqfem;
         tangentMatrixProcedureName;
     end
     
@@ -22,12 +22,12 @@ classdef NonlinearAnalysis < FEAnalysis
             solver =  LinearEquationsSystem(I,J,obj.supports);
             obj.prepareRHSVectors();
             obj.iteration=1;
-            dP = obj.getCurrentNodalLoad();
+            dP = obj.getCurrentFEMlLoad();
             while conv > obj.convEnd
                 Kt = obj.globalSolutionDependendMatrixAggregation( obj.tangentMatrixProcedureName );
-                obj.qfem = solver.solve( Kt, dP );
+                obj.dqfem = solver.solve( Kt, dP );
+                obj.qfem = obj.qfem + obj.dqfem;
                 obj.qnodal = obj.fromFEMVector( obj.qfem );
-                obj.computeElementResults( obj.qnodal );
                 R=obj.computeResidualVector();
                 dP=obj.Pfem(:,0)-R;
                 conv  = norm( dP ) / norm( R );

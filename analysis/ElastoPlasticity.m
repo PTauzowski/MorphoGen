@@ -15,7 +15,7 @@ classdef ElastoPlasticity < NonlinearAnalysis
             R=obj.Pfem(:,1);
             R(:)=0;
             for k=1:max(size(obj.felems))
-                obj.felems{k}.computeStrain( mesh.nodes, obj.qnodal );
+                obj.felems{k}.computeStrain( obj.mesh.nodes, obj.qnodal );
                 obj.felems{k}.computeElasticStress()
                 obj.felems{k}.computePlasticStressAndStrainCorrector();
                 R = obj.felems{k}.computeInternalForces(mesh.nodes,V,R);
