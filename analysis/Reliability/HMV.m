@@ -17,7 +17,7 @@ classdef HMV < GradientBasedReliabilityAnalysis
             n1  = zeros( dim, 1 );
             dg  = zeros( dim, 1 );
             epsilon=1.0e-03;
-            [g, dg] = obj.gradG( u );  
+            [g, dg] = obj.g.compute( u );  
             if  norm(dg)<1.0E-20
                      Pf = -1;
                      betar = -1;

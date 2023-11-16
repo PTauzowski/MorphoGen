@@ -45,8 +45,9 @@ g.loadedEdgeSelectorY=loadedEdgeSelectorY;
 % scatter3(mc.x(p>0,1),mc.x(p>0,2),p(p>0),'MarkerEdgeColor',[0 .8 .8],'Marker','.');
 % scatter3(mc.x(p<=0,1),mc.x(p<=0,2),p(p<=0),'filled','MarkerEdgeColor',[0.5 0 .5],'Marker','o');
 
-form = FORM(randomVariables,g);
 hmv = HMV(randomVariables,g,3);
-[ Pf, mpp, betar ] = hmv.solve();
+form = FORM(randomVariables,g);
 Pf_form = form.solve()
+[ Pf, mpp, betar ] = hmv.solve();
+
 
