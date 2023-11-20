@@ -17,9 +17,9 @@ classdef GradientBasedReliabilityAnalysis < ReliabilityAnalysis
                 g = obj.g.computeValue( x );
 
                 for k=1:dim
-                        u1 = u;
-                        u1( k )  = u1( k ) + pert;
-                        x = obj.transformToU( u1 );
+                        gk = u;
+                        gk( k )  = gk( k ) + pert;
+                        x = obj.transformToU( gk );
                         g = obj.g.computeValue( x );
                         dg( k ) = ( gk - g ) / pert
 

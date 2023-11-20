@@ -12,12 +12,18 @@ classdef HMV < GradientBasedReliabilityAnalysis
         
         function [ Pf, mpp, betar ] = solve(obj,x0)
             dim = obj.getDim();
-            u   = zeros( dim, 1 );
-            n   = zeros( dim, 1 );
-            n1  = zeros( dim, 1 );
-            dg  = zeros( dim, 1 );
+            J   = zeros(dim);
+            u   = zeros( 1, dim );
+            n   = zeros( 1, dim );
+            n1  = zeros( 1, dim );
+            dg  = zeros( 1, dim );
             epsilon=1.0e-03;
-            [g, dg] = obj.g.compute( u );  
+            x = obj.transformFromU( u );
+            [g, dg] = obj.g.compute( x );
+            for k=1:size(obj.randVars,2)
+                        J(k,k)=normpdf(u(k))/pdf(obj.randVars{k}.pd,x(k));
+            end
+            dg=dg*J;
             if  norm(dg)<1.0E-20
                      Pf = -1;
                      betar = -1;
@@ -29,7 +35,12 @@ classdef HMV < GradientBasedReliabilityAnalysis
                 g1 = g;
                 n2 = n1; 
                 n1 = n;  
-                [g, dg] = obj.gradG( u );
+                x = obj.transformFromU( u );
+                [g, dg] = obj.g.compute( x );
+                for j=1:size(obj.randVars,2)
+                        J(j,j)=normpdf(u(j))/pdf(obj.randVars{k}.pd,x(j));
+                end
+                dg=dg*J;
                 n = -dg ./ norm(dg);
                 beta = norm( u );
                 dgrel = abs((g-g1)/norm(g) );
@@ -40,8 +51,7 @@ classdef HMV < GradientBasedReliabilityAnalysis
                      betar = obj.betat*(1+g/(g0-g));
                      ur = betar*n;
                      mpp = obj.transformFromU( ur );
-                     [g, corr]  = obj.g.computeValue( mpp );
-                     mpp = n;
+                     g = obj.g.computeValue( mpp );
                      Pf = normcdf( -beta );
                      % fprintf('iter = %2d\n',k);
                     return;
