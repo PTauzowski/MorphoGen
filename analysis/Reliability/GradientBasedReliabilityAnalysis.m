@@ -10,6 +10,8 @@ classdef GradientBasedReliabilityAnalysis < ReliabilityAnalysis
             obj.transform = transform;
             g.setPerturbation( transform.createXPerturbation(0.00001) );
         end
+        
+      
 
         function [g, gradU] = computeGu( obj, u  )
             x = obj.transform.toX ( u );

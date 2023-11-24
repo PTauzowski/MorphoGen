@@ -56,6 +56,7 @@ classdef HMV < GradientBasedReliabilityAnalysis
                         u = obj.betat * ne / norm(ne);
                     end
                 end
+
             end
             fprintf('HMV not converged!\n');
         end
