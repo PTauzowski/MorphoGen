@@ -3,15 +3,14 @@ close all;
 res = 10;
 l = 3;
 tic
-sfL9 = ShapeFunctionT3;
+sf = ShapeFunctionT3;
 mesh = Mesh();
 mesh.addRectMeshTriangular2D( 'quad', 0, 0, 2*l, l, 2*res, res );
 fixedEdgeSelector = Selector( @(x)( abs(x(:,1))<0.001 ) );
 loadedEdgeSelector = Selector( @(x)( abs(x(:,1) - 2*l)<0.001 ) );
 
-fe=PlaneStressElem( sfL9, mesh.elems );
-fe.plotSolid(mesh.nodes);
-fe.props.h=1;
+fe=PlaneStressElem( sf, mesh.elems );
+fe.plot(mesh.nodes);
 material = PlaneStressMaterial('mat1');
 material.setElasticIzo(210000, 0.3);
 fe.setMaterial( material );
