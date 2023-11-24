@@ -11,7 +11,7 @@ classdef ModelLinear < handle
             obj.result_node=rn;
         end
         
-        function solve(obj)
+        function solveWeighted(obj)
             obj.analysis.solveWeighted(obj.x);
             obj.analysis.computeElementResults();
         end
@@ -21,19 +21,30 @@ classdef ModelLinear < handle
             material.setElasticIzo(E, nu);
             obj.fe.setMaterial( material );   
             obj.analysis.loadClosestNode(obj.xp,["ux" "uy"], P);
-            obj.analysis.solveWeighted(obj.x);
         end
 
         function u = computeDisplacement(obj,E,nu,P)
+            obj.analysis.clearCurrentLoad();
             obj.setupVariables(E,nu,P);
             obj.analysis.solveWeighted(obj.x);
             u=obj.analysis.qnodal(obj.result_node,:);
         end
 
         function sHM = computeHMstress(obj,E,nu,P)
+            obj.analysis.clearCurrentLoad();
             obj.setupVariables(E,nu,P);
-            obj.solve();
+            obj.solveWeighted();
             sHM=obj.fe.results.nodal(obj.result_node,obj.result_number);
+        end
+
+        function plotModel( obj )
+            obj.analysis.plotFiniteElements();
+            obj.analysis.plotCurrentLoad();
+            obj.analysis.plotSupport();            
+        end
+
+        function plotNodes(obj)
+            plot(obj.mesh.nodes(:,1),obj.mesh.nodes(:,2),'.');
         end
     end
 end

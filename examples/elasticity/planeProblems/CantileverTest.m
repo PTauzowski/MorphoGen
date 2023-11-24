@@ -10,8 +10,9 @@ P=[0 -1];
 
 model = CantileverModelLinear(sf,l,nl,E,nu,xp,P);
 
-model.solve();
+model.solveWeighted();
 
+model.plotModel();
 model.analysis.plotMaps(["uy" "ux" "sxx" "sxy" "syy" "sHM"],0.1);
 model.fe.plotWired(model.mesh.nodes,model.analysis.qnodal,0.1);
 

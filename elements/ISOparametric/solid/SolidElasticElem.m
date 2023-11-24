@@ -369,7 +369,7 @@ classdef SolidElasticElem < FiniteElement
                 patch('Vertices', defnodes, 'Faces', allfaces(ifaces,:),'FaceColor','none','EdgeColor','r');
             end
         end
-        function plotSolid(obj,nodes,varargin)
+        function plot(obj,nodes,varargin)
             hold on, axis off;
             daspect([1 1 1]);
             if nargin == 2

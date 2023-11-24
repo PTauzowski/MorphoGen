@@ -15,9 +15,7 @@ classdef LShapeModelLinear < ModelLinear
             obj.fe.setMaterial( material );            
             obj.analysis = LinearElasticityWeighted( obj.fe, obj.mesh, true );           
             obj.analysis.loadClosestNode(xp,["ux" "uy"], P);
-            obj.analysis.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
-            obj.analysis.plotCurrentLoad();
-            obj.analysis.plotSupport();            
+            obj.analysis.fixNodes( fixedEdgeSelector, ["ux" "uy"] );    
             obj.analysis.printProblemInfo();
             obj.x=ones(obj.analysis.getTotalElemsNumber());
             obj.result_number=17;

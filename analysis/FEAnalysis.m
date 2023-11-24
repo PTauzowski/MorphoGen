@@ -251,6 +251,11 @@ classdef (Abstract) FEAnalysis < handle
             sn = sel.select( obj.mesh.nodes );
             plot(obj.mesh.nodes(sn,1), obj.mesh.nodes(sn,2), 'o');
         end
+        function plotFiniteElements(obj)
+             for k=1:max(size(obj.felems,2))
+                 obj.felems{k}.plot(obj.mesh.nodes);
+             end
+        end
         function plotCurrentLoad(obj)
               dim    = size(obj.mesh.nodes,2);
               dg     = norm( max(obj.mesh.nodes) - min(obj.mesh.nodes) );

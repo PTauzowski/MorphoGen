@@ -231,7 +231,7 @@ classdef PlaneElem < FiniteElement
                 patch('Vertices', defnodes, 'Faces', obj.elems(:,obj.sf.contour),'FaceColor','none','EdgeColor','r');
             end
         end
-        function plotSolid(obj,nodes)
+        function plot(obj,nodes)
             hold on, axis off;
             daspect([1 1 1]);
             patch('Vertices', nodes, 'Faces', obj.elems(:,obj.sf.contour),'FaceColor','none','EdgeColor','k');

@@ -14,7 +14,7 @@ classdef (Abstract) FiniteElement < handle
       P = loadLineIntegral(obj, mode, nodes, fedges,dofnames,valueFn);
       computeResults(obj,nodes,q,varargin);
       plotWired(nodes,varargin);
-      plotSolid(nodes);
+      plot(nodes);
       plotMap(nodes,q,mapName,scd);
     end
     
