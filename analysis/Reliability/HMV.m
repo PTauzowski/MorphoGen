@@ -5,19 +5,17 @@ classdef HMV < GradientBasedReliabilityAnalysis
     end
     
     methods
-        function obj = HMV(randVars,g,betat)
-            obj = obj@GradientBasedReliabilityAnalysis(randVars,g);
+        function obj = HMV(randVars,g,transform,betat)
+            obj = obj@GradientBasedReliabilityAnalysis(randVars,g,transform);
             obj.betat=betat;
         end
         
-        function [ Pf, mpp, betar ] = solve(obj,x0)
+        function [ Pf, mpp, betar ] = solve(obj)
             dim = obj.getDim();
             u   = zeros( dim, 1 );
             n   = zeros( dim, 1 );
             n1  = zeros( dim, 1 );
-            dg  = zeros( dim, 1 );
-            epsilon=1.0e-03;
-            [g, dg] = obj.g.compute( u );  
+            [g, dg] = computeGu( obj, u ); 
             if  norm(dg)<1.0E-20
                      Pf = -1;
                      betar = -1;
@@ -25,24 +23,24 @@ classdef HMV < GradientBasedReliabilityAnalysis
                      return;
             end
             g0=g;
-            for k=1:100000
+            for k=1:1000
                 g1 = g;
                 n2 = n1; 
                 n1 = n;  
-                [g, dg] = obj.gradG( u );
-                n = -dg ./ norm(dg);
+                [g, dg] = computeGu( obj, u );
+                n = -dg / norm(dg);
                 beta = norm( u );
-                dgrel = abs((g-g1)/norm(g) );
+                dgrel = abs((g-g1)/norm(dg) );
                 dgabs = abs((g-g1) );
-                if  max( abs(beta-obj.betat), max(dgrel, dgabs) ) < epsilon 
+                if  max( abs(beta-obj.betat), max(dgrel, dgabs) ) < 0.0001  
                      %Pf = normcdf( -norm( u ) );
                      mpp = zeros(dim,1);
                      betar = obj.betat*(1+g/(g0-g));
                      ur = betar*n;
-                     mpp = obj.transformFromU( ur );
-                     [g, corr]  = obj.g.computeValue( mpp );
+                     mpp = obj.transform.toX( ur );
+                     g = obj.g.computeValue( mpp );
                      mpp = n;
-                     Pf = normcdf( -beta );
+                     Pf = normcdf( -betar );
                      % fprintf('iter = %2d\n',k);
                     return;
                 end
@@ -58,8 +56,8 @@ classdef HMV < GradientBasedReliabilityAnalysis
                         u = obj.betat * ne / norm(ne);
                     end
                 end
-
             end
+            fprintf('HMV not converged!\n');
         end
     end
 end

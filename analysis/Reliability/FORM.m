@@ -4,24 +4,17 @@ classdef FORM < GradientBasedReliabilityAnalysis
     end
     
     methods
-        function obj = FORM(g,randVars)
-            obj = obj@GradientBasedReliabilityAnalysis(g,randVars);
+        function obj = FORM(randVars,g,transformU)
+            obj = obj@GradientBasedReliabilityAnalysis(randVars,g,transformU);
         end
         
         function [ Pf, mpp, beta ] = solve(obj)
-            pert = 0.0001;
 
             dim = obj.getDim();
-            J=zeros(dim);
-            un  = zeros( 1, dim );
-            xn  = ones( 1, dim );
-            dg  = zeros( 1, dim );
-            x1  = zeros( 1, dim );
-            %convP = 1.0E100;
-
-            for iter=1:100000
-               xn = obj.transformFromU( un );
-               [g, dg]  = obj.g.compute( xn );
+            u  = zeros( 1, dim );
+            mpp=u;
+            for iter=1:1000
+               [g, dg] = obj.computeGu( u );
                 
                if  norm(dg)<1.0E-20
                      Pf = -1;
@@ -29,13 +22,9 @@ classdef FORM < GradientBasedReliabilityAnalysis
                      mpp=dg;
                      return;
                end
-               for k=1:size(obj.randVars,2)
-                        J(k,k)=normpdf(un(k))/pdf(obj.randVars{k}.pd,xn(k));
-               end
-               dg=dg*J;
-
-                unp  = 1.0 / norm( dg )^2 * ( dg * un' - g ) * dg;
-                du   = unp - un;
+              
+                unext  = 1.0 / norm( dg )^2 * ( dg * u' - g ) * dg;
+                du   = u - unext;
                 conv = norm( du );
 
                 if  size(find( abs(conv) > 50 ),1 ) || iter > 150 
@@ -43,15 +32,17 @@ classdef FORM < GradientBasedReliabilityAnalysis
                      beta = -1;
                      return;
                 end
-                un   = unp;
-                if conv < 0.001 
-                    beta = norm( un );
+                u = unext;
+                if conv < 0.0001 
+                    beta = norm( u );
                     Pf = normcdf( -beta );
-                    mpp = obj.transformFromU( un );
+                    mpp = obj.transform.toX( u );
                     return;
                 end
-
             end
+            fprintf('FORM not converged!\n');
+            Pf=0;
+            beta=0.5;
         end
     end
 end

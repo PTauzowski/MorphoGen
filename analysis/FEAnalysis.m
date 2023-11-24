@@ -135,7 +135,7 @@ classdef (Abstract) FEAnalysis < handle
         function P = getCurrentNodalLoad(obj)
             P=obj.Pnodal;
         end
-         function P = getCurrentFEMlLoad(obj)
+        function P = getCurrentFEMlLoad(obj)
             P=obj.Pfem;
         end
         function P = setCurrentNodalLoad(obj,P)

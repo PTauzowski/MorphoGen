@@ -10,7 +10,7 @@ mesh = Mesh();
 mesh.addRectMesh2D(0, 0, l, c*l, round(1/c*res), res, sf.pattern);
 mesh.addRectMesh2D(0, c*l, c*l, (1-c)*l, res, 1/(1-c)*res, sf.pattern);
 fe=PlaneStressElem( sf, mesh.elems );
-fe.props.h=1;
+
 material = PlaneStressMaterial('mat1');
 material.setElasticIzo(E, nu);
 fe.setMaterial( material );
@@ -33,21 +33,22 @@ analysis.printProblemInfo();
 
 figure;
 randomVariables={RandomVariable("Normal",100,20) RandomVariable("Normal",100,20)};
+transform=IndependentTransformation(randomVariables);
 g=loadPerformanceFunction(analysis,material,mesh.findClosestNode([c*l c*l]),1,17);
 g.loadedEdgeSelectorX=loadedEdgeSelectorX;
 g.loadedEdgeSelectorY=loadedEdgeSelectorY;
 
-% N=10000;
-% mc= MonteCarlo(randomVariables,g,N);
-% [ Pf_mc, p ] = mc.solve();
-% Pf_mc
-% figure, hold on;
-% scatter3(mc.x(p>0,1),mc.x(p>0,2),p(p>0),'MarkerEdgeColor',[0 .8 .8],'Marker','.');
-% scatter3(mc.x(p<=0,1),mc.x(p<=0,2),p(p<=0),'filled','MarkerEdgeColor',[0.5 0 .5],'Marker','o');
+ N=5000;
+ mc= MonteCarlo(randomVariables,g,N);
+ [ Pf_mc, p ] = mc.solve();
+ Pf_mc
+ figure, hold on;
+ scatter3(mc.x(p>0,1),mc.x(p>0,2),p(p>0),'MarkerEdgeColor',[0 .8 .8],'Marker','.');
+ scatter3(mc.x(p<=0,1),mc.x(p<=0,2),p(p<=0),'filled','MarkerEdgeColor',[0.5 0 .5],'Marker','o');
 
-hmv = HMV(randomVariables,g,3);
-form = FORM(randomVariables,g);
+hmv = HMV(randomVariables,g,transform,3);
+form = FORM(randomVariables,g,transform);
 Pf_form = form.solve()
-[ Pf, mpp, betar ] = hmv.solve();
+[ Pf, mpp, betar ] = hmv.solve()
 
 

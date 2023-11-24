@@ -5,40 +5,39 @@ classdef CMV < GradientBasedReliabilityAnalysis
     end
     
     methods
-        function obj = CMV(g,randVars,betat)
-            obj = obj@GradientBasedReliabilityAnalysis(g,randVars);
+        function obj = CMV(randVars,g,transform,betat)
+            obj = obj@GradientBasedReliabilityAnalysis(randVars,g,transform);
             obj.betat=betat;
         end
        
-        function [ Pf, mpp, beta ] = solve(obj,x0)
+        function [ Pf, mpp, beta ] = solve(obj)
             dim = obj.getDim();
             u   = zeros( dim, 1 );
             n   = zeros( dim, 1 );
             n1  = zeros( dim, 1 );
-            epsilon=1.0e-03;
-            [g, dg] = obj.gradG( u );
+            [g, dg] = computeGu( obj, u );
             if  norm(dg)<1.0E-20
                      Pf = -1;
                      beta = -1;
                      mpp=dg;
                      return;
             end
-            for k=1:100000
+            for k=1:1000
                 g1 = g;
                 n2 = n1; 
                 n1 = n;  
-                [g, dg] = obj.gradG( u );
-                %fprintf('G = %5.3f\n',g);
+                [g, dg] = computeGu( obj, u );
+                obj.transform.toX( u )
                 n = -dg ./ norm(dg);
                 beta = norm(u);
-                dgrel = abs((g-g1)/norm(g));
+                dgrel = abs((g-g1)/norm(dg));
                 dgabs = abs((g-g1));
 
-                if  max( abs(beta-obj.betat), max(dgrel, dgabs) ) < epsilon 
+                if  max( abs(beta-obj.betat), max(dgrel, dgabs) ) < 0.0001  
                      Pf = normcdf(-norm(u));
                      mpp = zeros(dim,1);
-                     mpp = obj.transformFromU( u );
-                     [g, ~]  = obj.g.computeValue( mpp );
+                     mpp = obj.transform.toX( u );
+                     g  = obj.g.computeValue( mpp );
                      %fprintf('G = %5.3f\n',g);
                     return;
                 end
@@ -52,6 +51,7 @@ classdef CMV < GradientBasedReliabilityAnalysis
                 end
 
             end
+            fprintf('CMV not converged!\n');
         end
     end
 end

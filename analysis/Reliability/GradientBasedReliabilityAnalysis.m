@@ -1,31 +1,22 @@
-classdef GradientBasedReliabilityAnalysis < ReliabilityAnalysis
+classdef GradientBasedReliabilityAnalysis < ReliabilityAnalysis  
     
-    
+    properties
+        transform;
+    end
+
     methods
-        function obj = GradientBasedReliabilityAnalysis(g, randVars)
-            obj = obj@ReliabilityAnalysis(g,randVars);
+        function obj = GradientBasedReliabilityAnalysis(randVars, g, transform)
+            obj = obj@ReliabilityAnalysis(randVars,g);
+            obj.transform = transform;
+            g.setPerturbation( transform.createXPerturbation(0.00001) );
         end
-        
-        function [g, dg] = gradG( obj, u )
-                dim = obj.getDim();
-                dg  = zeros(dim,1);
-                x   = u*0;
-                pert = 0.0001;
 
-                x = obj.transformToU( u );
-                % gn  = LSF( data, xn );
-                g = obj.g.computeValue( x );
-
-                for k=1:dim
-                        u1 = u;
-                        u1( k )  = u1( k ) + pert;
-                        x = obj.transformToU( u1 );
-                        g = obj.g.computeValue( x );
-                        dg( k ) = ( gk - g ) / pert
-
-                end
-            end
+        function [g, gradU] = computeGu( obj, u  )
+            x = obj.transform.toX ( u );
+            [g, dgX]  = obj.g.compute( x );
+            gradU = obj.transform.gradientToU(x,u,dgX);
         end
+    end
         
 end
 
