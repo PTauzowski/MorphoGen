@@ -163,14 +163,15 @@ classdef (Abstract) FEAnalysis < handle
             di = obj.findDOFsIndices(dofnames);
             for k=1:max(size(obj.felems))
                 fedges = obj.felems{k}.findEdges(obj.mesh.findNodes(edgesSel)); 
-                obj.Pnodal = obj.Pnodal + obj.felems{k}.loadLineIntegral(mode, obj.mesh.nodes, fedges, dofnames, di, obj.Pnodal, valueFn);
+                Pelems = obj.felems{k}.loadLineIntegral(mode, obj.mesh.nodes, fedges, dofnames, di, obj.Pnodal, valueFn);
+                obj.Pnodal = Pelems;
             end
         end
         function elementLoadSurfaceIntegral(obj, mode, faceSel, dofnames, valueFn )
             di = obj.findDOFsIndices(dofnames);
             for k=1:max(size(obj.felems))
                 ffaces = obj.felems{k}.findFaces(obj.mesh.findNodes(faceSel)); 
-                obj.Pnodal = obj.Pnodal + obj.felems{k}.loadSurfaceIntegral(mode, obj.mesh.nodes, ffaces, dofnames, di, obj.Pnodal, valueFn);
+                obj.Pnodal = obj.felems{k}.loadSurfaceIntegral(mode, obj.mesh.nodes, ffaces, dofnames, di, obj.Pnodal, valueFn);
             end
         end
         function fixClosestNode(obj, x, dofnames, values )

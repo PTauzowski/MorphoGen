@@ -7,6 +7,9 @@ y0 = 5;
 a=10;
 hf = 0.5;
 sf = ShapeFunctionL4;
+
+
+
 mesh = Mesh();
 mesh.addRectWithHoleMesh2D( 10, x0, y0, hf, res, sf.pattern );
 %mesh.transformMeshDeg2D( [137 0], -90, [-137 0] );
@@ -15,7 +18,7 @@ material = PlaneStressMaterial('mat1');
 material.setElasticIzo(210000, 0.3);
 fe.props.h=1;
 fe.setMaterial( material );
-fe.plotSolid(mesh.nodes);
+fe.plot(mesh.nodes);
 
 analysis = LinearElasticity( fe, mesh );
 
@@ -25,15 +28,15 @@ loadedEdge3 = Selector( @(x)( abs(x(:,2) -(y0 - a) ) < 0.001 ) );
 loadedEdge4 = Selector( @(x)( abs(x(:,2) -(y0 + a) ) < 0.001 ) );
 circleSelector = Selector( @(x)( abs(((x(:,1) - x0).^2 + (x(:,2) - y0).^2 ) - (a*hf)^2 )) < 0.01 );
 %problem.plotSelectedNodeNumbers( loadedEdgeSelector );
-analysis.elementLoadLineIntegral( "global", loadedEdge1,  "ux", @(x)( x(:,1)*0 + 100 ));
-analysis.elementLoadLineIntegral( "global", loadedEdge2,  "ux", @(x)( x(:,1)*0 - 100 ));
-analysis.elementLoadLineIntegral( "global",  loadedEdge3, "uy", @(x)( x(:,2)*0 + 100 ));
-analysis.elementLoadLineIntegral( "global", loadedEdge4,  "uy", @(x)( x(:,2)*0 - 100 ));
-analysis.elementLoadLineIntegral( "local", circleSelector,  ["ux" "uy"], @(x)( x*0 + [ 0 -100 ] ));
+analysis.elementLoadLineIntegral( "global", loadedEdge1,  ["ux" "uy"], @(x)( x*0 + [ 100 0]));
+analysis.elementLoadLineIntegral( "global", loadedEdge2,  ["ux" "uy"], @(x)( x*0 + [-100 0]));
+analysis.elementLoadLineIntegral( "global", loadedEdge3, ["ux" "uy"], @(x)(  x*0 + [0 100 ]));
+analysis.elementLoadLineIntegral( "global", loadedEdge4, ["ux" "uy"], @(x)(  x*0 + [0 -100 ]));
+%analysis.elementLoadLineIntegral( "local", circleSelector,  ["ux" "uy"], @(x)( x*0 + [ 0 -100 ] ));
 analysis.plotCurrentLoad();
 
-analysis.fixClosestNode( [ x0-a y0-a], ["ux" "uy"], [0 0] );
-analysis.fixClosestNode([ x0+a y0-a],"uy", 0 );
+analysis.fixClosestNode( [ x0-a y0], ["ux" "uy"], [0 0] );
+analysis.fixClosestNode([ x0+a y0],"uy", 0 );
 analysis.plotSupport();
 
 analysis.printProblemInfo();

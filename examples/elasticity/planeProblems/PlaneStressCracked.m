@@ -14,14 +14,14 @@ connectionSelector = Selector( @(x)( ( abs( x(:,2) - l ) < 1.0E-04) & (( x(:,1) 
 elems2 = mesh.connect( connectionSelector, mesh2.nodes, mesh2.elems );
 
 fe1=PlaneStressElem( sf, elems1 );
-fe1.plotSolid(mesh.nodes);
+fe1.plot(mesh.nodes);
 fe1.props.h=1;
 material = PlaneStressMaterial('mat1');
 material.setElasticIzo(210000, 0.3);
 fe1.setMaterial( material );
 
 fe2=PlaneStressElem( sf, elems2 );
-fe2.plotSolid(mesh.nodes);
+fe2.plot(mesh.nodes);
 fe2.props.h=1;
 material = PlaneStressMaterial('mat2');
 material.setElasticIzo(81000, 0.3);
@@ -37,8 +37,8 @@ analysis.fixClosestNode( [ 0 l], ["ux" "uy"], [0 0] );
 analysis.fixClosestNode( [ 2*l l ],["uy"], [0] );
 
 analysis.printProblemInfo();
-fe1.plotSolid(mesh.nodes);
-fe2.plotSolid(mesh.nodes);
+fe1.plot(mesh.nodes);
+fe2.plot(mesh.nodes);
 analysis.plotCurrentLoad();
 analysis.plotSupport();
 analysis.plotSelectedNodes( connectionSelector );

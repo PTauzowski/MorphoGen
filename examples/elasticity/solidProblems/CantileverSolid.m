@@ -9,7 +9,7 @@ mesh.addRectMesh3D( 0, 0, 0, 2*l, l, l, 2*res, res, res, ShapeFn.localNodes);
 fe = SolidElasticElem( ShapeFn, mesh.elems );
 mX = max(mesh.nodes(:,1));
 
-fe.plotSolid(mesh.nodes);
+fe.plot(mesh.nodes);
 fe.props.h=1;
 material = SolidMaterial('mat1');
 material.setElasticIzo(1, 0.3);

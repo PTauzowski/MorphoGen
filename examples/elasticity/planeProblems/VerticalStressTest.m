@@ -11,7 +11,7 @@ material = PlaneStressMaterial('mat1');
 material.setElasticIzo(210000, 0.3);
 fe.setMaterial( material );
 fe.props.h=1;
-fe.plotSolid(mesh.nodes);
+fe.plot(mesh.nodes);
 problem = LinearElasticity( fe, mesh );
 fixedEdgeSelector = Selector( @(x)( abs(x(:,2))<0.001 ) );
 loadedEdgeSelector = Selector( @(x)( abs(x(:,2) - 2*l) <0.001) );

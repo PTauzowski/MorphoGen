@@ -23,16 +23,16 @@ classdef ModelLinear < handle
             obj.analysis.loadClosestNode(obj.xp,["ux" "uy"], P);
         end
 
-        function u = computeDisplacement(obj,E,nu,P)
+        function u = computeDisplacement(obj,E,nu,pressure)
             obj.analysis.clearCurrentLoad();
-            obj.setupVariables(E,nu,P);
+            obj.setupVariables(E,nu,pressure);
             obj.analysis.solveWeighted(obj.x);
             u=obj.analysis.qnodal(obj.result_node,:);
         end
 
-        function sHM = computeHMstress(obj,E,nu,P)
+        function sHM = computeHMstress(obj,E,nu,pressure)
             obj.analysis.clearCurrentLoad();
-            obj.setupVariables(E,nu,P);
+            obj.setupVariables(E,nu,pressure);
             obj.solveWeighted();
             sHM=obj.fe.results.nodal(obj.result_node,obj.result_number);
         end

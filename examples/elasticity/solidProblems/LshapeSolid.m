@@ -12,7 +12,7 @@ loadedFaceSelector = Selector( @(x)( abs(x(:,1) - 2*l)<0.001 ) );
 fe = SolidElasticElem( ShapeFn, mesh.elems );
 mX = max(mesh.nodes(:,1));
 
-fe.plotSolid(mesh.nodes);
+fe.plot(mesh.nodes);
 fe.props.h=1;
 material = SolidMaterial('mat1');
 material.setElasticIzo(1, 0.3);
