@@ -1,9 +1,8 @@
 classdef LShapeModelLinear < ModelLinear
     
     methods
-        function obj = LShapeModelLinear(sf,l,nl,E,nu,xp,P)
+        function obj = LShapeModelLinear(sf,l,res,E,nu,xp,P)
             c=0.4;
-            res = nl;
             obj.xp=xp;
             obj.mesh = Mesh();      
             obj.mesh.addLshape(l,c*l,round(res*c),sf.pattern);

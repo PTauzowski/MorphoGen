@@ -15,7 +15,7 @@ material.setElasticIzo(1, 0.3);
 material.setElasticIzoGrad();
 fe.setMaterial( material );
 fe.props.h=1;
-fe.plotSolid(mesh.nodes);
+fe.plot(mesh.nodes);
 [I,J,V,Ksize] = fe.sparseMatrixAllocDataUniform( ["ux" "uy"] );
 analysis = ElastoPlasticity( fe, mesh );
 analysis.elementLoadLineIntegral( "global",loadedEdgeSelector, ["ux" "uy"], @(x)( x*0 + [0 150] ));

@@ -1,10 +1,5 @@
 classdef PlaneStressElastoPlasticElem < PlaneStressElem
     
-    
-    properties
-        Property1
-    end
-    
     methods
         
         function obj = PlaneStressElastoPlasticElem(sf,elems)
@@ -41,6 +36,7 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
             weights = integrator.weights;
             D = obj.mat.D;
             h = obj.props.h;
+            %qelems = reshape( q( obj.elems',:)', nnodes * ndofs, nelems );
             for k=1:nelems
                 elemX = nodes(obj.elems(k,:),:);
                 Ke = zeros( dim , dim );
@@ -54,7 +50,7 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
                       B(3, 2*j-1) = dNx(2,j);
                       B(3, 2*j)   = dNx(1,j);
                     end
-                    Ke = Ke + abs(detJ) * weights(i) * h * B'*D*B;
+                    Ke = Ke + abs(detJ) * weights(i) * h * B' * obj.mat.tangentD( obj.results.stress(k,i,:), obj.results.dg(k,i) ) * B;
                 end
                 K(:,:,k) = x(k)*Ke;
             end
@@ -103,7 +99,7 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
             obj.results.GPvalues(19,:,:) = obj.resultsdg>0;
          end
 
-         function computeStrain(obj, nodes, q, varargin)
+         function computeStress(obj, nodes, q, dq, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
             ndofs = size( obj.ndofs,2);
@@ -124,9 +120,10 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
             end
             B = zeros(3,dim);
             strain = zeros(3,nelems,nip);
-            strainp = zeros(3,nelems,nip);
+            dstrain=obj.results.strain;
+            pstrain=obj.results.pstrain;
             qelems = reshape( q( obj.elems',:)', nnodes * ndofs, nelems );
-            D = obj.mat.D;
+            dqelems = reshape( dq( obj.elems',:)', nnodes * ndofs, nelems );
             h = obj.props.h;
             for k=1:nelems
                 elemX = nodes(obj.elems(k,:),:);
@@ -141,6 +138,9 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
                       B(3, 2*j)   = dNx(1,j);
                     end
                     strain(:,k,i) = B*qelems(:,k);
+                    dstrain(:,k,i) = B*dqelems(:,k);
+                    estress=(:,k,i) = D*B*qelems(:,k);
+                    [ s, e, ep, dg ] = returnMapping( strain(:,k,i), obj.results.pstrain(:,k,i), dstrain(:,k,i), obj.mat, x  );
                 end
             end
             obj.results.strain = permute(strain,[2,3,1]);
@@ -177,6 +177,12 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
                     [ obj.results.stress(k,i,:), obj.results.strain(k,i,:), obj.results.strainp(k,i,:), obj.results.dg(k,i) ] = obj.returnMapping( obj.results.strain(k,i,:), obj.results.strainp(k,i,:), de(:,i), mat, x );
                 end
             end
+        end
+
+        function computeStress(obj, nodes, qnodal, dq_nodal )
+            obj.computeStrain( nodes, dq_nodal );
+            obj.computeElasticStress()
+            obj.computePlasticStressAndStrainCorrector();
         end
 
         function Rfem = computeInternalForces(obj,nodes,Rfem,V)

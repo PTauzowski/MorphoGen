@@ -12,7 +12,7 @@ modelL27 = CantileverSolidModel(ShapeFunctionL27,l,res,E,nu,pressure);
 %modelL64 = ConstStressSolidModel(ShapeFunctionL64,l,res,E,nu,pressure);
 %modelT6  = ConstStressSolidModel(ShapeFunctionT6,l,res,E,nu,pressure);
 
-model=modelL8;
+model=modelL27;
 
 model.plotModel();
 model.solveWeighted();
