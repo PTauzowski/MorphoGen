@@ -12,19 +12,20 @@ classdef ElastoPlasticity < NonlinearAnalysis
         end
 
         function R = computeResidualVector(obj,V)
-            R=obj.Pfem(:,1);
-            R(:)=0;
-            for k=1:max(size(obj.felems))
-                %obj.felems{k}.computeStrain( obj.mesh.nodes, obj.qnodal );
-                %obj.felems{k}.computeElasticStress()
-                %obj.felems{k}.computePlasticStressAndStrainCorrector();
-                obj.felems{k}.computeStress( obj.mesh.nodes, obj.qnodal, obj.dq_nodal );
-                R = obj.felems{k}.computeInternalForces(mesh.nodes,V,R);
-            end
+            refR=obj.Pfem(:,1);
+            refR(:)=0;
+            % for k=1:max(size(obj.felems))
+            %     obj.felems{k}.computeResults( obj.mesh.nodes, obj.qnodal, obj.dq_nodal );
+            %     R = obj.felems{k}.computeInternalForces(mesh.nodes,V,R);
+            % end
+            cellfun(@(x) x.computeStress( obj.mesh.nodes, obj.qnodal, obj.dq_nodal ), obj.felems);
+            R = sum(cellfun( @(x) x.computeInternalForces(obj.mesh.nodes,V,refR), obj.felems));
         end
         
         function solve(obj)
+            obj.initializeResults();
             obj.qfem = NewtonRaphsonProcedure(obj);
+            cellfun(@(x) x.computeResults( ),obj.felems);
             obj.qnodal = obj.fromFEMVector(obj.qfem);
         end 
 

@@ -9,6 +9,7 @@ classdef PlaneStressElem < PlaneElem
                  "stress member syy" "stress member sxy" "principal strain e1" "principal strain e2" "maximal shear strain"...
                  "principal strain angle" "strain tensor trace Tr(e)" "volume change" "principal stress s1" "principal stress s2" ...
                  "maximal shear stress" "principal stress angle" "Huber-Mises stress" "Top opt density"];
+            
         end
         function setIsotropicMaterial( obj, E, nu, rho )
             D = E/(1-nu*nu)*[ 1  nu 0; ...
@@ -17,6 +18,14 @@ classdef PlaneStressElem < PlaneElem
             M =  diag([rho rho]); 
             obj.props.D = D;
             obj.props.M = M;
+        end
+        function initializeResults(obj)
+            nelems = size(obj.elems,1);
+            integrator = obj.sf.createIntegrator();
+            nip = size(integrator.points,1);
+            obj.results.gp.strain = zeros(3,nelems,nip);
+            obj.results.gp.stress = zeros(3,nelems,nip);
+            obj.results.gp.all = zeros(size(obj.results.names,2),nelems,nip);
         end
         function computeResults(obj,nodes,q, varargin)
             nelems = size(obj.elems,1);
@@ -38,9 +47,6 @@ classdef PlaneStressElem < PlaneElem
                 dNtrc{i}=dNtr(:,:,i);
             end
             B = zeros(3,dim);
-            strain = zeros(3,nelems,nip);
-            stress = zeros(3,nelems,nip);
-            obj.results.GPvalues = zeros(size(obj.results.names,2),nelems,nip);
             D = obj.mat.D;
             qelems = reshape( q( obj.elems',:)', nnodes * ndofs, nelems );
             for k=1:nelems
@@ -57,18 +63,18 @@ classdef PlaneStressElem < PlaneElem
                     end
                     e = B*qelems(:,k); %reshape( q(obj.elems(k,:),:)', nnodes * ndofs,1 );
                     s = x(k)*D*e;
-                    strain(:,k,i) = e;
-                    stress(:,k,i) = s;
+                    obj.results.gp.strain(:,k,i) = e;
+                    obj.results.gp.stress(:,k,i) = s;
                 end
             end
-            obj.results.strain = permute(strain,[2,3,1]);
-            obj.results.stress = permute(stress,[2,3,1]);
-            exx = obj.results.strain(:,:,1);
-            eyy = obj.results.strain(:,:,2);
-            exy = obj.results.strain(:,:,3);
-            sxx = obj.results.stress(:,:,1);
-            syy = obj.results.stress(:,:,2);
-            sxy = obj.results.stress(:,:,3);
+            %obj.results.gp.strain = permute(strain,[2,3,1]);
+            %obj.results.gp.stress = permute(stress,[2,3,1]);
+            exx = obj.results.gp.strain(1,:,:);
+            eyy = obj.results.gp.strain(2,:,:);
+            exy = obj.results.gp.strain(3,:,:);
+            sxx = obj.results.gp.stress(1,:,:);
+            syy = obj.results.gp.stress(2,:,:);
+            sxy = obj.results.gp.stress(3,:,:);
             e1 =  ( exx + eyy ) ./ 2.0 + sqrt( ( (exx - eyy) ./ 2.0 ) .* ( (exx - eyy) ./ 2.0 ) + ( exy .* exy )  );
             e2 =  ( exx + eyy ) ./ 2.0 - sqrt( ( (exx - eyy) ./ 2.0 ) .* ( (exx - eyy) ./ 2.0 ) + ( exy .* exy )  );
             maxt = ( e1 - e2 ) ./ 2.0;
@@ -80,24 +86,25 @@ classdef PlaneStressElem < PlaneElem
             maxs = ( s1 - s2 ) ./ 2.0;
             stheta = 2 .* atan( sxy ./ (sxx - syy) );
             sHM = sqrt(  s1 .* s1 - s1 .* s2 + s2 .* s2 );
-            obj.results.GPvalues(1,:,:) = exx;
-            obj.results.GPvalues(2,:,:) = eyy;
-            obj.results.GPvalues(3,:,:) = exy;
-            obj.results.GPvalues(4,:,:) = sxx;
-            obj.results.GPvalues(5,:,:) = syy;
-            obj.results.GPvalues(6,:,:) = sxy;
-            obj.results.GPvalues(7,:,:) = e1; 
-            obj.results.GPvalues(8,:,:) = e2;
-            obj.results.GPvalues(9,:,:) = maxt;
-            obj.results.GPvalues(10,:,:) = etheta;
-            obj.results.GPvalues(11,:,:) = etr;
-            obj.results.GPvalues(12,:,:) = vol;
-            obj.results.GPvalues(13,:,:) = s1;
-            obj.results.GPvalues(14,:,:) = s2;
-            obj.results.GPvalues(15,:,:) = maxs;
-            obj.results.GPvalues(16,:,:) = stheta;
-            obj.results.GPvalues(17,:,:) = sHM;
-            obj.results.GPvalues(18,:,:) = repmat(x,1,nip);
+           
+            obj.results.gp.all(1,:,:) = exx(1,:,:);
+            obj.results.gp.all(2,:,:) = eyy(1,:,:);
+            obj.results.gp.all(3,:,:) = exy(1,:,:);
+            obj.results.gp.all(4,:,:) = sxx(1,:,:);
+            obj.results.gp.all(5,:,:) = syy(1,:,:);
+            obj.results.gp.all(6,:,:) = sxy(1,:,:);
+            obj.results.gp.all(7,:,:) = e1(1,:,:); 
+            obj.results.gp.all(8,:,:) = e2(1,:,:);
+            obj.results.gp.all(9,:,:) = maxt(1,:,:);
+            obj.results.gp.all(10,:,:) = etheta(1,:,:);
+            obj.results.gp.all(11,:,:) = etr(1,:,:);
+            obj.results.gp.all(12,:,:) = vol(1,:,:);
+            obj.results.gp.all(13,:,:) = s1(1,:,:);
+            obj.results.gp.all(14,:,:) = s2(1,:,:);
+            obj.results.gp.all(15,:,:) = maxs(1,:,:);
+            obj.results.gp.all(16,:,:) = stheta(1,:,:);
+            obj.results.gp.all(17,:,:) = sHM(1,:,:);
+            obj.results.gp.all(18,:,:) = repmat(x,1,nip);
         end
         function [HMs, dHMs] = computeHMstress(obj,nodes, nelem, q, ddq, penalty, varargin)
             nelems = size(obj.elems,1);

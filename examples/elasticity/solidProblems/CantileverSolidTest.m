@@ -21,8 +21,8 @@ model.fe.plotWired(model.mesh.nodes,model.analysis.qnodal,0.1);
 
 model.setResultNode([l 0 0]);
 model.computeDisplacement(E,nu,pressure)
-model.setResultNode([l l/4 0]);
+model.setResultNode([l/2 0 0]);
 model.computeHMstress(E,nu,pressure)
-model.setResultNode([l/2 l/4 l/4]);
+model.setResultNode([l/2 l/2 0]);
 model.computeHMstress(E,nu,pressure)
 

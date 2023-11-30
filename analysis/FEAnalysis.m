@@ -187,36 +187,41 @@ classdef (Abstract) FEAnalysis < handle
            end
            obj.supports(snodes, obj.findDOFsIndices( dofnames ) ) = ones( size(snodes,1), size(dofnames,2) );
         end
-        function computeElementResults(obj,q,varargin)
+        function initializeResults(obj)
+            cellfun(@(x) x.initializeResults(),obj.felems);
+        end
+        function computeElementResults(obj,varargin)
             resnumber=0;
             nnodes=size(obj.mesh.nodes,1);
-            for k=1:max(size(obj.felems))
-                if ( nargin == 3 )
-                    obj.felems{k}.computeResults( obj.mesh.nodes,obj.qnodal,varargin{1});
-                    %obj.felems{k}.computeResults( obj.nodes,obj.fromFEMVector(q),varargin{1});
-                else
-                    obj.felems{k}.computeResults(obj.mesh.nodes,obj.qnodal);
-                    %obj.felems{k}.computeResults(obj.nodes,obj.fromFEMVector(q));
-                end
-                GPresults=permute( obj.felems{k}.results.GPvalues,[3,1,2]);
-                gpres = GPresults( 1,:,: );  
-                resnumber=max(resnumber,size( gpres, 2 ));
+            % for l=1:max(size(obj.felems))
+            %     if ( nargin == 2 )
+            %         obj.felems{l}.computeResults( obj.mesh.nodes,obj.qnodal,varargin{1});
+            %         cellfun(@(x) x.computeResults( obj.mesh.nodes,obj.qnodal,varargin{1}),obj.felems);
+            %     else
+            %         obj.felems{l}.computeResults(obj.mesh.nodes,obj.qnodal);
+            %         cellfun(@(x) x.computeResults( obj.mesh.nodes,obj.qnodal ),obj.felems);
+            %     end
+            %     resnumber=max(resnumber,size( obj.felems{l}.results.gp.all, 1 ));
+            % end
+            if ( nargin == 2 )
+                cellfun(@(x) x.computeResults( obj.mesh.nodes,obj.qnodal,varargin{1}),obj.felems);
+            else
+                cellfun(@(x) x.computeResults( obj.mesh.nodes,obj.qnodal ),obj.felems);
             end
+            resnumber = max(cellfun( @(x) size(x.results.gp.all,1), obj.felems),1);
             nres = zeros( nnodes, resnumber );
             ires = zeros( nnodes, resnumber );
-            for k=1:max(size(obj.felems))
-                GPresults = permute( obj.felems{k}.results.GPvalues,[3,1,2]);
-                gpres = GPresults( 1,:,: );  % gp x results
-                el = obj.felems{k}.elems;
-                sfv = obj.felems{k}.sf.getRecoveryMatrix();
+            for l=1:max(size(obj.felems))
+                el = obj.felems{l}.elems;
+                sfv=obj.felems{l}.sf.getRecoveryMatrix();
                 for k=1:size(el,1)
-                  neres = sfv * GPresults(:,:,k);
+                  neres=tensorprod(sfv, obj.felems{l}.results.gp.all(:,k,:),2,3);
                   nres( el( k, : ), : ) = nres( el( k, : ), : ) + neres;
                   ires( el( k, : ), : ) = ires( el( k, : ), : ) + 1;
                 end
             end
-            for k=1:max(size(obj.felems))
-              obj.felems{k}.results.nodal = nres ./ ires;
+            for l=1:max(size(obj.felems))
+              obj.felems{l}.results.nodal.all = nres ./ ires;
             end
         end
         function printProblemInfo(obj)

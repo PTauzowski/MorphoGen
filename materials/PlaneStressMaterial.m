@@ -32,7 +32,7 @@ classdef PlaneStressMaterial < Material
 
         function [ Dt ] = tangentD( obj, s, dg )
             if  dg == 0
-                Dt = mat.D;
+                Dt = obj.D;
                 return;
             end                
             P   = 1/3 * [ 2 -1 0; -1 2 0; 0 0 6];

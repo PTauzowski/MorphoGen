@@ -11,7 +11,7 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
                  "principal strain angle" "strain tensor trace Tr(e)" "volume change" "principal stress s1" "principal stress s2" ...
                  "maximal shear stress" "principal stress angle" "Huber-Mises stress" "Top opt density" "plastic zone"];
         end
-
+  
         function K = elastoPlasticTangentMatrix(obj, nodes, q, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
@@ -36,7 +36,6 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
             weights = integrator.weights;
             D = obj.mat.D;
             h = obj.props.h;
-            %qelems = reshape( q( obj.elems',:)', nnodes * ndofs, nelems );
             for k=1:nelems
                 elemX = nodes(obj.elems(k,:),:);
                 Ke = zeros( dim , dim );
@@ -50,14 +49,71 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
                       B(3, 2*j-1) = dNx(2,j);
                       B(3, 2*j)   = dNx(1,j);
                     end
-                    Ke = Ke + abs(detJ) * weights(i) * h * B' * obj.mat.tangentD( obj.results.stress(k,i,:), obj.results.dg(k,i) ) * B;
+                    Ke = Ke + abs(detJ) * weights(i) * h * B' * obj.mat.tangentD( obj.results.gp.stress(:,k,i), obj.results.gp.dg(k,i) ) * B;
                 end
                 K(:,:,k) = x(k)*Ke;
             end
             K=K(:);
         end
 
-         function computeResults(obj)
+        function initializeResults(obj)
+            nelems = size(obj.elems,1);
+            integrator = obj.sf.createIntegrator();
+            nip = size(integrator.points,1);
+            obj.results.gp.strain = zeros(3,nelems,nip);
+            obj.results.gp.pstrain = zeros(3,nelems,nip);
+            obj.results.gp.stress = zeros(3,nelems,nip);
+            obj.results.gp.dg = zeros(nelems,nip);
+            obj.results.gp.all = zeros(size(obj.results.names,2),nelems,nip);
+        end
+        
+        function computeStress(obj, nodes, q, dq, varargin)
+            nelems = size(obj.elems,1);
+            nnodes = size(obj.elems,2);
+            ndofs = size( obj.ndofs,2);
+            dim = nnodes * ndofs;
+            if ( nargin == 5 ) 
+                x=varargin{1};
+            else
+                x=ones(nelems,1);
+            end
+            integrator = obj.sf.createIntegrator();
+            nip = size(integrator.points,1);
+            dN = obj.sf.computeGradient( integrator.points );
+            nnd = size(dN,1); 
+            dNtr = permute(dN,[2,1,3]);
+            dNtrc = cell(size(dNtr,3),1);
+            for i=1:nip
+                dNtrc{i}=dNtr(:,:,i);
+            end
+            B = zeros(3,dim);           
+            qelems = reshape( q( obj.elems',:)', nnodes * ndofs, nelems );
+            dqelems = reshape( dq( obj.elems',:)', nnodes * ndofs, nelems );
+            h = obj.props.h;
+            for k=1:nelems
+                elemX = nodes(obj.elems(k,:),:);
+                for i=1:nip
+                    J = dNtrc{i}*elemX;
+                    detJ = J(1,1) * J(2,2) - J(1,2) * J(2,1);
+                    dNx = (1 / detJ * [ J(2,2) -J(1,2); -J(2,1)  J(1,1) ]) * dNtrc{i};
+                    for j = 1:nnd
+                      B(1, 2*j-1) = dNx(1,j);
+                      B(2, 2*j)   = dNx(2,j);
+                      B(3, 2*j-1) = dNx(2,j);
+                      B(3, 2*j)   = dNx(1,j);
+                    end
+                    %e = B*qelems(:,k);
+                    de = B*dqelems(:,k);
+                    [ obj.results.gp.stress(:,k,i), obj.results.gp.strain(:,k,i), obj.results.gp.pstrain(:,k,i), obj.results.gp.dg(k,i) ]  = obj.returnMapping( obj.results.gp.strain(:,k,i), obj.results.gp.pstrain(:,k,i), de, x(k)  );
+                end
+            end
+            %obj.results.gp.strain = permute(strain,[2,3,1]);
+            %obj.results.gp.pstrain = permute(strain,[2,3,1]);
+            %obj.results.dg=zeros(nelems,nip);
+            
+         end
+
+          function computeResults(obj)
             nelems = size(obj.elems,1);
             nip = size(integrator.points,1);
             obj.results.GPvalues = zeros(size(obj.results.names,2),nelems,nip);
@@ -99,57 +155,6 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
             obj.results.GPvalues(19,:,:) = obj.resultsdg>0;
          end
 
-         function computeStress(obj, nodes, q, dq, varargin)
-            nelems = size(obj.elems,1);
-            nnodes = size(obj.elems,2);
-            ndofs = size( obj.ndofs,2);
-            dim = nnodes * ndofs;
-            if ( nargin == 4 )
-                x=varargin{1};
-            else
-                x=ones(nelems,1);
-            end
-            integrator = obj.sf.createIntegrator();
-            nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
-            nnd = size(dN,1); 
-            dNtr = permute(dN,[2,1,3]);
-            dNtrc = cell(size(dNtr,3),1);
-            for i=1:nip
-                dNtrc{i}=dNtr(:,:,i);
-            end
-            B = zeros(3,dim);
-            strain = zeros(3,nelems,nip);
-            dstrain=obj.results.strain;
-            pstrain=obj.results.pstrain;
-            qelems = reshape( q( obj.elems',:)', nnodes * ndofs, nelems );
-            dqelems = reshape( dq( obj.elems',:)', nnodes * ndofs, nelems );
-            h = obj.props.h;
-            for k=1:nelems
-                elemX = nodes(obj.elems(k,:),:);
-                for i=1:nip
-                    J = dNtrc{i}*elemX;
-                    detJ = J(1,1) * J(2,2) - J(1,2) * J(2,1);
-                    dNx = (1 / detJ * [ J(2,2) -J(1,2); -J(2,1)  J(1,1) ]) * dNtrc{i};
-                    for j = 1:nnd
-                      B(1, 2*j-1) = dNx(1,j);
-                      B(2, 2*j)   = dNx(2,j);
-                      B(3, 2*j-1) = dNx(2,j);
-                      B(3, 2*j)   = dNx(1,j);
-                    end
-                    strain(:,k,i) = B*qelems(:,k);
-                    dstrain(:,k,i) = B*dqelems(:,k);
-                    estress=(:,k,i) = D*B*qelems(:,k);
-                    [ s, e, ep, dg ] = returnMapping( strain(:,k,i), obj.results.pstrain(:,k,i), dstrain(:,k,i), obj.mat, x  );
-                end
-            end
-            obj.results.strain = permute(strain,[2,3,1]);
-            obj.results.strainp = permute(strain,[2,3,1]);
-            obj.results.strainp(:) = 0;
-            obj.results.dg=zeros(nelems,nip);
-            
-         end
-
         function computeElasticStress(obj, varargin)
             nelems = size(obj.elems,1);
             integrator = obj.sf.createIntegrator();
@@ -174,22 +179,20 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
             nip = size(integrator.points,1);     
             for k=1:nelems
                 for i=1:nip
-                    [ obj.results.stress(k,i,:), obj.results.strain(k,i,:), obj.results.strainp(k,i,:), obj.results.dg(k,i) ] = obj.returnMapping( obj.results.strain(k,i,:), obj.results.strainp(k,i,:), de(:,i), mat, x );
+                    [ obj.results.stress(k,i,:), obj.results.strain(k,i,:), obj.results.strainp(k,i,:), obj.results.dg(k,i) ] = obj.returnMapping( obj.results.strain(k,i,:), obj.results.strainp(k,i,:), de(:,i), x(k) );
                 end
             end
         end
 
-        function computeStress(obj, nodes, qnodal, dq_nodal )
-            obj.computeStrain( nodes, dq_nodal );
-            obj.computeElasticStress()
-            obj.computePlasticStressAndStrainCorrector();
-        end
-
-        function Rfem = computeInternalForces(obj,nodes,Rfem,V)
+        function Rfem = computeInternalForces(obj,nodes,refR,V)
             integrator = obj.sf.createIntegrator();
             nip = size(integrator.points,1);     
             ndofs = size( obj.ndofs,2);
+            nnodes = size(obj.elems,2);
+            nelems = size(obj.elems,1);
             dim = nnodes * ndofs;
+            V=reshape(V,nelems,nnodes);
+            Rfem=refR;
             B = zeros(3,dim);
             dN = obj.sf.computeGradient( integrator.points );
             nnd = size(dN,1); 
@@ -198,11 +201,11 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
             for i=1:nip
                 dNtrc{i}=dNtr(:,:,i);
             end
-            Rg = zeros( size(B,2), ngp );
+            Rg = zeros( size(B,2), nip );
             h = obj.props.h;
             for k=1:nelems
                 elemX = nodes(obj.elems(k,:),:);
-                Rfem(V(k,:)) = 0;
+                %Rfem(V(k,:)) = 0;
                 for i=1:nip
                     J = dNtrc{i}*elemX;
                     detJ = J(1,1) * J(2,2) - J(1,2) * J(2,1);
@@ -213,21 +216,21 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
                       B(3, 2*j-1) = dNx(2,j);
                       B(3, 2*j)   = dNx(1,j);
                     end
-                    Rg(:,i)= abs(detJ) * integrator.weights(i) * h  * B' * obj.results.GPvalues.stress(k,i,:); 
+                    Rfem(V(k,:)) = Rfem(V(k,:)) + abs(detJ) * integrator.weights(i) * h  * B' * obj.results.gp.stress(:,k,i); 
                 end
-                Rfem(V(k,:)) = Rfem(V(k,:)) + sum( Rg, 2 );
+                %Rfem(V(k,:)) = Rfem(V(k,:)) + sum( Rg, 2 );
             end    
         end
 
-        function [ s, e, ep, dg ] = returnMapping( en, epn, de, x  )
+        function [ s, e, ep, dg ] = returnMapping( obj, en, epn, de, x  )
 
             % (i) elastic predictor
             
-                G    = x * mat.E / 2 / ( 1 + mat.nu );
+                G    = x^2 * obj.mat.E / 2 / ( 1 + obj.mat.nu );
                 eTr  = en  + de; % trial strain
                 epTr = epn; % permanent plastic strain
-                sTr  = x * mat.D * eTr;
-                sy   = mat.sy;
+                sTr  = x * obj.mat.D * eTr;
+                sy   = obj.mat.sy;
             
             % (iI) plasticity condition
                 a1 = ( sTr(1) + sTr(2) )^ 2;
@@ -248,7 +251,7 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
                     dg    = 0;
                     ep(:) = 0;
                 else
-                    [ dg, ksi ] = NR4RetMap( sTr, FiTr, mat, x );
+                    [ dg, ksi ] = NR4RetMap( sTr, FiTr, x );
                     A11 = 3 * (1-mat.nu) / (3*(1-mat.nu)+x*mat.E*dg);
                     A22 = 1 / (1+2*G*dg);
                     A33 = A22;
@@ -260,12 +263,12 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
                 end
         end
 
-        function [ dg, ksi ] = NR4RetMap( sTr, FiTr, mat, x )
+        function [ dg, ksi ] = NR4RetMap( sTr, FiTr, x )
 
             % (1) initial guess
-                E  = x * mat.E;
-                sy = mat.sy;
-                nu = mat.nu;
+                E  = x^2 * obj.mat.E;
+                sy = obj.mat.sy;
+                nu = obj.mat.nu;
                 G  = E / 2 / ( 1 + nu );
                 dg  = 0;
                 ksi = 0;

@@ -202,7 +202,15 @@ classdef SolidElasticElem < FiniteElement
             end
             K=K(:);
         end
-        function computeResults(obj,nodes,q, varargin)
+        function initializeResults(obj)
+            nelems = size(obj.elems,1);
+            integrator = obj.sf.createIntegrator();
+            nip = size(integrator.points,1);
+            obj.results.gp.strain = zeros(6,nelems,nip);
+            obj.results.gp.stress = zeros(6,nelems,nip);
+            obj.results.gp.all = zeros(size(obj.results.names,2),nelems,nip);
+        end
+        function computeResults(obj,nodes, q, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
             ndofs = size( obj.ndofs,2);
@@ -224,7 +232,7 @@ classdef SolidElasticElem < FiniteElement
             B = zeros(6,dim);
             strain = zeros(6,nelems,nip);
             stress = zeros(6,nelems,nip);
-            obj.results.GPvalues = zeros(size(obj.results.names,2),nelems,nip);
+            obj.results.gp.all = zeros(size(obj.results.names,2),nelems,nip);
             D = obj.mat.D;
             qelems = reshape( q( obj.elems',:)', nnodes * ndofs, nelems );
             for k=1:nelems
@@ -251,39 +259,38 @@ classdef SolidElasticElem < FiniteElement
                           B(6, 3*j-1) = dNx(1,j);
                     end
                     e = B*qelems(:,k); 
-                    s = x(k)*D*e;
+                    stress(:,k,i) = x(k)*D*e;
                     strain(:,k,i) = e;
-                    stress(:,k,i) = s;
                 end
             end
-            obj.results.strain = permute(strain,[2,3,1]);
-            obj.results.stress = permute(stress,[2,3,1]);
-            exx = obj.results.strain(:,:,1);
-            eyy = obj.results.strain(:,:,2);
-            ezz = obj.results.strain(:,:,3);
-            exy = obj.results.strain(:,:,4);
-            eyz = obj.results.strain(:,:,5);
-            exz = obj.results.strain(:,:,6);
-            sxx = obj.results.stress(:,:,1);
-            syy = obj.results.stress(:,:,2);
-            szz = obj.results.stress(:,:,3);
-            sxy = obj.results.stress(:,:,4);
-            syz = obj.results.stress(:,:,5);
-            sxz = obj.results.stress(:,:,6);
+            obj.results.gp.strain = permute(strain,[2,3,1]);
+            obj.results.gp.stress = permute(stress,[2,3,1]);
+            exx = obj.results.gp.strain(:,:,1);
+            eyy = obj.results.gp.strain(:,:,2);
+            ezz = obj.results.gp.strain(:,:,3);
+            exy = obj.results.gp.strain(:,:,4);
+            eyz = obj.results.gp.strain(:,:,5);
+            exz = obj.results.gp.strain(:,:,6);
+            sxx = obj.results.gp.stress(:,:,1);
+            syy = obj.results.gp.stress(:,:,2);
+            szz = obj.results.gp.stress(:,:,3);
+            sxy = obj.results.gp.stress(:,:,4);
+            syz = obj.results.gp.stress(:,:,5);
+            sxz = obj.results.gp.stress(:,:,6);
             sHM = sqrt( 1/2*( (sxx-syy).^2+(syy-szz).^2+(szz-sxx).^2 )+3*( sxy.^2+syz.^2+sxz.^2) ) ;
-            obj.results.GPvalues(1,:,:) = exx;
-            obj.results.GPvalues(2,:,:) = eyy;
-            obj.results.GPvalues(3,:,:) = ezz;
-            obj.results.GPvalues(4,:,:) = exy;
-            obj.results.GPvalues(5,:,:) = eyz;
-            obj.results.GPvalues(6,:,:) = exz;
-            obj.results.GPvalues(7,:,:) = sxx;
-            obj.results.GPvalues(8,:,:) = syy;
-            obj.results.GPvalues(9,:,:) = szz;
-            obj.results.GPvalues(10,:,:) = sxy;
-            obj.results.GPvalues(11,:,:) = syz;
-            obj.results.GPvalues(12,:,:) = sxz;
-            obj.results.GPvalues(13,:,:) = sHM;
+            obj.results.gp.all(1,:,:) = exx;
+            obj.results.gp.all(2,:,:) = eyy;
+            obj.results.gp.all(3,:,:) = ezz;
+            obj.results.gp.all(4,:,:) = exy;
+            obj.results.gp.all(5,:,:) = eyz;
+            obj.results.gp.all(6,:,:) = exz;
+            obj.results.gp.all(7,:,:) = sxx;
+            obj.results.gp.all(8,:,:) = syy;
+            obj.results.gp.all(9,:,:) = szz;
+            obj.results.gp.all(10,:,:) = sxy;
+            obj.results.gp.all(11,:,:) = syz;
+            obj.results.gp.all(12,:,:) = sxz;
+            obj.results.gp.all(13,:,:) = sHM;
         end
         function faces = findFaces( obj, fnodes )
               allfaces = obj.multiObjectList( obj.sf.faces );
@@ -417,7 +424,7 @@ classdef SolidElasticElem < FiniteElement
                     title("displacement "+valueName);
                 end
             else
-                C = obj.results.nodal(:,valueIndex);
+                C = obj.results.nodal.all(:,valueIndex);
                 title(obj.results.descriptions(valueIndex));
             end
              allfaces = reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))';

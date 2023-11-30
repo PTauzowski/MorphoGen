@@ -5,7 +5,7 @@ classdef CantileverModelLinear < ModelLinear
             c=2;
             obj.xp=xp;
             obj.mesh = Mesh();      
-            obj.mesh.addRectMesh2D( 0, 0, l, l/c, round(c*nh), nh, sf.pattern )
+            obj.mesh.addRectMesh2D( 0, 0, l, l/c, round(c*nh), nh, sf.pattern );
             fixedEdgeSelector = Selector( @(x)( abs(x(:,1)) < 0.001 ) );
 
             obj.fe=PlaneStressElem( sf, obj.mesh.elems );

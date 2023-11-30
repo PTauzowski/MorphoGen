@@ -12,6 +12,7 @@ classdef (Abstract) FiniteElement < handle
     methods(Abstract)
       N = shapeMatrix( obj, points );
       P = loadLineIntegral(obj, mode, nodes, fedges,dofnames,valueFn);
+      initializeResults(obj);
       computeResults(obj,nodes,q,varargin);
       plotWired(nodes,varargin);
       plot(nodes);
@@ -57,7 +58,7 @@ classdef (Abstract) FiniteElement < handle
             V = adofs;
         end
         
-        function fromGPToNodes(obj,nnodes)
+        function fromGPToNodal(obj,nnodes)
               GPresults = permute( obj.results.GPvalues,[3,1,2]);
               gpres = GPresults( 1,:,: );  % gp x results
               el = obj.elems;
@@ -65,7 +66,7 @@ classdef (Abstract) FiniteElement < handle
               ires = zeros( nnodes, size( gpres, 2 ) );
               sfv = obj.sf.getRecoveryMatrix();
               for k=1:size(el,1)
-                  neres = sfv * GPresults(:,:,k);
+                  neres = sfv * GPresults(:,:,k); %tensorprod(sfv,GPresults,3)
                   nres( el( k, : ), : ) = nres( el( k, : ), : ) + neres;
                   ires( el( k, : ), : ) = ires( el( k, : ), : ) + 1;
               end

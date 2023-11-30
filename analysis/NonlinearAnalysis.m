@@ -18,7 +18,7 @@ classdef NonlinearAnalysis < FEAnalysis
         
         function qfem = NewtonRaphsonProcedure(obj)
             conv=1.0;
-            [I,J,~,~] = obj.globalMatrixIndices();
+            [I,J,V,~] = obj.globalMatrixIndices();
             solver =  LinearEquationsSystem(I,J,obj.supports);
             obj.prepareRHSVectors();
             obj.iteration=1;
@@ -33,7 +33,7 @@ classdef NonlinearAnalysis < FEAnalysis
                 end
                 obj.qnodal = obj.fromFEMVector( obj.qfem );
                 obj.dq_nodal = obj.fromFEMVector( obj.dq_fem );
-                R=obj.computeResidualVector();
+                R=obj.computeResidualVector(V);
                 dP=obj.Pfem(:,0)-R;
                 conv  = norm( dP ) / norm( R );
                 obj.iteration = obj.iteration + 1;

@@ -252,7 +252,7 @@ classdef PlaneElem < FiniteElement
                     title("displacement "+valueName);
                 end
             else
-                C = obj.results.nodal(:,valueIndex);
+                C = obj.results.nodal.all(:,valueIndex);
                 title(obj.results.descriptions(valueIndex));
             end
             patch('Vertices', nodes+scd*q, 'Faces', obj.elems(:,obj.sf.contour), 'FaceVertexCData', C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );

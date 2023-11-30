@@ -13,6 +13,7 @@ classdef ModelLinear < handle
         
         function solveWeighted(obj)
             obj.analysis.solveWeighted(obj.x);
+            obj.analysis.initializeResults();
             obj.analysis.computeElementResults();
         end
 
@@ -34,7 +35,7 @@ classdef ModelLinear < handle
             obj.analysis.clearCurrentLoad();
             obj.setupVariables(E,nu,pressure);
             obj.solveWeighted();
-            sHM=obj.fe.results.nodal(obj.result_node,obj.result_number);
+            sHM=obj.fe.results.nodal.all(obj.result_node,obj.result_number);
         end
 
         function plotModel( obj )
