@@ -23,6 +23,7 @@ classdef NonlinearAnalysis < FEAnalysis
             obj.prepareRHSVectors();
             obj.iteration=1;
             dP = obj.getCurrentFEMlLoad();
+            P=obj.Pfem(:,1);
             while conv > obj.convEnd
                 Kt = obj.globalSolutionDependendMatrixAggregation( obj.tangentMatrixProcedureName );
                 obj.dq_fem = solver.solve( Kt, dP );
@@ -34,8 +35,8 @@ classdef NonlinearAnalysis < FEAnalysis
                 obj.qnodal = obj.fromFEMVector( obj.qfem );
                 obj.dq_nodal = obj.fromFEMVector( obj.dq_fem );
                 R=obj.computeResidualVector(V);
-                dP=obj.Pfem(:,0)-R;
-                conv  = norm( dP ) / norm( R );
+                dP=P-R;
+                conv  = norm( dP(solver.freedofs) ) / norm( R(solver.freedofs) );
                 obj.iteration = obj.iteration + 1;
             end
         end

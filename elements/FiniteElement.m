@@ -52,10 +52,10 @@ classdef (Abstract) FiniteElement < handle
             Kdim  = size(obj.ndofs,2) * nnodes;
             Ksize = Kdim * Kdim;
             [ix, iy] = meshgrid( 1:Kdim, 1:Kdim );
-            adofs = (repelem( obj.elems, 1, size(obj.ndofs,2))-1)*size(gdofs,2)+repmat(idofs',nelems,nnodes);
-            I = adofs(1:nelems,ix(:));
-            J = adofs(1:nelems,iy(:));
-            V = adofs;
+            alldofs = (repelem( obj.elems, 1, size(obj.ndofs,2))-1)*size(gdofs,2)+repmat(idofs',nelems,nnodes);
+            I = alldofs(1:nelems,ix(:));
+            J = alldofs(1:nelems,iy(:));
+            V = alldofs;
         end
         
         function fromGPToNodal(obj,nnodes)

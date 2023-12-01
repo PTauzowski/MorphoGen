@@ -193,16 +193,6 @@ classdef (Abstract) FEAnalysis < handle
         function computeElementResults(obj,varargin)
             resnumber=0;
             nnodes=size(obj.mesh.nodes,1);
-            % for l=1:max(size(obj.felems))
-            %     if ( nargin == 2 )
-            %         obj.felems{l}.computeResults( obj.mesh.nodes,obj.qnodal,varargin{1});
-            %         cellfun(@(x) x.computeResults( obj.mesh.nodes,obj.qnodal,varargin{1}),obj.felems);
-            %     else
-            %         obj.felems{l}.computeResults(obj.mesh.nodes,obj.qnodal);
-            %         cellfun(@(x) x.computeResults( obj.mesh.nodes,obj.qnodal ),obj.felems);
-            %     end
-            %     resnumber=max(resnumber,size( obj.felems{l}.results.gp.all, 1 ));
-            % end
             if ( nargin == 2 )
                 cellfun(@(x) x.computeResults( obj.mesh.nodes,obj.qnodal,varargin{1}),obj.felems);
             else

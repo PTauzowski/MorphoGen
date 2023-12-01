@@ -102,27 +102,23 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
                       B(3, 2*j-1) = dNx(2,j);
                       B(3, 2*j)   = dNx(1,j);
                     end
-                    %e = B*qelems(:,k);
                     de = B*dqelems(:,k);
                     [ obj.results.gp.stress(:,k,i), obj.results.gp.strain(:,k,i), obj.results.gp.pstrain(:,k,i), obj.results.gp.dg(k,i) ]  = obj.returnMapping( obj.results.gp.strain(:,k,i), obj.results.gp.pstrain(:,k,i), de, x(k)  );
                 end
-            end
-            %obj.results.gp.strain = permute(strain,[2,3,1]);
-            %obj.results.gp.pstrain = permute(strain,[2,3,1]);
-            %obj.results.dg=zeros(nelems,nip);
-            
+            end            
          end
 
-          function computeResults(obj)
+          function computeResults(obj, nodes, qnodal)
             nelems = size(obj.elems,1);
+            integrator = obj.sf.createIntegrator();
             nip = size(integrator.points,1);
             obj.results.GPvalues = zeros(size(obj.results.names,2),nelems,nip);
-            exx = obj.results.strain(:,:,1);
-            eyy = obj.results.strain(:,:,2);
-            exy = obj.results.strain(:,:,3);
-            sxx = obj.results.stress(:,:,1);
-            syy = obj.results.stress(:,:,2);
-            sxy = obj.results.stress(:,:,3);
+            exx = obj.results.gp.strain(1,:,:);
+            eyy = obj.results.gp.strain(2,:,:);
+            exy = obj.results.gp.strain(3,:,:);
+            sxx = obj.results.gp.stress(1,:,:);
+            syy = obj.results.gp.stress(2,:,:);
+            sxy = obj.results.gp.stress(3,:,:);
             e1 = ( exx + eyy ) ./ 2.0 + sqrt( ( (exx - eyy) ./ 2.0 ) .* ( (exx - eyy) ./ 2.0 ) + ( exy .* exy )  );
             e2 = ( exx + eyy ) ./ 2.0 - sqrt( ( (exx - eyy) ./ 2.0 ) .* ( (exx - eyy) ./ 2.0 ) + ( exy .* exy )  );
             maxt = ( e1 - e2 ) ./ 2.0;
@@ -134,25 +130,25 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
             maxs = ( s1 - s2 ) ./ 2.0;
             stheta = 2 .* atan( sxy ./ (sxx - syy) );
             sHM = sqrt(  s1 .* s1 - s1 .* s2 + s2 .* s2 );
-            obj.results.GPvalues(1,:,:) = exx;
-            obj.results.GPvalues(2,:,:) = eyy;
-            obj.results.GPvalues(3,:,:) = exy;
-            obj.results.GPvalues(4,:,:) = sxx;
-            obj.results.GPvalues(5,:,:) = syy;
-            obj.results.GPvalues(6,:,:) = sxy;
-            obj.results.GPvalues(7,:,:) = e1; 
-            obj.results.GPvalues(8,:,:) = e2;
-            obj.results.GPvalues(9,:,:) = maxt;
-            obj.results.GPvalues(10,:,:) = etheta;
-            obj.results.GPvalues(11,:,:) = etr;
-            obj.results.GPvalues(12,:,:) = vol;
-            obj.results.GPvalues(13,:,:) = s1;
-            obj.results.GPvalues(14,:,:) = s2;
-            obj.results.GPvalues(15,:,:) = maxs;
-            obj.results.GPvalues(16,:,:) = stheta;
-            obj.results.GPvalues(17,:,:) = sHM;
-            obj.results.GPvalues(18,:,:) = repmat(x,1,nip);
-            obj.results.GPvalues(19,:,:) = obj.resultsdg>0;
+            obj.results.gp.all(1,:,:) = exx;
+            obj.results.gp.all(2,:,:) = eyy;
+            obj.results.gp.all(3,:,:) = exy;
+            obj.results.gp.all(4,:,:) = sxx;
+            obj.results.gp.all(5,:,:) = syy;
+            obj.results.gp.all(6,:,:) = sxy;
+            obj.results.gp.all(7,:,:) = e1; 
+            obj.results.gp.all(8,:,:) = e2;
+            obj.results.gp.all(9,:,:) = maxt;
+            obj.results.gp.all(10,:,:) = etheta;
+            obj.results.gp.all(11,:,:) = etr;
+            obj.results.gp.all(12,:,:) = vol;
+            obj.results.gp.all(13,:,:) = s1;
+            obj.results.gp.all(14,:,:) = s2;
+            obj.results.gp.all(15,:,:) = maxs;
+            obj.results.gp.all(16,:,:) = stheta;
+            obj.results.gp.all(17,:,:) = sHM;
+            obj.results.gp.all(18,:,:) = 1; %repmat(x,1,nip);
+            obj.results.gp.all(19,:,:) = obj.results.gp.dg>0;
          end
 
         function computeElasticStress(obj, varargin)
@@ -191,7 +187,7 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
             nnodes = size(obj.elems,2);
             nelems = size(obj.elems,1);
             dim = nnodes * ndofs;
-            V=reshape(V,nelems,nnodes);
+            V=reshape(V,dim,nelems)';
             Rfem=refR;
             B = zeros(3,dim);
             dN = obj.sf.computeGradient( integrator.points );
@@ -251,23 +247,23 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
                     dg    = 0;
                     ep(:) = 0;
                 else
-                    [ dg, ksi ] = NR4RetMap( sTr, FiTr, x );
-                    A11 = 3 * (1-mat.nu) / (3*(1-mat.nu)+x*mat.E*dg);
+                    [ dg, ksi ] = obj.NR4RetMap( sTr, FiTr, x );
+                    A11 = 3 * (1-obj.mat.nu) / (3*(1-obj.mat.nu)+x*obj.mat.E*dg);
                     A22 = 1 / (1+2*G*dg);
                     A33 = A22;
                     A   = [ 0.5*(A11+A22) 0.5*(A11-A22) 0; 0.5*(A11-A22) 0.5*(A11+A22) 0; 0 0 A33];
                     s   = A * sTr;
-                    e   = 1 / x * mat.invD * s;
+                    e   = 1 / x * obj.mat.invD * s;
                     ep  = epTr + dg * sqrt( 2/3 * ksi ); 
                     
                 end
         end
 
-        function [ dg, ksi ] = NR4RetMap( sTr, FiTr, x )
+        function [ dg, ksi ] = NR4RetMap( obj, sTr, FiTr, x )
 
             % (1) initial guess
                 E  = x^2 * obj.mat.E;
-                sy = obj.mat.sy;
+                sy = x^2 * obj.mat.sy;
                 nu = obj.mat.nu;
                 G  = E / 2 / ( 1 + nu );
                 dg  = 0;
@@ -279,7 +275,7 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
             % (2) NR iterations
             
                 fi = FiTr;
-                while( abs(fi/FiTr) >= 0.5 )
+                while( abs(fi/FiTr) >= 0.001 )
                 
                       H = 0;
                       ksip = - A1 / (9*(1+E*dg/3/(1-nu))^3) * E / (1-nu)  - 2 * G * ( A2 + 4 * A3 ) / ( 1 + 2 * G * dg )^3;
