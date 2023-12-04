@@ -5,7 +5,7 @@ classdef LShapeModelLinear < ModelLinear
             c=0.4;
             obj.xp=xp;
             obj.mesh = Mesh();      
-            obj.mesh.addLshape(l,c*l,round(res*c),sf.pattern);
+            obj.mesh.addLshape(l,c*l,res,sf.pattern);
             fixedEdgeSelector = Selector( @(x)( abs(x(:,2)-l) ) < 0.001 );
 
             obj.fe=PlaneStressElem( sf, obj.mesh.elems );
@@ -16,8 +16,10 @@ classdef LShapeModelLinear < ModelLinear
             obj.analysis.loadClosestNode(xp,["ux" "uy"], P);
             obj.analysis.fixNodes( fixedEdgeSelector, ["ux" "uy"] );    
             obj.analysis.printProblemInfo();
-            obj.x=ones(obj.analysis.getTotalElemsNumber());
+            obj.analysis.initializeResults();
+            obj.x=ones(obj.analysis.getTotalElemsNumber(),1);
             obj.result_number=17;
+         
         end
        
     end

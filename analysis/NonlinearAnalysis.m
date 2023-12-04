@@ -6,7 +6,7 @@ classdef NonlinearAnalysis < FEAnalysis
     end
     
     methods (Abstract)
-        computeResidualVector();
+        computeInternalForces();
     end
     
     methods
@@ -26,7 +26,7 @@ classdef NonlinearAnalysis < FEAnalysis
             P=obj.Pfem(:,1);
             while conv > obj.convEnd
                 Kt = obj.globalSolutionDependendMatrixAggregation( obj.tangentMatrixProcedureName );
-                obj.dq_fem = solver.solve( Kt, dP );
+                obj.dq_fem = solver.solveClassical( Kt, dP );
                 if obj.iteration==1
                     obj.qfem = obj.dq_fem;
                 else
@@ -34,9 +34,9 @@ classdef NonlinearAnalysis < FEAnalysis
                 end
                 obj.qnodal = obj.fromFEMVector( obj.qfem );
                 obj.dq_nodal = obj.fromFEMVector( obj.dq_fem );
-                R=obj.computeResidualVector(V);
-                dP=P-R;
-                conv  = norm( dP(solver.freedofs) ) / norm( R(solver.freedofs) );
+                Fint = obj.computeInternalForces(V);
+                R = P-Fint;
+                conv = norm( R(solver.freedofs ) ) / norm( P( solver.freedofs ) )
                 obj.iteration = obj.iteration + 1;
             end
         end

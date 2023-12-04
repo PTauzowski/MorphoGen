@@ -17,10 +17,16 @@ classdef ModelLinear < handle
             obj.analysis.computeElementResults();
         end
 
+        function setupLoad(obj,P)
+            obj.analysis.clearCurrentLoad();
+            obj.analysis.loadClosestNode(obj.xp,["ux" "uy"], P);
+        end
+
         function setupVariables(obj,E,nu,P)
             material = PlaneStressMaterial('mat1');
             material.setElasticIzo(E, nu);
             obj.fe.setMaterial( material );   
+            obj.analysis.clearCurrentLoad();
             obj.analysis.loadClosestNode(obj.xp,["ux" "uy"], P);
         end
 
@@ -34,14 +40,16 @@ classdef ModelLinear < handle
         function sHM = computeHMstress(obj,E,nu,pressure)
             obj.analysis.clearCurrentLoad();
             obj.setupVariables(E,nu,pressure);
-            obj.solveWeighted();
+            obj.analysis.solveWeighted(obj.x);
+            obj.analysis.computeElementResults(obj.x);
             sHM=obj.fe.results.nodal.all(obj.result_node,obj.result_number);
         end
 
         function plotModel( obj )
             obj.analysis.plotFiniteElements();
             obj.analysis.plotCurrentLoad();
-            obj.analysis.plotSupport();            
+            obj.analysis.plotSupport();
+            plot(obj.mesh.nodes(obj.result_node,1),obj.mesh.nodes(obj.result_node,2),"Marker","o");
         end
 
         function plotNodes(obj)

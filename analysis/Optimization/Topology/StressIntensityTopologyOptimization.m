@@ -24,6 +24,12 @@ classdef (Abstract) StressIntensityTopologyOptimization < TopologyOptimization
             ret=true;
         end
 
+        function resetAnalysis(obj)
+            obj.x(:)=1;
+            obj.totalFENumber = obj.FEAnalysis.getTotalElemsNumber();
+            obj.erased_elems = false(obj.totalFENumber,1);
+        end
+
         function updateDesign(obj)
             obj.ais = obj.weights * obj.computeAverageIntensities();
             obj.removeStressed();
@@ -47,13 +53,13 @@ classdef (Abstract) StressIntensityTopologyOptimization < TopologyOptimization
 
         function ais = computeAverageIntensities(obj)
             obj.qnodal = obj.FEAnalysis.solveWeighted((obj.x).^obj.penal);
-            obj.FEAnalysis.computeElementResults(obj.qnodal,obj.x.^obj.penal);
+            obj.FEAnalysis.computeElementResults(obj.x.^obj.penal);
             ais = zeros(obj.FEAnalysis.getTotalElemsNumber(),1);
             for i=1:size(obj.FEAnalysis.felems,1)
                hmIndex=find(obj.FEAnalysis.felems{i}.results.names == "sHM");
                for j=1:size(obj.FEAnalysis.felems{i}.elems,1)
                     %ais(obj.elem_inds{i}(j)) = mean( obj.linearElasticProblem.felems{i}.results.GPvalues(hmIndex,j,:) );
-                    ais(obj.elem_inds{i}(j)) = mean( obj.FEAnalysis.felems{i}.results.nodal(obj.FEAnalysis.felems{i}.elems(j,:),hmIndex) );
+                    ais(obj.elem_inds{i}(j)) = mean( obj.FEAnalysis.felems{i}.results.nodal.all(obj.FEAnalysis.felems{i}.elems(j,:),hmIndex) );
                end
             end
             obj.maxstress = [ obj.maxstress max(ais) ];
@@ -63,6 +69,7 @@ classdef (Abstract) StressIntensityTopologyOptimization < TopologyOptimization
         function setFrame( obj, k )
             if k > 0 && k <= size( obj.allx,2 )
                 obj.x=obj.allx(:,k);
+                obj.FEAnalysis.computeElementResults(obj.x.^obj.penal);
                 return;
             end
             fprintf("The specified iteration number %d is outside the allowed range %d - %d\n",k,1,size( obj.allx,2 ));

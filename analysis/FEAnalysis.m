@@ -192,9 +192,9 @@ classdef (Abstract) FEAnalysis < handle
         end
         function computeElementResults(obj,varargin)
             resnumber=0;
-            nnodes=size(obj.mesh.nodes,1);
+            nnodes=size(obj.mesh.nodes, 1);
             if ( nargin == 2 )
-                cellfun(@(x) x.computeResults( obj.mesh.nodes,obj.qnodal,varargin{1}),obj.felems);
+                cellfun(@(x) x.computeResults( obj.mesh.nodes, obj.qnodal, varargin{1}), obj.felems);
             else
                 cellfun(@(x) x.computeResults( obj.mesh.nodes,obj.qnodal ),obj.felems);
             end

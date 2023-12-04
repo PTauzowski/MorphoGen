@@ -11,12 +11,12 @@ classdef ElastoPlasticity < NonlinearAnalysis
 
         end
 
-        function R = computeResidualVector(obj,V)
+        function Fint = computeInternalForces(obj,V)
             refR=obj.Pfem(:,1);
             refR(:)=0;
             cellfun(@(x) x.computeStress( obj.mesh.nodes, obj.qnodal, obj.dq_nodal ), obj.felems);
-            Rc = cellfun( @(x) x.computeInternalForces(obj.mesh.nodes,refR,V), obj.felems,'UniformOutput',false);
-            R = sum(cell2mat(Rc),2);
+            F = cellfun( @(x) x.computeInternalForces(obj.mesh.nodes,refR,V), obj.felems,'UniformOutput',false);
+            Fint = sum(cell2mat(F),2);
         end
         
         function solve(obj)

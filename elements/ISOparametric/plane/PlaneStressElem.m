@@ -27,7 +27,7 @@ classdef PlaneStressElem < PlaneElem
             obj.results.gp.stress = zeros(3,nelems,nip);
             obj.results.gp.all = zeros(size(obj.results.names,2),nelems,nip);
         end
-        function computeResults(obj,nodes,q, varargin)
+        function computeResults(obj,nodes, q, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
             ndofs = size( obj.ndofs,2);

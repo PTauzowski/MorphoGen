@@ -15,10 +15,7 @@ classdef LinearElasticity < FEAnalysis
                solver = LinearEquationsSystemTr2D(I, J, obj.toFEMVector(obj.supports),obj.rotations);
                R=0;
            end
-           %tic;
            K = obj.globalMatrixAggregation('computeStifnessMatrix');
-           %fprintf('Assembly time : ');
-           %toc;
            obj.qfem = solver.solve(K, obj.Pfem );
            obj.qnodal = obj.fromFEMVector( obj.qfem );
            obj.computeElementResults(obj.qnodal);

@@ -112,7 +112,6 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
             nelems = size(obj.elems,1);
             integrator = obj.sf.createIntegrator();
             nip = size(integrator.points,1);
-            obj.results.GPvalues = zeros(size(obj.results.names,2),nelems,nip);
             exx = obj.results.gp.strain(1,:,:);
             eyy = obj.results.gp.strain(2,:,:);
             exy = obj.results.gp.strain(3,:,:);
@@ -130,55 +129,26 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
             maxs = ( s1 - s2 ) ./ 2.0;
             stheta = 2 .* atan( sxy ./ (sxx - syy) );
             sHM = sqrt(  s1 .* s1 - s1 .* s2 + s2 .* s2 );
-            obj.results.gp.all(1,:,:) = exx;
-            obj.results.gp.all(2,:,:) = eyy;
-            obj.results.gp.all(3,:,:) = exy;
-            obj.results.gp.all(4,:,:) = sxx;
-            obj.results.gp.all(5,:,:) = syy;
-            obj.results.gp.all(6,:,:) = sxy;
-            obj.results.gp.all(7,:,:) = e1; 
-            obj.results.gp.all(8,:,:) = e2;
-            obj.results.gp.all(9,:,:) = maxt;
-            obj.results.gp.all(10,:,:) = etheta;
-            obj.results.gp.all(11,:,:) = etr;
-            obj.results.gp.all(12,:,:) = vol;
-            obj.results.gp.all(13,:,:) = s1;
-            obj.results.gp.all(14,:,:) = s2;
-            obj.results.gp.all(15,:,:) = maxs;
-            obj.results.gp.all(16,:,:) = stheta;
-            obj.results.gp.all(17,:,:) = sHM;
+            obj.results.gp.all(1,:,:) = exx(1,:,:);
+            obj.results.gp.all(2,:,:) = eyy(1,:,:);
+            obj.results.gp.all(3,:,:) = exy(1,:,:);
+            obj.results.gp.all(4,:,:) = sxx(1,:,:);
+            obj.results.gp.all(5,:,:) = syy(1,:,:);
+            obj.results.gp.all(6,:,:) = sxy(1,:,:);
+            obj.results.gp.all(7,:,:) = e1(1,:,:); 
+            obj.results.gp.all(8,:,:) = e2(1,:,:);
+            obj.results.gp.all(9,:,:) = maxt(1,:,:);
+            obj.results.gp.all(10,:,:) = etheta(1,:,:);
+            obj.results.gp.all(11,:,:) = etr(1,:,:);
+            obj.results.gp.all(12,:,:) = vol(1,:,:);
+            obj.results.gp.all(13,:,:) = s1(1,:,:);
+            obj.results.gp.all(14,:,:) = s2(1,:,:);
+            obj.results.gp.all(15,:,:) = maxs(1,:,:);
+            obj.results.gp.all(16,:,:) = stheta(1,:,:);
+            obj.results.gp.all(17,:,:) = sHM(1,:,:);
             obj.results.gp.all(18,:,:) = 1; %repmat(x,1,nip);
             obj.results.gp.all(19,:,:) = obj.results.gp.dg>0;
-         end
-
-        function computeElasticStress(obj, varargin)
-            nelems = size(obj.elems,1);
-            integrator = obj.sf.createIntegrator();
-            nip = size(integrator.points,1);
-            if ( nargin == 4 )
-                x=varargin{1};
-            else
-                x=ones(nelems,1);
-            end
-            obj.results.stress = zeros(nelems,nip,3);
-            D = obj.mat.D;
-            for k=1:nelems
-                for i=1:nip
-                    obj.results.stress(k,i,:) = x(k)*tensorprod(D,obj.results.strain(k,i,:),1,3);
-                end
-            end
-        end
-
-        function computePlasticStressAndStrainCorrector(obj)
-            integrator = obj.sf.createIntegrator();
-            nelems = size(obj.elems,1);
-            nip = size(integrator.points,1);     
-            for k=1:nelems
-                for i=1:nip
-                    [ obj.results.stress(k,i,:), obj.results.strain(k,i,:), obj.results.strainp(k,i,:), obj.results.dg(k,i) ] = obj.returnMapping( obj.results.strain(k,i,:), obj.results.strainp(k,i,:), de(:,i), x(k) );
-                end
-            end
-        end
+          end
 
         function Rfem = computeInternalForces(obj,nodes,refR,V)
             integrator = obj.sf.createIntegrator();
@@ -222,11 +192,12 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
 
             % (i) elastic predictor
             
+                E    = x^2*obj.mat.E;
                 G    = x^2 * obj.mat.E / 2 / ( 1 + obj.mat.nu );
                 eTr  = en  + de; % trial strain
                 epTr = epn; % permanent plastic strain
-                sTr  = x * obj.mat.D * eTr;
-                sy   = obj.mat.sy;
+                sTr  = x^2 * obj.mat.D * eTr;
+                sy   = x^2 * obj.mat.sy;
             
             % (iI) plasticity condition
                 a1 = ( sTr(1) + sTr(2) )^ 2;
@@ -248,7 +219,7 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
                     ep(:) = 0;
                 else
                     [ dg, ksi ] = obj.NR4RetMap( sTr, FiTr, x );
-                    A11 = 3 * (1-obj.mat.nu) / (3*(1-obj.mat.nu)+x*obj.mat.E*dg);
+                    A11 = 3 * (1-obj.mat.nu) / (3*(1-obj.mat.nu)+E*dg);
                     A22 = 1 / (1+2*G*dg);
                     A33 = A22;
                     A   = [ 0.5*(A11+A22) 0.5*(A11-A22) 0; 0.5*(A11-A22) 0.5*(A11+A22) 0; 0 0 A33];
@@ -278,16 +249,12 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
                 while( abs(fi/FiTr) >= 0.001 )
                 
                       H = 0;
-                      ksip = - A1 / (9*(1+E*dg/3/(1-nu))^3) * E / (1-nu)  - 2 * G * ( A2 + 4 * A3 ) / ( 1 + 2 * G * dg )^3;
-                    
-                      Hb = 0;
-                    
-                      Fip = 0.5 * ksip;
-                    
+                      ksip = - A1 / (9*(1+E*dg/3/(1-nu))^3) * E / (1-nu)  - 2 * G * ( A2 + 4 * A3 ) / ( 1 + 2 * G * dg )^3;                    
+                      Hb = 0;                    
+                      Fip = 0.5 * ksip;                    
                       dg = dg - fi / Fip;
                     
                 % (3) check for convergence
-                
                       ksi =  A1 / 6 /  (1 + E * dg / 3 / (1-nu) )^2 +  ( 0.5 * A2 + 2 * A3 ) / (1+2*G*dg)^2;
                       fi = 1.0/2.0*ksi - 1.0/3.0 * sy^2;
             
