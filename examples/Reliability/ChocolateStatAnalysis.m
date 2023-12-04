@@ -8,7 +8,7 @@ randomVariables={RandomVariable("Uniform",0.2,0.8) RandomVariable("Uniform",0.2,
 transform=IndependentTransformation(randomVariables);
 g = chocolatePerformanceFunction(height,210000,0.3);
 
- N=10;
+ N=1000;
  mc= MonteCarlo(randomVariables,g,N);
  [ Pf_mc, p ] = mc.solve();
  Pf_mc
