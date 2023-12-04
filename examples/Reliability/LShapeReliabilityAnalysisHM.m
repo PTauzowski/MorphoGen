@@ -2,7 +2,7 @@ clear;
 close all;
 l=3;
 c=0.4;
-res = 20;
+res = 40;
 E=210000;
 nu=0.3;
 
@@ -13,20 +13,20 @@ model = LShapeModelLinear(ShapeFunctionL4,l,res,E,nu,xp,P);
 model.setResultNode([l*0.4 l*0.4]);
 model.plotModel();
 
-randomVariables={RandomVariable("Normal",0,5) RandomVariable("Normal",10,5)};
+randomVariables={RandomVariable("Normal",0,5) RandomVariable("Normal",10,2)};
 transform=IndependentTransformation(randomVariables);
 g=loadPerformanceFunctionHM(model);
 
-N=5;
-mc= MonteCarlo(randomVariables,g,N);
-[ Pf_mc, p ] = mc.solve();
-Pf_mc
-mc.scatterPlots(["Px" "Py"],"Ux");
-
-hmv = HMV(randomVariables,g,transform,3);
-form = FORM(randomVariables,g,transform);
-Pf_form = form.solve()
-%[ Pf, mpp, betar ] = hmv.solve()
+% N=1000;
+% mc= MonteCarlo(randomVariables,g,N);
+% [ Pf_mc, p ] = mc.solve();
+% Pf_mc
+% mc.scatterPlots(["Px" "Py"],"Ux");
+% 
+ hmv = HMV(randomVariables,g,transform,3);
+% form = FORM(randomVariables,g,transform);
+% Pf_form = form.solve()
+% [ Pf, mpp, betar ] = hmv.solve()
 
 Rfilter = 1.2*l/res;
 penal = 3;
@@ -37,6 +37,6 @@ topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTre
 %[objF, xopt]  = topOpt.solve();
 
 sora = SORA(model,topOpt, hmv);
-[xDet, xRel, volDet, volRel] = sora.solve()
+[xDet, betaDet, xRel, volDet, volRel] = sora.solve()
 
 

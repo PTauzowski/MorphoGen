@@ -9,9 +9,10 @@ classdef SORA
             obj.model=model;
             obj.topOpt=topOpt;
             obj.reliability=reliability;
+            obj.topOpt.is_silent=true;
         end
         
-        function [xDet, xRel, volDet, volRel] = solve(obj)
+        function [xDet, betaDet, xRel, volDet, volRel] = solve(obj)
             inProgress=true;
             if isfile('_allXopt.mat')
                  load('_allXopt.mat','allx');
@@ -24,31 +25,35 @@ classdef SORA
                   allx=obj.topOpt.allx;
                   save('_allXopt.mat','allx');
             end
-            [ ~, mpp, beta ] = obj.reliability.solve();
-            volDet=obj.topOpt.computeVolumeFraction();
+            %[ ~, mpp, betaDet ] = obj.reliability.solve();
+            [gz, mpp, betaDet] = obj.computePerformance(size(allx,2));
+            betaDet
+            volDet=obj.topOpt.computeVolumeFraction()
             xDet=obj.topOpt.allx(:,end);
             figure;
             while inProgress
                 mppX=obj.reliability.transform.toX(mpp);
                 obj.model.setupLoad(mppX);
                 [objF, xopt] = obj.topOpt.solve();
-                for k=1:size(obj.topOpt.allx,2)
-                   [g, ~, betar] = obj.computePerformance(k);
-                   fprintf("Iter :%3d  G=%5.7f, Beta=%1.4f\n",k,g,betar);
-                end
-                obj.reliability.transform.toX(mpp)
+                % for k=1:size(obj.topOpt.allx,2)
+                %    [g, ~, betar] = obj.computePerformance(k);
+                %    fprintf("Iter :%3d  G=%5.7f, Beta=%1.4f\n",k,g,betar);
+                % end
+                % obj.reliability.transform.toX(mpp)
                 zeroiter = obj.findZeroG();
                 [gz, mpp1, beta] = obj.computePerformance(zeroiter);
                 obj.topOpt.setFrame( zeroiter );
                 obj.topOpt.plotCurrentFrame();
                 % gz1 = obj.computePerformance(zeroiter+1);
                 % fprintf("ZeroIterter :%3d,   Gz=%5.7f,  Gz1=%5.7f\n",zeroiter,gz,gz1);
-                if norm(mpp-mpp1)<0.001 
+                conv=norm(mpp-mpp1);
+                if conv<0.001 
                     inProgress=false;
                     volRel=obj.topOpt.computeVolumeFraction();
                     xRel=obj.topOpt.allx(:,zeroiter);
                 else
                     mpp=mpp1;
+                    fprintf("conv=%5.7f, beta=%1.5f\n",conv,beta);
                 end
             
             end

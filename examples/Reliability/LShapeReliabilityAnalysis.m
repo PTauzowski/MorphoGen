@@ -37,6 +37,8 @@ topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTre
 %[objF, xopt]  = topOpt.solve();
 
 sora = SORA(model,topOpt, hmv);
-sora.solve();
+[xDet, betaDet, xRel, volDet, volRel]  = sora.solve();
+volDet
+volRel
 
 

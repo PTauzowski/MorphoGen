@@ -14,6 +14,7 @@ classdef TopologyOptimization < ConstrainedOptimization
         erased_elems;
         totalFENumber;
         is_const;
+        is_silent;
     end
     
     methods (Abstract)
@@ -40,6 +41,7 @@ classdef TopologyOptimization < ConstrainedOptimization
             obj.elem_inds = FEproblem.getElemIndices();
             obj.createFilteringMatrix();
             colormap(jet);
+            obj.is_silent=false;
         end
         
         function [objF, xopt] = solve(obj)
@@ -48,7 +50,9 @@ classdef TopologyOptimization < ConstrainedOptimization
             while obj.isNotFinished()
                 obj.updateDesign();
                 obj.plotFrame();
-                obj.printIterationInfo();                
+                if ~obj.is_silent
+                    obj.printIterationInfo();                
+                end
                 obj.iteration = obj.iteration + 1;
             end
             obj.plotCurrentFrame();
