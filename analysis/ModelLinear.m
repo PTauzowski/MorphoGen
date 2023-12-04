@@ -45,6 +45,14 @@ classdef ModelLinear < handle
             sHM=obj.fe.results.nodal.all(obj.result_node,obj.result_number);
         end
 
+        function pstress = computePenalizedHMstress(obj,E,nu,pressure,penalty)
+            obj.analysis.clearCurrentLoad();
+            obj.setupVariables(E,nu,pressure);
+            obj.analysis.solveWeighted(obj.x);
+            obj.analysis.computeElementResults(obj.x);
+            pstress=sum(obj.fe.results.nodal.all(:,obj.result_number))^(1/penalty);
+        end
+
         function plotModel( obj )
             obj.analysis.plotFiniteElements();
             obj.analysis.plotCurrentLoad();
