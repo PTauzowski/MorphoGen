@@ -2,7 +2,7 @@ clear;
 close all;
 l=3;
 c=0.4;
-res = 20;
+res = 40;
 E=200000;
 nu=0.3;
 
@@ -27,17 +27,17 @@ model = LShapeModelLinear(ShapeFunctionL4,l,res,E,nu,xp,P);
 model.setResultNode([l*0.4 l*0.4]);
 model.plotModel();
 
-randomVariables={RandomVariable("Normal",-1,1) RandomVariable("Normal",-5,2)};
+randomVariables={RandomVariable("Normal",0,2) RandomVariable("Normal",-8,0.2)};
 transform=IndependentTransformation(randomVariables);
 g=loadFatiguePerformanceFunction(model,fatigueData);
 
-% N=1000;
+% N=5000;
 % mc= MonteCarlo(randomVariables,g,N);
 % [ Pf_mc, p ] = mc.solve();
 % Pf_mc
 % mc.scatterPlots(["Px" "Py"],"Ux");
 % % 
-  hmv = HMV(randomVariables,g,transform,3);
+ hmv = HMV(randomVariables,g,transform,3);
 % form = FORM(randomVariables,g,transform);
 % Pf_form = form.solve()
 % [ Pf, mpp, betar ] = hmv.solve()
@@ -51,6 +51,7 @@ topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTre
 %[objF, xopt]  = topOpt.solve();
 
 sora = SORA(model,topOpt, hmv);
-[xDet, betaDet, xRel, volDet, volRel] = sora.solve()
-
+[xDet, betaDet, xRel, volDet, volRel] = sora.solve();
+volDet
+volRel
 
