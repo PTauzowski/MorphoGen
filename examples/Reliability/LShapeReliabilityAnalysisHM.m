@@ -2,7 +2,7 @@ clear;
 close all;
 l=3;
 c=0.4;
-res = 40;
+res = 20;
 E=210000;
 nu=0.3;
 
@@ -10,14 +10,14 @@ xp=[l 0.4*l];
 P = [0 10];
 
 model = LShapeModelLinear(ShapeFunctionL4,l,res,E,nu,xp,P);
-model.setResultNode([l*0.4 l*0.4]);
+model.setResultNode([0 l]);
 model.plotModel();
 
-randomVariables={RandomVariable("Normal",0,5) RandomVariable("Normal",10,2)};
+randomVariables={RandomVariable("Normal",-10,4) RandomVariable("Normal",-10,4)};
 transform=IndependentTransformation(randomVariables);
 g=loadPerformanceFunctionHM(model);
 
-% N=1000;
+% N=5000;
 % mc= MonteCarlo(randomVariables,g,N);
 % [ Pf_mc, p ] = mc.solve();
 % Pf_mc
