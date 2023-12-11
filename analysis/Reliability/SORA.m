@@ -103,12 +103,21 @@ classdef SORA < handle
         end
 
         function limitReliability(obj)
-               [g, ~, betar] = obj.computePerformance(1);
+               [g, mpp, betar] = obj.computePerformance(1);
                volFr=sum(obj.topOpt.allx(:,1))/size(obj.topOpt.allx,1)*100;
-               fprintf("Iter :%3d  VolFr=%3.1f, G=%5.7f, Beta=%1.4f\n",1,volFr,g,betar);
-               [g, ~, betar] = obj.computePerformance(size(obj.topOpt.allx,2));
+               fprintf("\nIter :%3d  VolFr=%3.1f, G=%5.7f, Beta=%1.4f, ",1,volFr,g,betar);
+               mppX=obj.hmv.transform.toX(mpp);
+               for k=1:size(mppX,2)
+                  fprintf("x(%1d)=%3.4f ",k,mppX(k));
+               end
+               [g, mpp, betar] = obj.computePerformance(size(obj.topOpt.allx,2));
                volFr=sum(obj.topOpt.allx(:,size(obj.topOpt.allx,2)))/size(obj.topOpt.allx,1)*100;
-               fprintf("Iter :%3d  VolFr=%3.1f, G=%5.7f, Beta=%1.4f\n",size(obj.topOpt.allx,2),volFr,g,betar);
+               fprintf("\nIter :%3d  VolFr=%3.1f, G=%5.7f, Beta=%1.4f, ",size(obj.topOpt.allx,2),volFr,g,betar);
+               mppX=obj.hmv.transform.toX(mpp);
+               for k=1:size(mppX,2)
+                  fprintf("x(%1d)=%3.4f ",k,mppX(k));
+               end
+               fprintf("\n");
         end
 
         function ci = findBetaFrame(obj)

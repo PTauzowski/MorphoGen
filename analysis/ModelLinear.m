@@ -50,7 +50,7 @@ classdef ModelLinear < handle
             obj.setupVariables(E,nu,pressure);
             obj.analysis.solveWeighted(obj.x);
             obj.analysis.computeElementResults(obj.x);
-            pstress=sum(obj.fe.results.nodal.all(:,obj.result_number))^(1/penalty);
+            pstress=sum(obj.fe.results.nodal.all(:,18).*obj.fe.results.nodal.all(:,obj.result_number))^(1/penalty);
         end
 
         function plotModel( obj )

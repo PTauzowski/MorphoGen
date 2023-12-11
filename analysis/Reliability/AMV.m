@@ -10,15 +10,16 @@ classdef AMV < GradientBasedReliabilityAnalysis
             obj.betat=betat;
         end
         
-        function [ Pf, mpp, beta ] = solve(obj)
+        function [ Pf, mpp, n, success ] = solve(obj)
             dim = obj.getDim();
             u   = zeros( 1, dim );
             [g, dg] = computeGu( obj, u );
 
             if  norm(dg)<1.0E-20
                      Pf = -1;
-                     beta = -1;
+                     n = -1;
                      mpp=dg;
+                     success=false;
                      return;
             end
 
@@ -26,7 +27,7 @@ classdef AMV < GradientBasedReliabilityAnalysis
             n = -dg ./ norm(dg);
             u = obj.betat * n;
             mpp=u;
-            for k=1:1000
+            for k=1:100
                 g1 = g;
                 [g, dg] = computeGu( obj, u );
                 n = -dg ./ norm(dg,2);
@@ -44,6 +45,7 @@ classdef AMV < GradientBasedReliabilityAnalysis
                      mpp = obj.transform.toX( ur );
                      %[g, ~]  = obj.g.computerValue( mpp );
                      %fprintf('G = %5.3f\n',g);
+                     success=true;
                     return;
                 end
             end
