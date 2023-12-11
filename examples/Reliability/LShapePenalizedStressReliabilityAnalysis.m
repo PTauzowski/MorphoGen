@@ -2,31 +2,31 @@ clear;
 close all;
 l=3;
 c=0.4;
-res = 20;
+res = 40;
 E=210000;
 nu=0.3;
+betat=3;
 
 xp=[l 0.4*l];
-P = [0 10];
+P = [0 -10];
 
 model = LShapeModelLinear(ShapeFunctionL4,l,res,E,nu,xp,P);
 model.setResultNode([0 l]);
 model.plotModel();
 
-randomVariables={RandomVariable("Normal",-10,1) RandomVariable("Normal",-10,1)};
+randomVariables={RandomVariable("Normal",P(1),3) RandomVariable("Normal",P(2),5)};
 transform=IndependentTransformation(randomVariables);
 g=loadPenalizedStressPerformanceFunction(model);
+hmv = HMV(randomVariables,g,transform,betat);
+form = FORM(randomVariables,g,transform);
 
-% N=1000;
-% mc= MonteCarlo(randomVariables,g,N);
-% [ Pf_mc, p ] = mc.solve();
-% Pf_mc
-% mc.scatterPlots(["Px" "Py"],"Ux");
-% 
- hmv = HMV(randomVariables,g,transform,3);
-% form = FORM(randomVariables,g,transform);
-% Pf_form = form.solve()
-% [ Pf, mpp, betar ] = hmv.solve()
+% [ Pf_form, mpp_form, beta_form ]= form.solve();
+% [ Pf_hmv, mpp_hmv, beta_hmv ] = hmv.solve();
+% fprintf("\nDesign Domain \n BetaDet_form=%5.7f,  BetaDet_hmv=%5.7f\n",beta_form,beta_hmv);
+% if beta_form < betat
+%     fprintf("\nDesign domain reliability indes lower than target beta\n");
+%     return;
+% end
 
 Rfilter = 1.2*l/res;
 penal = 3;
@@ -34,10 +34,24 @@ cutTreshold = 0.005;
 volFr=0.4;
 
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTreshold, penal, volFr, true );
-%[objF, xopt]  = topOpt.solve();
+sora = SORA(model, topOpt, randomVariables, g, transform, betat );
 
-sora = SORA(model,topOpt, hmv);
-[xDet, betaDet, xRel, volDet, volRel] = sora.solve();
-volDet
-volRel
+N=5000;
+mc= MonteCarlo(randomVariables,g,N);
+[ Pf_mc, p ] = mc.solve();
+Pf_mc
+mc.scatterPlots(["Px" "Py"],"HMpen");
 
+[ Pf_form, mpp_form, beta_form ]= form.solve();
+[ Pf_hmv, mpp_hmv, beta_hmv ] = hmv.solve();
+fprintf("\nDeterministic design \n BetaDet_form=%5.7f,  BetaDet_hmv=%5.7f\n",beta_form,beta_hmv);
+if beta_form < betat
+    fprintf("\nDesign domain reliability lower than target beta\n");
+    return;
+end
+
+% sora.limitReliability();
+ [betaDet, xRel, volDet, volRel] = sora.solve();
+ figure;
+ plot(sora.mpps(:,1),sora.mpps(:,2),'Marker','o');
+ [ Pf, mpp, betar ] = form.solve()

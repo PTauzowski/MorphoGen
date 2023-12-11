@@ -13,20 +13,20 @@ model = LShapeModelLinear(ShapeFunctionL4,l,res,E,nu,xp,P);
 model.setResultNode([0 l]);
 model.plotModel();
 
-randomVariables={RandomVariable("Normal",-10,4) RandomVariable("Normal",-10,4)};
+randomVariables={RandomVariable("Normal",10,2) RandomVariable("Normal",0,5)};
 transform=IndependentTransformation(randomVariables);
 g=loadPerformanceFunctionHM(model);
 
-% N=5000;
-% mc= MonteCarlo(randomVariables,g,N);
-% [ Pf_mc, p ] = mc.solve();
-% Pf_mc
-% mc.scatterPlots(["Px" "Py"],"Ux");
-% 
+N=5000;
+mc= MonteCarlo(randomVariables,g,N);
+[ Pf_mc, p ] = mc.solve();
+Pf_mc
+mc.scatterPlots(["Px" "Py"],"Ux");
+
  hmv = HMV(randomVariables,g,transform,3);
-% form = FORM(randomVariables,g,transform);
-% Pf_form = form.solve()
-% [ Pf, mpp, betar ] = hmv.solve()
+form = FORM(randomVariables,g,transform);
+Pf_form = form.solve()
+[ Pf, mpp, betar ] = hmv.solve()
 
 Rfilter = 1.2*l/res;
 penal = 3;
