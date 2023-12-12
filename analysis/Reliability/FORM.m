@@ -11,7 +11,7 @@ classdef FORM < GradientBasedReliabilityAnalysis
         function [ Pf, mpp, beta, success ] = solve(obj)
             dim = obj.getDim();
             u  = zeros( 1, dim );
-            mpp=u;
+            mpp = u;
             for iter=1:100
                [g, dg] = obj.computeGu( u );
                 

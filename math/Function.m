@@ -1,7 +1,7 @@
 classdef (Abstract) Function < handle
    
     properties
-        dim, eps, dx;
+        dim, eps, dx, success;
     end
     methods (Abstract)
         computeValue( x );
@@ -9,6 +9,7 @@ classdef (Abstract) Function < handle
     methods
         function obj = Function(dim,eps)
             obj.dim=dim;
+            obj.success=true;
             obj.setPerturbation(eps);            
         end
         function [value, grad] = compute( obj, x )

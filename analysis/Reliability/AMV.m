@@ -43,8 +43,6 @@ classdef AMV < GradientBasedReliabilityAnalysis
                      Pf = normcdf( -norm(u) );
                      ur = betar*n;
                      mpp = obj.transform.toX( ur );
-                     %[g, ~]  = obj.g.computerValue( mpp );
-                     %fprintf('G = %5.3f\n',g);
                      success=true;
                     return;
                 end

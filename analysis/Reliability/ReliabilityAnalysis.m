@@ -5,6 +5,8 @@ classdef ReliabilityAnalysis < handle
         g;
         Pf;
         beta;
+        success;
+        err_msg;
     end
     
     methods(Abstract)
@@ -15,6 +17,7 @@ classdef ReliabilityAnalysis < handle
         function obj = ReliabilityAnalysis( randVars, g  )
             obj.randVars = randVars;
             obj.g = g;
+            obj.err_msg = "OK";
         end
         
         function dim = getDim(obj)
@@ -29,12 +32,17 @@ classdef ReliabilityAnalysis < handle
             end
         end
         
-        function [x, r] = generatePerformanceRandomSapmles(obj,nsamples)
+        function [x, r, fx] = generatePerformanceRandomSapmles(obj,nsamples)
             dim = obj.getDim();
             x=obj.generateRandomSapmles(nsamples);
             r = zeros(nsamples,1);
             for k=1:nsamples
-                r(k) = obj.g.computeValue( x(k,:) );
+                value = obj.g.computeValue( x(k,:) );
+                if  obj.g.success
+                    r(k)=value;
+                else
+                    fx = [ fx; x(k,:) ];
+                end
             end
         end
         
