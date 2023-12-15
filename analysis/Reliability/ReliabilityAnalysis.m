@@ -7,6 +7,7 @@ classdef ReliabilityAnalysis < handle
         beta;
         success;
         err_msg;
+        warning;
     end
     
     methods(Abstract)
@@ -32,17 +33,20 @@ classdef ReliabilityAnalysis < handle
             end
         end
         
-        function [x, r, fx] = generatePerformanceRandomSapmles(obj,nsamples)
-            dim = obj.getDim();
+        function [x, r, fi] = generatePerformanceRandomSapmles(obj,nsamples)
             x=obj.generateRandomSapmles(nsamples);
             r = zeros(nsamples,1);
+            fi=[];
             for k=1:nsamples
                 value = obj.g.computeValue( x(k,:) );
                 if  obj.g.success
                     r(k)=value;
                 else
-                    fx = [ fx; x(k,:) ];
+                    fi = [ fi k ];
                 end
+            end
+            if size(fi,2) > 0 
+                obj.warning="Computations of performance function failed for some points";
             end
         end
         

@@ -8,7 +8,7 @@ classdef FORM < GradientBasedReliabilityAnalysis
             obj = obj@GradientBasedReliabilityAnalysis(randVars,g,transformU);
         end
         
-        function [ Pf, mpp, beta, success ] = solve(obj)
+        function results = solve(obj)
             dim = obj.getDim();
             u  = zeros( 1, dim );
             mpp = u;
@@ -16,10 +16,8 @@ classdef FORM < GradientBasedReliabilityAnalysis
                [g, dg] = obj.computeGu( u );
                 
                if  norm(dg)<1.0E-20
-                     Pf = -1;
-                     beta = -1;
-                     mpp=dg;
-                     success=false;
+                     results.success=false;
+                     results.err_msg='FORM error: gradient norm too small';
                      return;
                end
               
@@ -27,27 +25,22 @@ classdef FORM < GradientBasedReliabilityAnalysis
                 du   = u - unext;
                 conv = norm( du );
 
-                if  size(find( abs(conv) > 50 ),1 )  
-                     Pf = -1;
-                     beta = -1;
-                     mpp=dg;
-                     success=false;
+                if  size(find( abs(conv) > 50 ),1 ) 
+                     results.success=false;
+                     results.err_msg='FORM not converged!\n';
                      return;
                 end
                 u = unext;
                 if conv < 0.0001 
-                    beta = norm( u );
-                    Pf = normcdf( -beta );
-                    mpp = obj.transform.toX( u );
-                    success=true;
+                    results.beta = norm( u );
+                    results.Pf = normcdf( -results.beta );
+                    results.mpp = obj.transform.toX( u );
+                    results.success=true;
                     return;
                 end
             end
-            fprintf('FORM not converged!\n');
-            Pf = -1;
-            beta = -1;
-            mpp=dg;
-            success=false;
+            results.success=false;
+            results.err_msg='FORM not converged!\n';
         end
     end
 end

@@ -10,19 +10,21 @@ classdef CMV < GradientBasedReliabilityAnalysis
             obj.betat=betat;
         end
        
-        function [ Pf, mpp, beta ] = solve(obj)
+        function results = solve(obj)
             dim = obj.getDim();
             u   = zeros( dim, 1 );
             n   = zeros( dim, 1 );
             n1  = zeros( dim, 1 );
             [g, dg] = computeGu( obj, u );
             if  norm(dg)<1.0E-20
-                     Pf = -1;
-                     beta = -1;
-                     mpp=dg;
+                     results.Pf = -1;
+                     results.n = -1;
+                     results.mpp=dg;
+                     results.success=false;
+                     results.err_msg='CMV error: gradient norm too small';
                      return;
             end
-            for k=1:1000
+            for k=1:100
                 g1 = g;
                 n2 = n1; 
                 n1 = n;  
@@ -34,12 +36,12 @@ classdef CMV < GradientBasedReliabilityAnalysis
                 dgabs = abs((g-g1));
 
                 if  max( abs(beta-obj.betat), max(dgrel, dgabs) ) < 0.0001  
-                     Pf = normcdf(-norm(u));
-                     mpp = zeros(dim,1);
-                     mpp = obj.transform.toX( u );
-                     g  = obj.g.computeValue( mpp );
-                     %fprintf('G = %5.3f\n',g);
-                    return;
+                        results.mpp = obj.transform.toX( u );
+                        results.g = obj.g.computeValue( mpp );
+                        results.n=n;
+                        results.beta_pred = obj.betat*(1+g/(g0-g));
+                        results.success=true;
+                        return;
                 end
 
                 if k<3
@@ -51,7 +53,8 @@ classdef CMV < GradientBasedReliabilityAnalysis
                 end
 
             end
-            fprintf('CMV not converged!\n');
+            results.success = false;
+            results.err_msg = ['CMV error: not convergent after ' num2str(k-1) ' iterations'];
         end
     end
 end

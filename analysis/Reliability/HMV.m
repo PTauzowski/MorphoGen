@@ -10,16 +10,18 @@ classdef HMV < GradientBasedReliabilityAnalysis
             obj.betat=betat;
         end
         
-        function [ Pf, mpp, betar ] = solve(obj)
+        function results = solve(obj)
             dim = obj.getDim();
             u   = zeros( dim, 1 );
             n   = zeros( dim, 1 );
             n1  = zeros( dim, 1 );
             [g, dg] = computeGu( obj, u ); 
             if  norm(dg)<1.0E-20
-                     Pf = -1;
-                     betar = -1;
-                     mpp=dg;
+                     results.Pf = -1;
+                     results.n = -1;
+                     results.mpp=dg;
+                     results.success=false;
+                     results.err_msg='HMV error: gradient norm too small';
                      return;
             end
             g0=g;
@@ -38,11 +40,16 @@ classdef HMV < GradientBasedReliabilityAnalysis
                      %betar = norm(u);
                      betar = obj.betat*(1+g/(g0-g));
                      ur = betar*n;
-                     mpp = obj.transform.toX( ur );
+                     mpp = obj.transform.toX( u );
                      g = obj.g.computeValue( mpp );
                      mpp = u;
                      Pf = normcdf( -beta );
                      % fprintf('iter = %2d\n',k);
+                     results.mpp = obj.transform.toX( ur );
+                     results.g = obj.g.computeValue( mpp );
+                     results.n=n;
+                     results.beta_pred = obj.betat*(1+g/(g0-g));
+                     results.success=true;
                     return;
                 end
 
@@ -59,7 +66,8 @@ classdef HMV < GradientBasedReliabilityAnalysis
                 end
 
             end
-            fprintf('HMV not converged!\n');
+            results.success = false;
+            results.err_msg = ['HMV error: not convergent after ' num2str(k-1) ' iterations'];
         end
     end
 end

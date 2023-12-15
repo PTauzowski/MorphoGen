@@ -12,7 +12,7 @@ P = [0 -10];
 
 model = LShapeModelLinear(ShapeFunctionL4,l,res,E,nu,xp,P);
 model.setResultNode([0 l]);
-model.plotModel();
+%model.plotModel();
 
 randomVariables={RandomVariable("Normal",P(1),5) RandomVariable("Normal",P(2),5)};
 transform=IndependentTransformation(randomVariables);
@@ -21,40 +21,48 @@ g.computeValue(P)
 hmv = HMV(randomVariables,g,transform,betat);
 form = FORM(randomVariables,g,transform);
 
-[ Pf_form, mpp_form, beta_form ]= form.solve();
-[ Pf_hmv, mpp_hmv, beta_hmv ] = hmv.solve();
-fprintf("\nDesign Domain \n BetaDet_form=%5.7f,  BetaDet_hmv=%5.7f\n",beta_form,beta_hmv);
-if beta_form > betat
-    fprintf("\nDesign domain reliability indes lower than target beta\n");
-    return;
-end
+% res_form = form.solve();
+% res_hmv = hmv.solve();
+% fprintf("\nDesign Domain \n BetaDet_form=%5.7f,  BetaPred_hmv=%5.7f\n",res_form.beta, res_hmv.beta_pred);
+% if res_form.beta > betat
+%     fprintf("\nDesign domain reliability indes lower than target beta\n");
+% end
+
+model.setupLoad(P);
 
 Rfilter = 1.2*l/res;
 penal = 3;
 cutTreshold = 0.005;
 volFr=0.4;
 
-topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTreshold, penal, volFr, true );
-sora = SORA(model, topOpt, randomVariables, g, transform, betat );
-
-
-Pf_mc=0;
+% Pf_mc=0;
 % N=5000;
 % mc= MonteCarlo(randomVariables,g,N);
-% [ Pf_mc, p ] = mc.solve();
+% res_mc = mc.solve();
+% 
+% fprintf("\n minDesign :%1.5f, maxDesign :%1.5f\n",min(mc.r),max(mc.r));
+ topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTreshold, penal, volFr, true );
+ topOpt.is_silent=true;
+% model.setupLoad(P);
+% topOpt.solve();
+sora = SORA(model, topOpt, randomVariables, g, transform, betat );
+
+model.setupLoad(P);
+% res_mc = mc.solve();
 % mc.scatterPlots(["Px" "Py"],"HMpen");
+% fprintf("\n minTop :%1.5f, maxTop :%1.5f\n",min(mc.r),max(mc.r));
 
-[ Pf_form, mpp_form, beta_form ]= form.solve();
-[ Pf_hmv, mpp_hmv, beta_hmv ] = hmv.solve();
-fprintf("\nDeterministic design \n Pf_Det_mc=%5.7f, BetaDet_form=%5.7f,  BetaDet_hmv=%5.7f\n",Pf_mc,beta_form,beta_hmv);
-if beta_form > betat
-    fprintf("\nDesign domain reliability lower than target beta\n");
-end
-
+% res_form = form.solve();
+% res_hmv = hmv.solve();
+% fprintf("\nDeterministic design \n Beta_Det_mc=%5.7f, BetaDet_form=%5.7f,  BetaDet_hmv=%5.7f\n",-norminv(res_mc.Pf), res_form.beta, res_hmv.beta_pred);
+% if res_form.beta> betat
+%     fprintf("\nDesign domain reliability lower than target beta\n");
+% end
+% 
 g.computeValue(P)
 sora.limitReliability();
 
- % [betaDet, xRel, volDet, volRel] = sora.solve();
+sora_res = sora.solve()
  % figure;
  % plot(sora.mpps(:,1),sora.mpps(:,2),'Marker','o');
  % [ Pf, mpp, betar ] = form.solve()
