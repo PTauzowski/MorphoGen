@@ -12,17 +12,17 @@ classdef SORA < handle
             obj.hmv = HMV(randomVariables,g,transform,betat);  
             obj.topOpt.is_silent=true;
             obj.betat=betat;
-            if isfile('_allXopt.mat')
-                 load('_allXopt.mat','allx');
-                 obj.topOpt.allx=allx;
-                 obj.topOpt.x=allx(:,end);
-                 obj.topOpt.setFrame( size(allx,2) );
-                 obj.topOpt.plotCurrentFrame();
-            else
+            % if isfile('_allXopt.mat')
+            %      load('_allXopt.mat','allx');
+            %      obj.topOpt.allx=allx;
+            %      obj.topOpt.x=allx(:,end);
+            %      obj.topOpt.setFrame( size(allx,2) );
+            %      obj.topOpt.plotCurrentFrame();
+            % else
                   [objF, xopt] = obj.topOpt.solve();
                   allx=obj.topOpt.allx;
-                  save('_allXopt.mat','allx');
-            end
+                  %save('_allXopt.mat','allx');
+            %end
             model.x=obj.topOpt.allx(:,size(allx,2));
             figure;
         end

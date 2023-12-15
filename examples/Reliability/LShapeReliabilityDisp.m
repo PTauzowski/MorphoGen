@@ -17,15 +17,17 @@ randomVariables={RandomVariable("Normal",P(1),10) RandomVariable("Normal",P(2),1
 transform=IndependentTransformation(randomVariables);
 g=loadPerformanceFunction(model);
 
-% N=5000;
-% mc= MonteCarlo(randomVariables,g,N);
-% res_mc = mc.solve()
-% mc.scatterPlots(["Px" "Py"],"Ux");
-% 
-% hmv = HMV(randomVariables,g,transform,3);
-% form = FORM(randomVariables,g,transform);
-% form_res = form.solve()
-% hmv_res = hmv.solve()
+tic
+N=5000;
+mc= MonteCarlo(randomVariables,g,N);
+res_mc = mc.solve()
+mc.scatterPlots(["Px" "Py"],"Ux");
+
+hmv = HMV(randomVariables,g,transform,3);
+form = FORM(randomVariables,g,transform);
+form_res = form.solve()
+hmv_res = hmv.solve()
+toc
 
 Rfilter = 1.2*l/res;
 penal = 3;
