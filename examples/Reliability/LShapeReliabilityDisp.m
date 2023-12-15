@@ -15,19 +15,8 @@ model.plotModel();
 
 randomVariables={RandomVariable("Normal",P(1),10) RandomVariable("Normal",P(2),10)};
 transform=IndependentTransformation(randomVariables);
-g=loadPerformanceFunction(model);
-
-tic
-N=5000;
-mc= MonteCarlo(randomVariables,g,N);
-res_mc = mc.solve()
-mc.scatterPlots(["Px" "Py"],"Ux");
-
-hmv = HMV(randomVariables,g,transform,3);
-form = FORM(randomVariables,g,transform);
-form_res = form.solve()
-hmv_res = hmv.solve()
-toc
+g=loadPerformanceFunctionDisp(model);
+betat=3;
 
 Rfilter = 1.2*l/res;
 penal = 3;
@@ -35,11 +24,17 @@ cutTreshold = 0.005;
 volFr=0.4;
 
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTreshold, penal, volFr, true );
-%[objF, xopt]  = topOpt.solve();
+topOpt.is_silent=true;
 
-sora = SORA(model,topOpt, randomVariables, g, transform, 3);
-sora.limitReliability();
-%sora.tabReliability();
+tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 5000, betat);
+
+tuner.tuneMC();
+%tuner.plotMCs(["Px" "Py"],'Ux');
+
+% 
+% sora = SORA(model,topOpt, randomVariables, g, transform, 3);
+% sora.limitReliability();
+% sora.tabReliability();
 % sora_results = sora.solve();
 % form_res = form.solve()
 % res_mc = mc.solve()

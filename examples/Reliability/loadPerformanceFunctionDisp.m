@@ -1,11 +1,11 @@
-classdef  loadPerformanceFunction < Function
+classdef  loadPerformanceFunctionDisp < Function
 
     properties
         model;
     end
 
     methods
-        function obj = loadPerformanceFunction(model)
+        function obj = loadPerformanceFunctionDisp(model)
             obj=obj@Function(2,0.0001)
             obj.model=model;   
         end
@@ -14,7 +14,7 @@ classdef  loadPerformanceFunction < Function
             g=zeros(size(points,1),1);
             for k=1:size(points,1)
                 u=obj.model.computeDisplacement(210000,0.3,[points(k,1) points(k,2)]);
-                g(k)=u(1)+0.017;
+                g(k)=u(1)+0.05;
             end            
         end
 

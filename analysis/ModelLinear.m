@@ -64,6 +64,10 @@ classdef ModelLinear < handle
         function plotNodes(obj)
             plot(obj.mesh.nodes(:,1),obj.mesh.nodes(:,2),'.');
         end
+
+        function vol = getVolumeFraction(obj)
+            vol=sum(obj.x(:))/size(obj.x,1);
+        end
     end
 end
 
