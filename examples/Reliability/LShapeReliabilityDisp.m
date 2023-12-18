@@ -16,12 +16,12 @@ model.plotModel();
 randomVariables={RandomVariable("Normal",P(1),20) RandomVariable("Normal",P(2),20)};
 transform=IndependentTransformation(randomVariables);
 g=loadPerformanceFunctionDisp(model);
-betat=2;
+betat=3;
 
 Rfilter = 1.2*l/res;
 penal = 3;
 cutTreshold = 0.01;
-volFr=0.3;
+volFr=0.2;
 
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTreshold, penal, volFr, true );
 topOpt.is_silent=true;
@@ -34,13 +34,11 @@ topOpt.is_silent=true;
  sora = SORA(model,topOpt, randomVariables, g, transform, betat);
  %topOpt.solve();
  % sora.limitReliability();
- % sora.limitReliability();
- % sora.limitReliability();
- % sora.limitReliability();
- results=sora.solveX()
+ % sora.tabMultiMpp();
+
 % topOpt.solve();
 % sora.tabReliability();
-% sora_results = sora.solve();
+sora_results = sora.solveX();
 % form_res = form.solve()
 % res_mc = mc.solve()
 % [xDet, betaDet, xRel, volDet, volRel]  = sora.solve();

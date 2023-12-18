@@ -16,57 +16,12 @@ classdef SORA < handle
             figure;
         end
 
-        function results = solve(obj)
-            inProgress=true;
-            hmv_res = obj.hmv.solve();
-            mpp=0.*hmv_res.mpp;
-            mpp=obj.hmv.transform.toX(mpp);
-            iter=1;
-            while inProgress
-                if iter==2
-                    figure, hold on;
-                end
-                obj.model.setupLoad(mpp);
-                obj.topOpt.allx=[];
-                [objF, xopt] = obj.topOpt.solve(); 
-                hmv_res = obj.hmv.solve();
-                mppX=hmv_res.mpp;
-                obj.mpps=[obj.mpps; mppX];
-                fprintf("mppX: ");
-                for k=1:size(mppX,2)
-                   fprintf("x(%1d)=%3.4f ",k,mpp(k));
-                end                
-                ci = obj.findBetaFrame();
-                obj.topOpt.setFrame( ci.frame );                
-                obj.topOpt.plotCurrentFrame();
-                cn=norm(ci.mpp-mpp);
-                res_form=obj.form.solve();
-                fprintf("conv=%1.5f, g=%5.7f, beta_form=%5.7f, vol=%5.7f\n",cn,hmv_res.g,res_form.beta,obj.topOpt.computeVolumeFraction());
-                if cn < 0.001
-                    results.mpp=mpp;
-                    obj.model.setupLoad(mpp);
-                    [g0, gmpp, mpp, beta_pred] = obj.computePerformance(ci);
-                    results.mpp=mpp;
-                    results.g0=g0;
-                    results.beta_pred=beta_pred;
-                    results.gmpp=gmpp;
-                    results.form_res=obj.form.solve();
-                    return;
-                end         
-                mpp=ci.mpp;
-                obj.model.setupLoad(mpp);
-            end
-        end
+     
         
         function results = solveX(obj)
-            hmv_res = obj.hmv.solve();
             mpp=obj.hmv.transform.toX([0 0]);
             obj.model.setupLoad(mpp);
-            mpp0=mpp;
-            %obj.setMeans(mpp);
-            obj.model.x(:)=1;
             inProgress=true;
-            betaX=0;
             iter=1;
             while inProgress
                 if iter==2
@@ -74,13 +29,12 @@ classdef SORA < handle
                 end
                 obj.topOpt.allx=[];
                 [~, xopt] = obj.topOpt.solve();  
-                obj.model.setupLoad(mpp0);
-                %obj.limitReliability();
+                
                 fr_res=obj.findBetaFrame();
                 obj.topOpt.setFrame( fr_res.frame );    
                 obj.topOpt.plotCurrentFrame();
-                conv=norm(fr_res.mpp0_pred-mpp);
-                obj.model.x=fr_res.x;
+                conv=norm(fr_res.mpp-mpp);
+                %obj.model.x=fr_res.x;
                 %form_res=obj.form.solve();
                 fprintf("\nconv=%1.5f, frame=%3d/%3d, beta_form=%5.7f, g=%5.7f, beta_pred=%5.7f, vol=%5.7f, ",conv,fr_res.frame,fr_res.lastframe,fr_res.beta_pred,fr_res.g,fr_res.beta_pred,obj.topOpt.computeVolumeFraction());
                 fprintf("mpp: ");
@@ -95,35 +49,65 @@ classdef SORA < handle
                     fr_res=obj.findBetaFrame();
                     return;
                 end
-                mpp=fr_res.mpp0_pred;
-                obj.model.setupLoad(fr_res.mpp0_pred);
+                mpp=fr_res.mpp;
+                obj.model.setupLoad(fr_res.mpp);
                 %obj.setMeans(mpp);
                 iter=iter+1;
             end
         end
 
-        % function [g0, gmpp, mpp, mpp0_pred, beta_pred] = computePerformance(obj, iter)
-        %      obj.model.x=obj.topOpt.allx(:,iter);
-        %      res_hmv = obj.hmv.solve();
-        %      g0=res_hmv.g0;
-        %      gmpp=res_hmv.g;
-        %      beta_pred=res_hmv.beta_pred;
-        %      mpp=res_hmv.mpp;
-        %      mpp0_pred=res_hmv.mpp0_pred;
-        % end
-
-         function [g0, gmpp, mpp, mpp0_pred, beta_pred] = computePerformance(obj, iter)
+        function [g0, gmpp, mpp, mpp0_pred, beta_pred] = computePerformance(obj, iter)
              x=obj.model.x;
-             obj.model.x=obj.topOpt.allx(:,iter);
-             res_form = obj.form.solve();
-             g0=res_form.g0;
-             gmpp=res_form.gmpp;
-             beta_pred=res_form.beta;
-             mpp=res_form.mpp;
-             umpp=obj.form.transform.toU(mpp);
-             n=umpp/norm(umpp);
-             mpp0_pred=obj.form.transform.toX(umpp-obj.betat*n);
+             if iter== size(obj.topOpt.allx,2)
+                obj.model.x=obj.topOpt.allx(:,iter);
+             else
+                obj.model.x=obj.topOpt.allx(:,iter);
+                res_hmv = obj.hmv.solve();
+                g1=res_hmv.g;
+                obj.model.x=obj.topOpt.allx(:,iter+1);
+                res_hmv = obj.hmv.solve();
+                g2=res_hmv.g;
+                alpha=abs(g1)/(abs(g2)+g1);
+                obj.model.x=alpha*obj.topOpt.allx(:,iter)+(1-alpha)*obj.topOpt.allx(:,iter+1);
+             end
+             res_hmv = obj.hmv.solve();
+             g0=res_hmv.g0;
+             gmpp=res_hmv.g;
+             beta_pred=res_hmv.beta_pred;
+             mpp=res_hmv.mpp;
+             %umpp=obj.form.transform.toU(mpp);
+             %n=umpp/norm(umpp);
+             mpp0_pred=res_hmv.mpp0_pred;
              obj.model.x=x;
+        end
+
+        function tabMultiMpp(obj)
+            form_res=obj.form.solve();
+            cf=0.25;
+            plBetaFORM=[];
+            plVolFr=[];
+            for k=1:40
+              umpp=obj.form.transform.toU(form_res.mpp);
+              n=umpp/norm(umpp);
+              mpp0_pred=obj.form.transform.toX(cf*k*obj.betat*n);
+              obj.model.setupLoad(mpp0_pred);
+              obj.topOpt.allx=[];
+              [~, xopt] = obj.topOpt.solve();  
+              fr_res=obj.findBetaFrame();
+              obj.topOpt.setFrame( fr_res.frame );    
+              obj.topOpt.plotCurrentFrame();
+              fprintf("\niter :%3d, cf=%2.5f, frame=%3d/%3d, beta_form=%5.7f, g=%5.7f, beta_pred=%5.7f, vol=%5.7f",k,cf*k,fr_res.frame,fr_res.lastframe,fr_res.beta_pred,fr_res.g,fr_res.beta_pred,obj.topOpt.computeVolumeFraction());
+                fprintf(" mpp: ");
+                for k=1:size(mpp0_pred,2)
+                   fprintf("x(%1d)=%3.4f ",k,mpp0_pred(k));
+                end 
+                volFr=obj.topOpt.computeVolumeFraction();
+                plBetaFORM=[plBetaFORM fr_res.beta_pred];
+                plVolFr=[plVolFr volFr];
+            end
+            figure;
+            plot(plVolFr,plBetaFORM);
+            title('FORM beta vs volFr');
         end
 
         function tabReliability(obj)
@@ -133,6 +117,7 @@ classdef SORA < handle
              plG=[];
              for k=1:size(obj.topOpt.allx,2)
                [g0, gmpp, mpp, mpp0_pred, beta_pred] = obj.computePerformance(k);
+               obj.model.x=obj.topOpt.allx(:,k);
                form_res=obj.form.solve();
                obj.topOpt.setFrame(k);
                volFr=obj.topOpt.computeVolumeFraction();
@@ -154,6 +139,9 @@ classdef SORA < handle
              figure;
              plot(plG);
              title('Performance function evolution');
+             figure;
+             plot(smooth(plG));
+             title('Smoothed performance function evolution');
              figure;
              plot(plVolFr,plBetaFORM);
              title('FORM beta vs volFr');
@@ -183,7 +171,7 @@ classdef SORA < handle
             results.lastframe=size(obj.topOpt.allx,2);
             ia=1; 
             [ga, gmpp, mpp, mpp0_pred, beta_pred] = obj.computePerformance(ia);
-            if beta_pred < obj.betat
+            if gmpp < 0
                results.frame=1;
                results.x=obj.topOpt.allx(:,1);
                results.mpp=mpp;
@@ -194,7 +182,7 @@ classdef SORA < handle
             end
             ib=size(obj.topOpt.allx,2);
             [gb, gmpp, mpp, mpp0_pred, beta_pred] =obj.computePerformance(ib);
-            if beta_pred >= obj.betat
+            if gmpp >= 0
                results.frame=ib;
                results.x=obj.topOpt.allx(:,ib);
                results.mpp=mpp;
@@ -206,7 +194,7 @@ classdef SORA < handle
             while ib-ia>1
                 i=round((ib+ia)/2);
                 [gb, v, mpp, mpp0_pred, beta_pred]=obj.computePerformance(i);
-                if beta_pred >= obj.betat
+                if v > 0
                     ia=i;
                     va=v;
                 else
@@ -215,6 +203,8 @@ classdef SORA < handle
                 end
                 results.mpp=mpp;
             end
+            [gb, v, mpp, mpp0_pred, beta_pred]=obj.computePerformance(ia);
+            [gb1, v1, mpp1, mpp0_pred1, beta_pred1]=obj.computePerformance(ia+1);
             results.frame=ia;
             results.x=obj.topOpt.allx(:,ia);
             results.g=v;
@@ -254,8 +244,6 @@ classdef SORA < handle
                 obj.randVars{k}.setMean(m(k));
             end
         end
-           
-
     end
 end
 
