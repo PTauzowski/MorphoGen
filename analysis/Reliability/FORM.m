@@ -11,6 +11,7 @@ classdef FORM < GradientBasedReliabilityAnalysis
         function results = solve(obj)
             dim = obj.getDim();
             u  = zeros( 1, dim );
+            results.g0 = obj.g.computeValue( obj.transform.toX( u ) );
             mpp = u;
             for iter=1:100
                [g, dg] = obj.computeGu( u );
@@ -31,10 +32,11 @@ classdef FORM < GradientBasedReliabilityAnalysis
                      return;
                 end
                 u = unext;
-                if conv < 0.0001 
+                if conv < 0.00001 
                     results.beta = norm( u );
                     results.Pf = normcdf( -results.beta );
                     results.mpp = obj.transform.toX( u );
+                    results.gmpp = obj.g.computeValue(results.mpp );
                     results.success=true;
                     return;
                 end

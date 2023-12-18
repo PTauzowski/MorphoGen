@@ -3,11 +3,6 @@ classdef ReliabilityAnalysis < handle
     properties
         randVars;
         g;
-        Pf;
-        beta;
-        success;
-        err_msg;
-        warning;
     end
     
     methods(Abstract)
@@ -18,7 +13,6 @@ classdef ReliabilityAnalysis < handle
         function obj = ReliabilityAnalysis( randVars, g  )
             obj.randVars = randVars;
             obj.g = g;
-            obj.err_msg = "OK";
         end
         
         function dim = getDim(obj)

@@ -35,20 +35,18 @@ classdef HMV < GradientBasedReliabilityAnalysis
                 dgrel = abs((g-g1)/norm(dg) );
                 dgabs = abs((g-g1) );
                 if  max( abs(beta-obj.betat), max(dgrel, dgabs) ) < 0.0001  
-                     %Pf = normcdf( -norm( u ) );
-                     %mpp = zeros(dim,1);
-                     %betar = norm(u);
+                    
                      betar = obj.betat*(1+g/(g0-g));
-                     ur = betar*n;
-                     mpp = obj.transform.toX( u );
+                     ur = obj.betat*n;
+                     mpp = obj.transform.toX( ur );
                      g = obj.g.computeValue( mpp );
-                     mpp = u;
-                     Pf = normcdf( -beta );
-                     % fprintf('iter = %2d\n',k);
-                     results.mpp = obj.transform.toX( ur );
-                     results.g = obj.g.computeValue( mpp );
+
+                     results.g0=g0;
+                     results.mpp = mpp;
+                     results.mpp0_pred = obj.transform.toX(n*betar);
+                     results.g = g;
                      results.n=n;
-                     results.beta_pred = obj.betat*(1+g/(g0-g));
+                     results.beta_pred = betar;
                      results.success=true;
                     return;
                 end
