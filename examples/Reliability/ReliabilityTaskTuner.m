@@ -1,8 +1,8 @@
 classdef ReliabilityTaskTuner < handle
     
     properties
-        model, topOpt, randVars, g, transform, N, mcDD, mcTop, form, hmv;
-        mcDD_res, mcTop_res;
+        model, topOpt, randVars, g, transform, N, mcDD, mcTop, mcTopSafe, form, hmv;
+        mcDD_res, mcTop_res, mcTopSafe_res;
         formDD_res, formTop_res;
         hmvDD_res, hmvTop_res;
     end
@@ -17,6 +17,7 @@ classdef ReliabilityTaskTuner < handle
             obj.N=N;
             obj.mcDD  = MonteCarlo(randVars,g,N);
             obj.mcTop = MonteCarlo(randVars,g,N);
+            obj.mcTopSafe = MonteCarlo(randVars,g,N);
             obj.topOpt.is_silent=true;
             obj.hmv = HMV(randVars,g,transform, betat);
             obj.form = FORM(randVars,g,transform);
@@ -32,8 +33,18 @@ classdef ReliabilityTaskTuner < handle
             obj.model.x=xopt;
             fprintf("Topology Monte Carlo sampling\n");
             obj.mcTop_res = obj.mcTop.solve();
+            fprintf("Topology safe Monte Carlo sampling\n");
+            obj.model.x=obj.topOpt.allx(:,end);
+            obj.hmvTop_res = obj.hmv.solve();
+            obj.model.setupLoad(obj.hmvTop_res.mpp);
+            obj.topOpt.allx=[];
+            [~, xopt] = obj.topOpt.solve();
+            obj.model.x=obj.topOpt.allx(:,end);
+            obj.mcTopSafe_res = obj.mcTopSafe.solve();
+
             fprintf("Design domain boundaries: min=%5.7f, max=%5.7f\n",min(obj.mcDD.r),max(obj.mcDD.r));
             fprintf("     Topology boundaries: min=%5.7f, max=%5.7f\n",min(obj.mcTop.r),max(obj.mcTop.r));
+            fprintf("Safe topology boundaries: min=%5.7f, max=%5.7f\n",min(obj.mcTopSafe.r),max(obj.mcTopSafe.r));
         end
 
          function obj = tuneFORM(obj)

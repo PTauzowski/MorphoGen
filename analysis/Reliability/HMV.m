@@ -17,9 +17,6 @@ classdef HMV < GradientBasedReliabilityAnalysis
             n1  = zeros( dim, 1 );
             [g, dg] = computeGu( obj, u ); 
             if  norm(dg)<1.0E-20
-                     results.Pf = -1;
-                     results.n = -1;
-                     results.mpp=dg;
                      results.success=false;
                      results.err_msg='HMV error: gradient norm too small';
                      return;
@@ -42,9 +39,9 @@ classdef HMV < GradientBasedReliabilityAnalysis
                      g = obj.g.computeValue( mpp );
 
                      results.g0=g0;
-                     results.mpp = mpp;
+                     results.mpp = obj.transform.toX(u);
                      results.mpp0_pred = obj.transform.toX(n*betar);
-                     results.g = g;
+                     results.g = obj.g.computeValue( results.mpp );
                      results.n=n;
                      results.beta_pred = betar;
                      results.success=true;

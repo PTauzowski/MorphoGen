@@ -34,8 +34,6 @@ classdef SORA < handle
                 obj.topOpt.setFrame( fr_res.frame );    
                 obj.topOpt.plotCurrentFrame();
                 conv=norm(fr_res.mpp-mpp);
-                %obj.model.x=fr_res.x;
-                %form_res=obj.form.solve();
                 fprintf("\nconv=%1.5f, frame=%3d/%3d, beta_form=%5.7f, g=%5.7f, beta_pred=%5.7f, vol=%5.7f, ",conv,fr_res.frame,fr_res.lastframe,fr_res.beta_pred,fr_res.g,fr_res.beta_pred,obj.topOpt.computeVolumeFraction());
                 fprintf("mpp: ");
                 for k=1:size(mpp,2)
@@ -51,7 +49,6 @@ classdef SORA < handle
                 end
                 mpp=fr_res.mpp;
                 obj.model.setupLoad(fr_res.mpp);
-                %obj.setMeans(mpp);
                 iter=iter+1;
             end
         end
@@ -62,13 +59,13 @@ classdef SORA < handle
                 obj.model.x=obj.topOpt.allx(:,iter);
              else
                 obj.model.x=obj.topOpt.allx(:,iter);
-                res_hmv = obj.hmv.solve();
-                g1=res_hmv.g;
-                obj.model.x=obj.topOpt.allx(:,iter+1);
-                res_hmv = obj.hmv.solve();
-                g2=res_hmv.g;
-                alpha=abs(g1)/(abs(g2)+g1);
-                obj.model.x=alpha*obj.topOpt.allx(:,iter)+(1-alpha)*obj.topOpt.allx(:,iter+1);
+                % res_hmv = obj.hmv.solve();
+                % g1=res_hmv.g;
+                % obj.model.x=obj.topOpt.allx(:,iter+1);
+                % res_hmv = obj.hmv.solve();
+                % g2=res_hmv.g;
+                % alpha=abs(g1)/(abs(g2)+g1);
+                % obj.model.x=alpha*obj.topOpt.allx(:,iter)+(1-alpha)*obj.topOpt.allx(:,iter+1);
              end
              res_hmv = obj.hmv.solve();
              g0=res_hmv.g0;
@@ -206,10 +203,10 @@ classdef SORA < handle
             [gb, v, mpp, mpp0_pred, beta_pred]=obj.computePerformance(ia);
             [gb1, v1, mpp1, mpp0_pred1, beta_pred1]=obj.computePerformance(ia+1);
             results.frame=ia;
-            results.x=obj.topOpt.allx(:,ia);
-            results.g=v;
-            results.beta_pred=beta_pred;
-            results.mpp0_pred=mpp0_pred;
+            results.x=(obj.topOpt.allx(:,ia)+obj.topOpt.allx(:,ia+1))/2;
+            results.g=(v+v1)/2;
+            results.beta_pred=(beta_pred+beta_pred1)/2;
+            results.mpp0_pred=(mpp0_pred+mpp0_pred1)/2;
         end
 
         function ci = findZeroGold(obj)
