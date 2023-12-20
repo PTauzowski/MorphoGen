@@ -1,12 +1,12 @@
 clear;
 close all;
-res = 32;
+res = 16;
 l = 3;
 
 % Filtering radius
 Rfilter = 2*l/res;
 penal=3;
-cutTreshold = 0.005;
+cutTreshold = 0.002;
 
 
 ShapeFn = ShapeFunctionL8;
