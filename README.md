@@ -33,7 +33,15 @@ After cloning the repository, the 'MorphoGen' directory will appear. After addin
 
 ## Configuration
 The system is currently written and tested in MATLAB R2023a. So it is recommended to use this version. A regular adding MorphoGen directory to the path along with its subdirectories is needed for be able to use the system.
+## Getting started
+To quickly run an example topology optimization task, just follow these three simple steps:
+1. Add the repository to MATLAB paths
+2. Go into examples/ folder: cd MorphoGen/examples/benchmarkProblems
+3. Run the exemplary task calling the script name: Cantilever.m
 
+While performing calculations, the user will be able to observe the topology creation process. After performing the calculations, you will receive an image of the topology:   
+
+![Cantilever](images/Cantilever.png)
 ## Usage
 We will present here a file with the definition of an example topological optimization of a cantilever using two methods:
 
