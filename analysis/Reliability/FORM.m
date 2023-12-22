@@ -26,7 +26,7 @@ classdef FORM < GradientBasedReliabilityAnalysis
                 du   = u - unext;
                 conv = norm( du );
 
-                if  size(find( abs(conv) > 50 ),1 ) 
+                if  size(find( abs(conv) > 500 ),1 ) 
                      results.success=false;
                      results.err_msg='FORM not converged!\n';
                      return;

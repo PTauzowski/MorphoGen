@@ -14,8 +14,7 @@ classdef  loadPerformanceFunctionHM < Function
             g=zeros(size(points,1),1);
             for k=1:size(points,1)
                 sHM=obj.model.computeHMstress(210000,0.3,[points(k,1) points(k,2)]);
-                %g(k)=400-sHM;
-                g(k)=sHM-141;
+                g(k)=400-sHM;
             end            
         end
 

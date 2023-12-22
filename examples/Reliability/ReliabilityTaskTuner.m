@@ -36,15 +36,15 @@ classdef ReliabilityTaskTuner < handle
             fprintf("Topology safe Monte Carlo sampling\n");
             obj.model.x=obj.topOpt.allx(:,end);
             obj.hmvTop_res = obj.hmv.solve();
-            obj.model.setupLoad(obj.hmvTop_res.mpp);
-            obj.topOpt.allx=[];
-            [~, xopt] = obj.topOpt.solve();
-            obj.model.x=obj.topOpt.allx(:,end);
-            obj.mcTopSafe_res = obj.mcTopSafe.solve();
+            % obj.model.setupLoad(obj.hmvTop_res.mpp);
+            % obj.topOpt.allx=[];
+            % [~, xopt] = obj.topOpt.solve();
+            % obj.model.x=obj.topOpt.allx(:,end);
+            % obj.mcTopSafe_res = obj.mcTopSafe.solve();
 
             fprintf("Design domain boundaries: min=%5.7f, max=%5.7f\n",min(obj.mcDD.r),max(obj.mcDD.r));
             fprintf("     Topology boundaries: min=%5.7f, max=%5.7f\n",min(obj.mcTop.r),max(obj.mcTop.r));
-            fprintf("Safe topology boundaries: min=%5.7f, max=%5.7f\n",min(obj.mcTopSafe.r),max(obj.mcTopSafe.r));
+            %fprintf("Safe topology boundaries: min=%5.7f, max=%5.7f\n",min(obj.mcTopSafe.r),max(obj.mcTopSafe.r));
         end
 
          function obj = tuneFORM(obj)
@@ -61,6 +61,8 @@ classdef ReliabilityTaskTuner < handle
              end            
             fprintf("Topology FORMg\n");
             obj.formTop_res = obj.form.solve();
+            obj.hmvTop_res = obj.hmv.solve();
+            obj.model.x=xopt;
             if obj.formDD_res.success
                 fprintf("Design domain FORM: beta=%1.7f\n",obj.formDD_res.beta);
             else
@@ -71,12 +73,15 @@ classdef ReliabilityTaskTuner < handle
             else
                 fprintf("     Topology FORM: not succeed\n");
             end
+            
          end
 
          function obj = plotMCs(obj,varNames,objName)
                 obj.mcDD.scatterPlots(varNames,['DD' objName])
                 obj.mcTop.scatterPlots(varNames,['Top' objName])
          end
+
+         
     end
 end
 
