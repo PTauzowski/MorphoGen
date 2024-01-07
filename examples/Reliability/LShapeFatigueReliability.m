@@ -2,7 +2,7 @@ clear;
 close all;
 l=3;
 c=0.4;
-res = 40;
+res = 10;
 E=200000;
 nu=0.3;
 
@@ -20,38 +20,49 @@ fatigueData.Fref=0.01;
 fatigueData.Nexp=42150;
 
 
-xp=[l 0.4*l];
-P = [0 10];
+xp=[l 0.2*l 0.4*l];
+P = [1 -6];
 
-model = LShapeModelLinear(ShapeFunctionL4,l,res,E,nu,xp,P);
-model.setResultNode([l*0.4 l*0.4]);
+model = LShapeSolidModel(ShapeFunctionL8,l,res,E,nu,xp,P);
+model.setResultNode([0.4*l 0.2*l 0.4*l]);
 model.plotModel();
 
-randomVariables={RandomVariable("Normal",0,2) RandomVariable("Normal",-8,0.2)};
+randomVariables={RandomVariable("Normal",P(1),1) RandomVariable("Normal",P(3),1)};
 transform=IndependentTransformation(randomVariables);
 g=loadFatiguePerformanceFunction(model,fatigueData);
 
-% N=5000;
-% mc= MonteCarlo(randomVariables,g,N);
-% [ Pf_mc, p ] = mc.solve();
-% Pf_mc
-% mc.scatterPlots(["Px" "Py"],"Ux");
-% % 
- hmv = HMV(randomVariables,g,transform,3);
-% form = FORM(randomVariables,g,transform);
-% Pf_form = form.solve()
-% [ Pf, mpp, betar ] = hmv.solve()
+%g.tabNCycles(0.1,500,10)
 
 Rfilter = 1.2*l/res;
 penal = 3;
 cutTreshold = 0.005;
-volFr=0.4;
+volFr=0.25;
 
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTreshold, penal, volFr, true );
-%[objF, xopt]  = topOpt.solve();
+topOpt.is_silent=true;
 
-sora = SORA(model,topOpt, hmv);
-[xDet, betaDet, xRel, volDet, volRel] = sora.solve();
-volDet
-volRel
+tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 1000, 2);
+tuner.tuneMC();
+tuner.plotMCs(["Px" "Py" "Pz"],'Nc');
+
+%tuner.tuneFORM();
+
+ sora2 = SORA('LShapeSolidFatigueBeta2', model,topOpt, randomVariables, g, transform, 2);
+ sora3 = SORA('LShapeSolidFatigueBeta3', model,topOpt, randomVariables, g, transform, 3);
+ %sora.checkTuning();
+
+ 
+ % topOpt.solve();
+%  sora2.limitReliability();
+  %sora.tabMultiMpp();
+
+% topOpt.solve();
+% sora2.tabReliability();
+
+%sora2.checkTuning();
+
+% sora_results2 = sora2.solveX();
+% sora_results3 = sora3.solveX();
+
+% form_res = form.solve()
 

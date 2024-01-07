@@ -23,7 +23,7 @@ classdef LShapeSolidModel < ModelLinear
             obj.analysis.fixNodes( fixedFaceSelector, ["ux" "uy" "uz"] );   
             obj.analysis.printProblemInfo();
 
-            obj.x=ones(obj.analysis.getTotalElemsNumber());
+            obj.x=ones(obj.analysis.getTotalElemsNumber(),1);
             obj.result_number=13;
         end
 
@@ -32,6 +32,15 @@ classdef LShapeSolidModel < ModelLinear
             material.setElasticIzo(E, nu);
             obj.fe.setMaterial( material );   
             obj.analysis.loadClosestNode(obj.xp,["ux" "uy" "uz"], P);
+         end
+
+         function pstress = computePenalizedHMstress(obj,E,nu,pressure,penalty)
+            obj.analysis.clearCurrentLoad();
+            obj.setupVariables(E,nu,pressure);
+            obj.analysis.solveWeighted(obj.x);
+            obj.analysis.computeElementResults(obj.x);
+            pstress=sum(obj.fe.results.nodal.all(:,14).*obj.fe.results.nodal.all(:,obj.result_number))^(1/penalty);
+            %pstress=sum(obj.fe.results.nodal.all(:,obj.result_number))^(1/penalty);
         end
        
     end

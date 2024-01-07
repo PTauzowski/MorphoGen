@@ -17,6 +17,7 @@ classdef MonteCarlo < ReliabilityAnalysis
             obj.x=obj.generateRandomSapmles(obj.nsamples);
             [obj.x, obj.r, obj.fi] = obj.generatePerformanceRandomSapmles(obj.nsamples);
             results.Pf = max(size(find(obj.r<0)))/(obj.nsamples-size(obj.fi,2));
+            results.beta=-norminv(results.Pf);
         end
 
         function scatterPlots(obj,varNames,objName)

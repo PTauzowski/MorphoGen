@@ -152,6 +152,7 @@ classdef TopologyOptimization < ConstrainedOptimization
         end
         function plotCurrentFrame(obj)
                 obj.plotMeshTopology( obj.x, obj.elem_inds )
+                title(['Iteration :',num2str(obj.iteration), 'vol =' num2str(obj.computeVolumeFraction)]);
         end
         function plotMeshTopology( obj, x, elem_inds )
             clf;

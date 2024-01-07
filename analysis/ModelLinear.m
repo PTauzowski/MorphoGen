@@ -19,7 +19,7 @@ classdef ModelLinear < handle
 
         function setupLoad(obj,P)
             obj.analysis.clearCurrentLoad();
-            obj.analysis.loadClosestNode(obj.xp,["ux" "uy"], P);
+            obj.analysis.loadClosestNode(obj.xp,["ux" "uy" "uz"], P);
         end
 
         function setupVariables(obj,E,nu,P)
@@ -27,7 +27,7 @@ classdef ModelLinear < handle
             material.setElasticIzo(E, nu);
             obj.fe.setMaterial( material );   
             obj.analysis.clearCurrentLoad();
-            obj.analysis.loadClosestNode(obj.xp,["ux" "uy"], P);
+            obj.analysis.loadClosestNode(obj.xp,["ux" "uy" "uz"], P);
         end
 
         function u = computeDisplacement(obj,E,nu,pressure)

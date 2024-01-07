@@ -10,7 +10,8 @@ classdef FORM < GradientBasedReliabilityAnalysis
         
         function results = solve(obj)
             dim = obj.getDim();
-            u  = zeros( 1, dim );
+            u0  = zeros( 1, dim );
+            u=u0;
             results.g0 = obj.g.computeValue( obj.transform.toX( u ) );
             mpp = u;
             for iter=1:100

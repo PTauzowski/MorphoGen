@@ -3,10 +3,10 @@ classdef SolidElasticElem < FiniteElement
         function obj = SolidElasticElem(sf,p)
              obj = obj@FiniteElement(sf,p);
              obj.ndofs=["ux" "uy" "uz"];
-             obj.results.names  = ["exx" "eyy" "ezz" "exy" "eyz" "exz" "sxx" "syy" "szz" "sxy" "syz" "sxz" "sHM"];
+             obj.results.names  = ["exx" "eyy" "ezz" "exy" "eyz" "exz" "sxx" "syy" "szz" "sxy" "syz" "sxz" "sHM" "rho"];
              obj.results.descriptions  = ["strain member exx" "strain member eyy" "strain member ezz" ...
                  "strain member exy" "strain member eyz" "strain member exz" "stress member sxx" "stress member syy" "stress member szz" ...
-                 "stress member sxy" "stress member syz" "stress member sxz" "Huber-Mises stress"];
+                 "stress member sxy" "stress member syz" "stress member sxz" "Huber-Mises stress" "Top opt density"];
         end
         function setIsotropicMaterial( obj, E, nu, rho )
             D = E / ( 1.0 + nu ) / ( 1 - 2.0 * nu ) * [ 1-nu nu nu 0 0 0; ...
@@ -291,6 +291,7 @@ classdef SolidElasticElem < FiniteElement
             obj.results.gp.all(11,:,:) = syz;
             obj.results.gp.all(12,:,:) = sxz;
             obj.results.gp.all(13,:,:) = sHM;
+            obj.results.gp.all(14,:,:) = repmat(x,1,nip);
         end
         function faces = findFaces( obj, fnodes )
               allfaces = obj.multiObjectList( obj.sf.faces );

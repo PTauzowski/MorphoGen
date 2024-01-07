@@ -53,7 +53,7 @@ classdef LowCycleFatigue
             inds=find(ds>2*obj.sy);
             last = size(inds,2);
             if last==0
-                 ncycles=1.0E6;
+                 ncycles=1.0E8;
                 return;
             end
             if size(inds,2)>1
@@ -90,7 +90,7 @@ classdef LowCycleFatigue
                 Nr13=(obj.Dc-D)/dDdN(last);
                 %pr = p+Nr13*dpdN(last);
                 ncycles=sum(obj.blocks(inds(1:last-1)))+Nr13;
-                42890-obj.Nexp;
+                %42890-obj.Nexp;
                 %abs(obj.fd.Nexp-ncycles)
             else
                 dep = (ds(inds)-2*obj.sy)/obj.Cy;

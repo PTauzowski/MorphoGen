@@ -42,8 +42,8 @@ classdef ReliabilityTaskTuner < handle
             % obj.model.x=obj.topOpt.allx(:,end);
             % obj.mcTopSafe_res = obj.mcTopSafe.solve();
 
-            fprintf("Design domain boundaries: min=%5.7f, max=%5.7f\n",min(obj.mcDD.r),max(obj.mcDD.r));
-            fprintf("     Topology boundaries: min=%5.7f, max=%5.7f\n",min(obj.mcTop.r),max(obj.mcTop.r));
+            fprintf("Design domain boundaries: min=%5.7f, max=%5.7f beta=%5.7f\n",min(obj.mcDD.r),max(obj.mcDD.r),obj.mcDD_res.beta);
+            fprintf("     Topology boundaries: min=%5.7f, max=%5.7f beta=%5.7f\n",min(obj.mcTop.r),max(obj.mcTop.r),obj.mcTop_res.beta);
             %fprintf("Safe topology boundaries: min=%5.7f, max=%5.7f\n",min(obj.mcTopSafe.r),max(obj.mcTopSafe.r));
         end
 

@@ -13,21 +13,21 @@ model = LShapeModelLinear(ShapeFunctionL4,l,res,E,nu,xp,P);
 model.setResultNode([l l*0.4]);
 model.plotModel();
 
-randomVariables={RandomVariable("Normal",P(1),10) RandomVariable("Normal",P(2),10)};
+randomVariables={RandomVariable("Normal",P(1),5) RandomVariable("Normal",P(2),5)};
 transform=IndependentTransformation(randomVariables);
 g=loadPerformanceFunctionDisp(model);
 
 Rfilter = 1.2*l/res;
 penal = 3;
-cutTreshold = 0.001;
-volFr=0.3;
+cutTreshold = 0.005;
+volFr=0.25;
 
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTreshold, penal, volFr, true );
 topOpt.is_silent=true;
 
-tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 5000, 2);
-%tuner.tuneMC();
-%tuner.plotMCs(["Px" "Py"],'Ux');
+% tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 5000, 2);
+% tuner.tuneMC();
+% tuner.plotMCs(["Px" "Py"],'Ux');
 %tuner.tuneFORM();
 
  sora2 = SORA('LShapeDispBeta2', model,topOpt, randomVariables, g, transform, 2);
@@ -40,7 +40,7 @@ tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 5000,
   %sora.tabMultiMpp();
 
 % topOpt.solve();
- %sora.tabReliability();
+%  sora2.tabReliability();
 
  %sora2.checkTuning();
 
