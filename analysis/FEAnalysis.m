@@ -19,7 +19,7 @@ classdef (Abstract) FEAnalysis < handle
             end
             obj.selTolerance=1.0E-05;
             obj.Pnodal = zeros( size(mesh.nodes,1), size(obj.ndofs,2) );
-            obj.Pfem = zeros( size(mesh.nodes,1) * size(obj.ndofs,2), 1 );
+            obj.Pfem = []; %zeros( size(mesh.nodes,1) * size(obj.ndofs,2), 1 );
             obj.qnodal = zeros( size(mesh.nodes,1), size(obj.ndofs,2) );
             obj.supports = zeros( size(mesh.nodes,1), size(obj.ndofs,2) );
         end
@@ -142,7 +142,7 @@ classdef (Abstract) FEAnalysis < handle
             obj.Pnodal=P;
         end
         function prepareRHSVectors(obj)
-            if any(obj.Pnodal(:)~=0) && size(obj.Pfem,2)>1
+            if any(obj.Pnodal(:)~=0) %&& size(obj.Pfem,2)>1
                 obj.createNextRightHandSideVector();
             else
                 setCurrentLoadToRightHandSideVectors(obj,size(obj.Pfem,2))

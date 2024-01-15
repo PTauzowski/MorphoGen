@@ -1,8 +1,8 @@
-classdef LShapeSolidModel < ModelLinear
+classdef LShapeSolidModel < ModelLinearLoad
     
     methods
-        function obj = LShapeSolidModel(sf,l,res,E,nu,xp,P)
-            obj.mesh = Mesh();
+        function obj = LShapeSolidModel(sf,l,res,E,nu,xp,resX)
+                obj.mesh = Mesh();
             obj.mesh.addLshape3D( l, 0.4*l, res, sf.localNodes );
             fixedFaceSelector = Selector( @(x)( abs(x(:,3) - l)<0.001 ) );
             loadedFaceSelector = Selector( @(x)( abs(x(:,1) - l)<0.001 ) );
@@ -19,12 +19,17 @@ classdef LShapeSolidModel < ModelLinear
             obj.analysis = LinearElasticityWeighted( obj.fe, obj.mesh, true );
             
             obj.xp=xp;
-            obj.analysis.loadClosestNode(obj.xp,["ux" "uy" "uz"], P);
+            obj.analysis.loadClosestNode(obj.xp,["ux" "uy" "uz"], [1 0 0]);
+            obj.analysis.createNextRightHandSideVector();
+            obj.analysis.loadClosestNode(obj.xp,["ux" "uy" "uz"], [0 1 0]);
+            obj.analysis.createNextRightHandSideVector();
+            obj.analysis.loadClosestNode(obj.xp,["ux" "uy" "uz"], [0 0 1]);
+%            obj.analysis.createNextRightHandSideVector();
             obj.analysis.fixNodes( fixedFaceSelector, ["ux" "uy" "uz"] );   
             obj.analysis.printProblemInfo();
-
-            obj.x=ones(obj.analysis.getTotalElemsNumber(),1);
+            obj.setResultNode(resX);
             obj.result_number=13;
+            obj.setX(ones(obj.analysis.getTotalElemsNumber(),1));
         end
 
          function setupVariables(obj,E,nu,P)

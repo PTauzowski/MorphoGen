@@ -21,7 +21,7 @@ classdef LinearElasticityWeighted < FEAnalysis
                 end
             end
         end
-       function qn = solveWeighted(obj, x)
+       function qfem = solveWeighted(obj, x)
            [I,J,~] = obj.globalMatrixIndices();
            obj.prepareRHSVectors();
             if size(obj.rotations,1)== 0 
@@ -34,8 +34,7 @@ classdef LinearElasticityWeighted < FEAnalysis
            else
                 obj.qfem = solver.solve(obj.globalMatrixAggregationWeighted('computeStifnessMatrix',x), obj.Pfem);
            end
-           obj.qnodal = obj.fromFEMVector(obj.qfem);
-           qn=obj.qnodal;
+           qfem=obj.qfem;
        end
    end
 end
