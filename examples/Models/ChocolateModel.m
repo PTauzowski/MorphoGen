@@ -231,7 +231,8 @@ classdef ChocolateModel < ModelLinear
             sy1 = obj.fe.results.nodal.all(n1,7);
             sx2 = obj.fe.results.nodal.all(n2,6);
             sy2 = obj.fe.results.nodal.all(n2,7);
-            stressObj=sx1+sy1-(sx2+sy2);
+            %stressObj=sx1+sy1-(sx2+sy2);
+            stressObj=(sx2+sy2)-sx1+sy1;
         end
 
         function o = computeObjectiveValue(obj,x)
