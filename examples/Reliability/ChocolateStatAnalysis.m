@@ -8,13 +8,12 @@ randomVariables={RandomVariable("Uniform",0.2,0.8) RandomVariable("Uniform",0.2,
 transform=IndependentTransformation(randomVariables);
 g = chocolatePerformanceFunction(height,210000,0.3);
 
- N=1000;
+ N=10;
  mc= MonteCarlo(randomVariables,g,N);
- [ Pf_mc, p ] = mc.solve();
- Pf_mc
- figure, hold on;
- scatter3(mc.x(p>0,1),mc.x(p>0,2),p(p>0),'MarkerEdgeColor',[0 .8 .8],'Marker','.');
- scatter3(mc.x(p<=0,1),mc.x(p<=0,2),p(p<=0),'filled','MarkerEdgeColor',[0.5 0 .5],'Marker','o');
+ tic
+ res_mc = mc.solve();
+ toc
+ res_mc.Pf
 
 
 
