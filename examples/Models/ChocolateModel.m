@@ -64,18 +64,18 @@ classdef ChocolateModel < ModelLinear
             ytiles=4;
             
             % x - width of the tile
-            cx=30;
+            cx=30-notchWidth;
             obj.cx=cx;
             
             % y - width of the tile
-            cy=20; 
+            cy=20-notchWidth; 
             obj.cy=cy;
             
             % FE x - division of the tile
-            ncx=8;
+            ncx=4;
             
             % FE y - division of the tile
-            ncy=6;
+            ncy=3;
             
             % depth FE division of the GaN layer
             ngan=2;

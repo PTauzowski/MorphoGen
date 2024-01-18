@@ -35,6 +35,7 @@ classdef LinearElasticityWeighted < FEAnalysis
                 obj.qfem = solver.solve(obj.globalMatrixAggregationWeighted('computeStifnessMatrix',x), obj.Pfem);
            end
            qfem=obj.qfem;
+           obj.qnodal=obj.fromFEMVector(qfem(:,1));
        end
    end
 end
