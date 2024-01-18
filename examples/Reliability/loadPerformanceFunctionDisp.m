@@ -14,7 +14,7 @@ classdef  loadPerformanceFunctionDisp < Function
             g=zeros(size(points,1),1);
             for k=1:size(points,1)
                 u=obj.model.computeDisplacement(210000,0.3,[points(k,1) points(k,2)]);
-                 g(k)=u(1)+0.015;
+                g(k)=u(1);
             end            
         end
 

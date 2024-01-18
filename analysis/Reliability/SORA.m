@@ -16,7 +16,6 @@ classdef SORA < handle
             obj.transform=transform;
             obj.topOpt.is_silent=true;
             obj.betat=betat;
-            obj.model.x(:)=1;
             figure;
         end
 

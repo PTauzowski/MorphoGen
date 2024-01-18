@@ -271,6 +271,7 @@ classdef (Abstract) FEAnalysis < handle
         end
         function clearCurrentLoad(obj)
                 obj.Pnodal(:)=0;
+                %obj.Pfem=[];
         end
         function plotSupport(obj)
               dim    = size(obj.mesh.nodes,2);

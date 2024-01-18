@@ -1,9 +1,9 @@
 classdef FEModel
-   
-    
+  
     properties
-        analysis, mesh;
+       mesh, x, rho, supports, rotations;
     end
+
     methods (Abstract)
         generateMesh();
         createFiniteElements();
@@ -14,12 +14,11 @@ classdef FEModel
     
     methods
         function obj = FEModel()
-      
             obj.generateMesh();
             obj.createFiniteElements();
-            createMaterials();
-            applyDirichletBC();
-            applyDirichletBC();
+            obj.createMaterials();
+            obj.applyDirichletBC();
+            obj.applyDirichletBC();
         end
        
     end

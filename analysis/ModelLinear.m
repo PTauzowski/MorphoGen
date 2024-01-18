@@ -10,6 +10,10 @@ classdef ModelLinear < handle
 
     methods
 
+        function setX(obj,x)
+            obj.x=x;
+        end
+
         function rn = setResultNode(obj, result_node_x)
             rn=obj.mesh.findClosestNode(result_node_x);
             obj.result_node=rn;
@@ -72,6 +76,7 @@ classdef ModelLinear < handle
         function vol = getVolumeFraction(obj)
             vol=sum(obj.x(:))/size(obj.x,1);
         end
+
     end
 end
 
