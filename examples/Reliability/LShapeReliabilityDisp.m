@@ -16,7 +16,7 @@ model.plotModel();
 randomVariables={RandomVariable("Normal",P(1),5) RandomVariable("Normal",P(2),5)};
 transform=IndependentTransformation(randomVariables);
 g=loadPerformanceFunctionDisp(model);
-gl=loadLinearPerformanceFunction(model,g);
+%gl=loadLinearPerformanceFunction(model,g);
 
 % g.computeValue([1 0])
 % g.computeValue([0 1])
@@ -33,7 +33,7 @@ volFr=0.25;
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTreshold, penal, volFr, true );
 topOpt.is_silent=true;
 
-tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 1000, 2);
+tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 100, 2);
 tuner.tuneMC();
 tuner.plotMCs(["Px" "Py"],'Ux');
 %tuner.tuneFORM();

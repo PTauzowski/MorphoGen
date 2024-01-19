@@ -51,7 +51,7 @@ classdef ModelLinear < handle
             obj.analysis.solveWeighted(obj.x);
             obj.analysis.computeElementResults(obj.x);
             sHM=obj.fe.results.nodal.all(obj.result_node,obj.result_number);
-        end
+        end 
     
         function pstress = computePenalizedHMstress(obj,E,nu,pressure,penalty)
             obj.analysis.clearCurrentLoad();
@@ -64,8 +64,8 @@ classdef ModelLinear < handle
     
         function plotModel( obj )
             obj.analysis.plotFiniteElements();
-            %obj.analysis.plotCurrentLoad();
-            %obj.analysis.plotSupport();
+            obj.analysis.plotCurrentLoad();
+            obj.analysis.plotSupport();
             plot(obj.mesh.nodes(obj.result_node,1),obj.mesh.nodes(obj.result_node,2),"Marker","o");
         end
     
