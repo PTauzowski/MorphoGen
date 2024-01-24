@@ -31,7 +31,7 @@ analysis.fixNodes( fixedEdgeSelector, ["uz"] );
 analysis.fixNodes( lengthSymmetrySelector, ["ux"] );
 analysis.fixNodes( depthSymmetrySelector, ["uy"] );
 
-fe.plotSolid(mesh.nodes);
+fe.plot(mesh.nodes);
 %problem.plotNodes();
 analysis.plotCurrentLoad();
 analysis.plotSupport();
