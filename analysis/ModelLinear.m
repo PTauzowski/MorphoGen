@@ -1,12 +1,9 @@
-classdef ModelLinear < handle
+classdef ModelLinear < FEModel
    
     properties
-        analysis, mesh, fe, xp, result_node, result_number;
+        analysis, fe, xp, result_node, result_number;
     end
 
-    properties (Access=protected)
-        x;
-    end
 
     methods
 

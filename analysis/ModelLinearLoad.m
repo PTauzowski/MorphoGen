@@ -1,4 +1,4 @@
-how 
+
 classdef ModelLinearLoad < ModelLinear
     properties
         P0fem, u0fem, ures, E, nu;
@@ -17,8 +17,9 @@ classdef ModelLinearLoad < ModelLinear
             obj.ures=zeros(1,dim);
             for k=1:dim
                 unodal=obj.analysis.fromFEMVector(obj.u0fem(:,k));
-                obj.ures(k)=unodal(obj.result_node,k);
+                obj.ures(k)=unodal(obj.result_node,1);
             end
+            obj.analysis.clearCurrentLoad();
         end
 
         function u = computeLinearDisplacement(obj,rvr)

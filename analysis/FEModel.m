@@ -1,26 +1,12 @@
-classdef FEModel
+classdef FEModel < handle
   
     properties
-       mesh, x, rho, supports, rotations;
+       mesh, rho, supports, rotations;
     end
 
-    methods (Abstract)
-        generateMesh();
-        createFiniteElements();
-        createMaterials();
-        applyDirichletBC();
-        applyNeumannBC();
+    properties (Access=protected)
+        x;
     end
-    
-    methods
-        function obj = FEModel()
-            obj.generateMesh();
-            obj.createFiniteElements();
-            obj.createMaterials();
-            obj.applyDirichletBC();
-            obj.applyDirichletBC();
-        end
-       
-    end
+
 end
 

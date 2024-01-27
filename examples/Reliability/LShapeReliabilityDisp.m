@@ -2,14 +2,14 @@ clear;
 close all;
 l=3;
 c=0.4;
-res = 40;
+res = 20;
 E=210000;
 nu=0.3;
 
 xp=[l 0.4*l];
 P = [0 -100];
 
-model = LShapeModelLinear(ShapeFunctionL4,l,res,E,nu,xp,P);
+model = LShapeModelLinear(ShapeFunctionL4,l,res,E,nu,xp);
 model.setResultNode([l l*0.4]);
 model.plotModel();
 

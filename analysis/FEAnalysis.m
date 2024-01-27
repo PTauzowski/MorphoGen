@@ -73,7 +73,6 @@ classdef (Abstract) FEAnalysis < handle
                obj.rotations=zeros(size(obj.mesh.nodes,1),1);
            end
            inodes=find(selector.select(obj.mesh.nodes));
-           %inodes=selector;
            obj.rotations(inodes)=angle;
         end
         function Fe = toFEMVector( obj, F )
@@ -118,19 +117,15 @@ classdef (Abstract) FEAnalysis < handle
         function id = findDOFsIndices(obj,dofnames)
             [~,id,~] = intersect(obj.ndofs,dofnames);
         end
-        function createNextRightHandSideVector(obj)
-            obj.Pfem=[obj.Pfem obj.toFEMVector(obj.Pnodal) ];
-            obj.Pnodal(:) = 0;
-        end
-        function setRightHandSideVectorAsCurrent(obj,n)
-            obj.Pnodal = obj.fromFEMVector( obj.Pfem(:,n) );
-        end
-        function setCurrentLoadToRightHandSideVectors(obj,n)
-            obj.Pfem(:,n) = obj.toFEMVector( obj.Pnodal );
-        end
+        
         function q = getSolution(obj,n)
             obj.qnodal = obj.fromFEMVector( obj.qfem(:,n) );
             q = obj.qnodal;
+        end
+
+        function clearCurrentLoad(obj)
+                obj.Pnodal(:)=0;
+                obj.Pfem=[];
         end
         function P = getCurrentNodalLoad(obj)
             P=obj.Pnodal;
@@ -141,6 +136,16 @@ classdef (Abstract) FEAnalysis < handle
         function P = setCurrentNodalLoad(obj,P)
             obj.Pnodal=P;
         end
+        function createNextRightHandSideVector(obj)
+            obj.Pfem=[obj.Pfem obj.toFEMVector(obj.Pnodal) ];
+            obj.Pnodal(:) = 0;
+        end
+        function setRightHandSideVectorAsCurrent(obj,n)
+            obj.Pnodal = obj.fromFEMVector( obj.Pfem(:,n) );
+        end
+        function setCurrentLoadToRightHandSideVectors(obj,n)
+            obj.Pfem(:,n) = obj.toFEMVector( obj.Pnodal );
+        end
         function prepareRHSVectors(obj)
             if any(obj.Pnodal(:)~=0) %&& size(obj.Pfem,2)>1
                 obj.createNextRightHandSideVector();
@@ -148,6 +153,7 @@ classdef (Abstract) FEAnalysis < handle
                 setCurrentLoadToRightHandSideVectors(obj,size(obj.Pfem,2))
             end
         end
+
         function loadClosestNode(obj, x, dofnames, values )
            obj.Pnodal( obj.mesh.findClosestNode(x), obj.findDOFsIndices( dofnames ) ) = obj.Pnodal( obj.mesh.findClosestNode(x), obj.findDOFsIndices( dofnames ) ) + values;
         end
@@ -269,10 +275,7 @@ classdef (Abstract) FEAnalysis < handle
                 plot3( X, Y, Z, 'm', 'LineWidth', 4 );
              end
         end
-        function clearCurrentLoad(obj)
-                obj.Pnodal(:)=0;
-                %obj.Pfem=[];
-        end
+       
         function plotSupport(obj)
               dim    = size(obj.mesh.nodes,2);
               dg     = norm( max(obj.mesh.nodes) - min(obj.mesh.nodes) );
