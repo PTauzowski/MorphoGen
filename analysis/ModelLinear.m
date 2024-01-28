@@ -4,11 +4,14 @@ classdef ModelLinear < FEModel
         analysis, fe, xp, result_node, result_number;
     end
 
-
     methods
 
         function setX(obj,x)
             obj.x=x;
+        end
+
+         function x=getX(obj)
+            x=obj.x;
         end
 
         function rn = setResultNode(obj, result_node_x)
@@ -31,7 +34,6 @@ classdef ModelLinear < FEModel
             material = PlaneStressMaterial('mat1');
             material.setElasticIzo(E, nu);
             obj.fe.setMaterial( material );   
-            obj.analysis.clearCurrentLoad();
             obj.analysis.loadClosestNode(obj.xp,["ux" "uy" "uz"], P);
         end
     

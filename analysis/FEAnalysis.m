@@ -143,15 +143,18 @@ classdef (Abstract) FEAnalysis < handle
         function setRightHandSideVectorAsCurrent(obj,n)
             obj.Pnodal = obj.fromFEMVector( obj.Pfem(:,n) );
         end
+        
         function setCurrentLoadToRightHandSideVectors(obj,n)
-            obj.Pfem(:,n) = obj.toFEMVector( obj.Pnodal );
-        end
-        function prepareRHSVectors(obj)
-            if any(obj.Pnodal(:)~=0) %&& size(obj.Pfem,2)>1
-                obj.createNextRightHandSideVector();
+            if size(obj.Pfem,2)==0  
+                obj.Pfem = obj.toFEMVector( obj.Pnodal );
             else
-                setCurrentLoadToRightHandSideVectors(obj,size(obj.Pfem,2))
+                obj.Pfem(:,n) =  obj.Pfem(:,n) + obj.toFEMVector( obj.Pnodal );
             end
+        end
+        
+        function prepareRHSVectors(obj)
+            setCurrentLoadToRightHandSideVectors(obj,size(obj.Pfem,2));
+            obj.Pnodal(:)=0;
         end
 
         function loadClosestNode(obj, x, dofnames, values )

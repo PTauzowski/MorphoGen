@@ -38,7 +38,7 @@ classdef SORA < handle
                 obj.topOpt.setFrame( fr_res.frame );    
                 obj.topOpt.plotCurrentFrame();
                 if iter==1
-                     obj.model.x=obj.topOpt.allx(:,end);
+                     obj.model.setX(obj.topOpt.allx(:,end));
                     form_res=obj.form.solve();
                     if form_res.success
                         title([obj.baseName 'initial topology, volfr=' num2str(sum(fr_res.x)/size(fr_res.x,1)) 'beta FORM = ' num2str(form_res.beta)]);
@@ -66,7 +66,7 @@ classdef SORA < handle
                     obj.topOpt.plotCurrentFrame();
                     title([obj.baseName 'safe topology, volfr=' num2str(sum(fr_res.x)/size(fr_res.x,1))]);
                     savefig([obj.baseName '_safe.fig']);
-                    obj.model.x=obj.topOpt.allx(:,end);
+                    obj.model.setX(obj.topOpt.allx(:,end));
                     form_res=obj.form.solve();
                     if form_res.success
                         fprintf('\nProbablistic topology beta FORM=%1.5f',form_res.beta );
@@ -96,11 +96,11 @@ classdef SORA < handle
         end
 
         function [g0, gmpp, mpp, mpp0_pred, beta_pred] = computePerformance(obj, iter)
-             x=obj.model.x;
+             x=obj.model.getX();
              if iter== size(obj.topOpt.allx,2)
-                obj.model.x=obj.topOpt.allx(:,iter);
+                obj.model.setX(obj.topOpt.allx(:,iter));
              else
-                obj.model.x=obj.topOpt.allx(:,iter);
+                obj.model.setX(obj.topOpt.allx(:,iter));
                 % res_hmv = obj.hmv.solve();
                 % g1=res_hmv.g;
                 % obj.model.x=obj.topOpt.allx(:,iter+1);
@@ -118,7 +118,7 @@ classdef SORA < handle
                 %umpp=obj.form.transform.toU(mpp);
                 %n=umpp/norm(umpp);
                 mpp0_pred=res_hmv.mpp0_pred;
-                obj.model.x=x;
+                obj.model.setX(x);
              else
                  a=1;
              end
@@ -150,7 +150,7 @@ classdef SORA < handle
             end
             figure;
             plot(plVolFr,plBetaFORM);
-            title('FORM beta vs volFr');
+            title('FORM beta vs volFr ');
         end
 
         function tabReliability(obj)
@@ -161,7 +161,7 @@ classdef SORA < handle
              plG0=[];
              for k=1:size(obj.topOpt.allx,2)
                [g0, gmpp, mpp, mpp0_pred, beta_pred] = obj.computePerformance(k);
-               obj.model.x=obj.topOpt.allx(:,k);
+               obj.model.setX(obj.topOpt.allx(:,k));
                form_res=obj.form.solve();
                obj.topOpt.setFrame(k);
                volFr=obj.topOpt.computeVolumeFraction();
@@ -174,23 +174,23 @@ classdef SORA < handle
              end
                 figure;
              plot(plVolFr);
-             title('Volume fraction evolution');
+             title('Volume fraction evolution ');
              figure;
              plot(plBetaPred);
-             title('HMV predicted beta evolution');
+             title('HMV predicted beta evolution ');
              figure;
              plot(plBetaFORM);
-             title('FORM beta evolution');
+             title('FORM beta evolution ');
              figure, hold on;
              plot(plG);
              plot(plG0);
-             title('Performance functions evolution');
+             title('Performance functions evolution ');
              figure;
              plot(smooth(plG));
-             title('Smoothed performance function evolution');
+             title('Smoothed performance function evolution ');
              figure;
              plot(plVolFr,plBetaFORM);
-             title('FORM beta vs volFr');
+             title('FORM beta vs volFr ');
         end
 
         function limitReliability(obj)
@@ -293,7 +293,7 @@ classdef SORA < handle
             plVolSafe=[];
 
             zeroLoad=obj.transform.toX( zeros(1,obj.g.dim) );
-            obj.model.x(:)=1;
+            obj.model.setOneX();
             fprintf("\n* FORM with reliability constraints tuner *\n");
             fprintf("Design Domain FORM\n");
             formDD_res = obj.form.solve();
@@ -320,8 +320,8 @@ classdef SORA < handle
              fr_res=obj.findBetaFrame();
              obj.topOpt.setFrame( fr_res.frame );    
              obj.topOpt.plotCurrentFrame();
-             obj.model.x=fr_res.x;
-             obj.topOpt.x=obj.model.x;
+             obj.model.setX(fr_res.x);
+             obj.topOpt.x=obj.model.getX();
              formTop_res = obj.form.solve();
              fprintf("Topology optimization FORM\n");
              if formTop_res.success
@@ -348,8 +348,8 @@ classdef SORA < handle
              fr_res=obj.findBetaFrame();
              obj.topOpt.setFrame( fr_res.frame );    
              obj.topOpt.plotCurrentFrame();
-             obj.model.x=fr_res.x;
-             obj.topOpt.x=obj.model.x;
+             obj.model.setX(fr_res.x);
+             obj.topOpt.x=obj.model.getX();
              formTop_res = obj.form.solve();
              fprintf("Safe topology optimization FORM\n");
              if formTop_res.success

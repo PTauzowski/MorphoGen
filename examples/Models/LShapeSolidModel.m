@@ -24,7 +24,7 @@ classdef LShapeSolidModel < ModelLinearLoad
             obj.analysis.loadClosestNode(obj.xp,["ux" "uy" "uz"], [0 1 0]);
             obj.analysis.createNextRightHandSideVector();
             obj.analysis.loadClosestNode(obj.xp,["ux" "uy" "uz"], [0 0 1]);
-%            obj.analysis.createNextRightHandSideVector();
+            obj.analysis.createNextRightHandSideVector();
             obj.analysis.fixNodes( fixedFaceSelector, ["ux" "uy" "uz"] );   
             obj.analysis.printProblemInfo();
             obj.setResultNode(resX);

@@ -40,14 +40,14 @@ volFr=0.2;
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTreshold, penal, volFr, true );
 topOpt.is_silent=true;
 
-tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 10000, 2);
-tuner.tuneMC();
-tuner.plotMCs(["Px" "Py" "Pz"],'Nc');
+% tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 1000000, 2);
+% tuner.tuneMC();
+% tuner.plotMCs(["Px" "Py" "Pz"],'Nc');
 
 %tuner.tuneFORM();
 
- sora2 = SORA('LShapeSolidDispBeta16_2', model,topOpt, randomVariables, g, transform, 2);
- sora3 = SORA('LShapeSolidDispBeta16_3', model,topOpt, randomVariables, g, transform, 3);
+ sora2 = SORA('LShapeSolidDispBeta_2', model,topOpt, randomVariables, g, transform, 2);
+ sora3 = SORA('LShapeSolidDispBeta_3', model,topOpt, randomVariables, g, transform, 3);
  %sora.checkTuning();
 
  
@@ -60,8 +60,8 @@ tuner.plotMCs(["Px" "Py" "Pz"],'Nc');
 
 %sora2.checkTuning();
 
-% sora_results2 = sora2.solveX();
-% sora_results3 = sora3.solveX();
+sora_results2 = sora2.solveX();
+sora_results3 = sora3.solveX();
 
 % form_res = form.solve()
 
