@@ -2,7 +2,7 @@ clear;
 close all;
 l=3;
 c=0.4;
-res = 10;
+res = 12;
 E=210000;
 nu=0.3;
 
@@ -35,7 +35,7 @@ g=loadSolidDisplacementPerformanceFunction(model,fatigueData);
 Rfilter = 1.2*l/res;
 penal = 3;
 cutTreshold = 0.005;
-volFr=0.2;
+volFr=0.1;
 
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTreshold, penal, volFr, true );
 topOpt.is_silent=true;
@@ -58,10 +58,10 @@ topOpt.is_silent=true;
 % topOpt.solve();
 % sora2.tabReliability();
 
-%sora2.checkTuning();
+ sora2.checkTuning();
 
-sora_results2 = sora2.solveX();
-sora_results3 = sora3.solveX();
+% sora_results2 = sora2.solveX();
+% sora_results3 = sora3.solveX();
 
 % form_res = form.solve()
 
