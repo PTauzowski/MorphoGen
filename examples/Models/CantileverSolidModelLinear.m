@@ -1,11 +1,11 @@
-classdef LShapeSolidModel < ModelLinearLoad
+classdef CantileverSolidModelLinear < ModelLinearLoad
     
     methods
-        function obj = LShapeSolidModel(sf,l,res,E,nu,xp,resX)
+        function obj = CantileverSolidModelLinear(sf,w,res,E,nu,xp,resPt)
             obj.mesh = Mesh();
-            obj.mesh.addLshape3D( l, 0.4*l, res, sf.localNodes );
-            fixedFaceSelector = Selector( @(x)( abs(x(:,3) - l)<0.001 ) );
-            loadedFaceSelector = Selector( @(x)( abs(x(:,1) - l)<0.001 ) );
+            obj.mesh.addRectMesh3D( 0,0,0, 8*w, w, 4*w, 8*res,res,4*res, sf.localNodes );
+            fixedFaceSelector = Selector( @(x)( abs(x(:,1))<0.001 ) );
+            %loadedFaceSelector = Selector( @(x)( abs(x(:,1) - l)<0.001 ) );
             
             obj.fe = SolidElasticElem( sf, obj.mesh.elems );
             
@@ -27,7 +27,7 @@ classdef LShapeSolidModel < ModelLinearLoad
             obj.analysis.createNextRightHandSideVector();
             obj.analysis.fixNodes( fixedFaceSelector, ["ux" "uy" "uz"] );   
             obj.analysis.printProblemInfo();
-            obj.setResultNode(resX);
+            obj.setResultNode(resPt);
             obj.result_number=13;
             obj.setX(ones(obj.analysis.getTotalElemsNumber(),1));
         end
