@@ -66,7 +66,8 @@ classdef SORA < handle
                     obj.topOpt.plotCurrentFrame();
                     title([obj.baseName 'safe topology, volfr=' num2str(sum(fr_res.x)/size(fr_res.x,1))]);
                     savefig([obj.baseName '_safe.fig']);
-                    obj.model.setX(obj.topOpt.allx(:,end));
+                    %obj.model.setX(obj.topOpt.allx(:,end));
+                    obj.model.setX(obj.topOpt.allx(:,fr_res.frame));
                     form_res=obj.form.solve();
                     if form_res.success
                         fprintf('\nProbablistic topology beta FORM=%1.5f',form_res.beta );

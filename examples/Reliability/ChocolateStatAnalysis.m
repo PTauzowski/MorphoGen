@@ -14,12 +14,14 @@ randomVariables={RandomVariable("Uniform",lb(1),ub(1)) RandomVariable("Uniform",
 transform=IndependentTransformation(randomVariables);
 g = chocolatePerformanceFunction(height,210000,0.3);
 %g.fullFactorialBoundsPlot(lb,ub);
-N=100;
+N=2000;
 mc= MonteCarlo(randomVariables,g,N);
 %x = mc.generateRandomSapmles(N);
 tic
 res_mc = mc.solve();
 toc
+
+save("chocolateStat2000_3.mat");
 
 [v, i]=max(mc.r)
 g.evaluateValue(mc.x(i,:));
