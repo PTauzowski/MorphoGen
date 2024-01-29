@@ -13,7 +13,7 @@ classdef  loadSolidDisplacementPerformanceFunction < Function
 
         function g = computeValue(obj,points)
             %g=0.0015-obj.model.computeLinearDisplacement(points); % res=16
-            g=0.008+obj.model.computeLinearDisplacement(points); %res=12
+            g=0.0035-obj.model.computeLinearDisplacement(points); %res=12
         end
 
         function tabNCycles(obj,x0,x1,N)
