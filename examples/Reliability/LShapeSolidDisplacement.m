@@ -2,7 +2,7 @@ clear;
 close all;
 l=3;
 c=0.4;
-res = 12;
+res = 18;
 E=210000;
 nu=0.3;
 
@@ -46,8 +46,8 @@ topOpt.is_silent=true;
 
 %tuner.tuneFORM();
 
- sora2 = SORA('LShapeSolidDispBeta_2', model,topOpt, randomVariables, g, transform, 2);
- sora3 = SORA('LShapeSolidDispBeta_3', model,topOpt, randomVariables, g, transform, 3);
+ sora2 = SORA('LShapeSolidDispBeta16_2', model,topOpt, randomVariables, g, transform, 2);
+ sora3 = SORA('LShapeSolidDispBeta16_3', model,topOpt, randomVariables, g, transform, 3);
  %sora.checkTuning();
 
  
