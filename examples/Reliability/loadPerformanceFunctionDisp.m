@@ -11,7 +11,8 @@ classdef  loadPerformanceFunctionDisp < Function
         end
 
         function g = computeValue(obj,points)
-            g=0.015+obj.model.computeLinearDisplacement(points);
+            %g=0.015+obj.model.computeLinearDisplacement(points);
+            g=7500-obj.model.computeLinearHMstress(points);
             % g=zeros(size(points,1),1);
             % for k=1:size(points,1)
             %     ue=obj.model.computeDisplacement(210000,0.3,[points(k,1) points(k,2)]);

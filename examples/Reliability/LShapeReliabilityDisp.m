@@ -25,7 +25,7 @@ g=loadPerformanceFunctionDisp(model);
 % gl.computeValue([0 1])
 
 
-Rfilter = 1.2*l/res;
+Rfilter = l/res;
 penal = 3;
 cutTreshold = 0.005;
 volFr=0.25;
@@ -33,11 +33,11 @@ volFr=0.25;
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTreshold, penal, volFr, true );
 topOpt.is_silent=true;
 
-% tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 1000, 2);
+% tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 10000, 2);
 % tic;
 % tuner.tuneMC();
 % toc
-% tuner.plotMCs(["Px" "Py"],'Ux');
+% tuner.plotMCs(["Px" "Py"],'HMstress');
 %tuner.tuneFORM();
 
  sora2 = SORA('LShapeDispBeta2', model,topOpt, randomVariables, g, transform, 2);
@@ -51,8 +51,8 @@ topOpt.is_silent=true;
 % topOpt.solve();
 %  sora2.tabReliability();
 
-%sora2.checkTuning();
+% sora2.checkTuning();
+% sora3.checkTuning();
    
-sora_results2 = sora2.solveX();
-sora_results3 = sora3.solveX();
+bu
 
