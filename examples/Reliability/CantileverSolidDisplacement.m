@@ -19,7 +19,7 @@ fatigueData.S = 2.8;
 fatigueData.s = 2;
 fatigueData.Dc = 0.2;
 fatigueData.Fref=0.01;
-fatigueData.Nexp=git push42150;
+fatigueData.Nexp=42150;
 
 
 xp=[l w/2 0];
@@ -49,8 +49,8 @@ topOpt.is_silent=true;
 
 %tuner.tuneFORM();
 
- sora2 = SORA('CantileverSolidDispBeta_2', model,topOpt, randomVariables, g, transform, 2);
- sora3 = SORA('CantileverSolidDispBeta_3', model,topOpt, randomVariables, g, transform, 3);
+ sora2 = SORA('CantileverSolidDisp6_2', model,topOpt, randomVariables, g, transform, 2);
+ sora3 = SORA('CantileverSolidDisp6_3', model,topOpt, randomVariables, g, transform, 3);
  %sora.checkTuning();
 
  
@@ -61,10 +61,11 @@ topOpt.is_silent=true;
 % topOpt.solve();
 % sora2.tabReliability();
 
-% sora2.checkTuning();
+ sora2.checkTuning();
+ sora3.checkTuning();
 
-sora_results2 = sora2.solveX();
-sora_results3 = sora3.solveX();
+% sora_results2 = sora2.solveX();
+% sora_results3 = sora3.solveX();
 
 % form_res = form.solve()
 

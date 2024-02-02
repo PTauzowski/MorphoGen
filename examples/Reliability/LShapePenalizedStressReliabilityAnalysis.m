@@ -10,7 +10,7 @@ betat=3;
 xp=[l 0.4*l];
 P = [5 -10];
 
-model = LShapeModelLinear(ShapeFunctionL4,l,res,E,nu,xp,P);
+model = LShapeModelLinear(ShapeFunctionL4,l,res,E,nu,xp);
 model.setResultNode([0 l]);
 %model.plotModel();
 
@@ -25,9 +25,9 @@ volFr=0.25;
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTreshold, penal, volFr, true );
 topOpt.is_silent=true;
 
-% tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 5000, 2);
-% tuner.tuneMC();
-% tuner.plotMCs(["Px" "Py"],'Ps');
+tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 5000, 2);
+tuner.tuneMC();
+tuner.plotMCs(["Px" "Py"],'Ps');
 
 %tuner.tuneFORM();
 
@@ -45,7 +45,6 @@ topOpt.is_silent=true;
 
  %sora2.checkTuning();
 
-sora_results2 = sora2.solveX();
-sora_results3 = sora3.solveX();
+% sora_results2 = sora2.solveX();
+% sora_results3 = sora3.solveX();
 
-% form_res = form.solve()

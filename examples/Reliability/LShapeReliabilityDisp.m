@@ -40,8 +40,8 @@ topOpt.is_silent=true;
 % tuner.plotMCs(["Px" "Py"],'Ux');
 %tuner.tuneFORM();
 
- sora2 = SORA('LShapeDispBeta2', model,topOpt, randomVariables, g, transform, 2);
- sora3 = SORA('LShapeDispBeta3', model,topOpt, randomVariables, g, transform, 3);
+ sora2 = SORA('LShapeDispBeta20_2', model,topOpt, randomVariables, g, transform, 2);
+ sora3 = SORA('LShapeDispBeta20_3', model,topOpt, randomVariables, g, transform, 3);
 
  
  % topOpt.solve();
