@@ -30,6 +30,25 @@ classdef ModelLinearLoad < ModelLinear
         function u = computeLinearDisplacement(obj,rvr)
             u=rvr*obj.ures';
         end
+
+        function sHM = computeLinearHMstress(obj,pressure)
+            np=size(pressure,1);
+            sHM=zeros(np,1);
+            for k=1:np
+                obj.setDisplacement(pressure(k,:));
+                obj.analysis.computeElementResults(obj.x);
+                sHM(k)=obj.fe.results.nodal.all(obj.result_node,obj.result_number);
+            end
+        end 
+
+        function setDisplacement(obj,rvr)
+            dim=size(rvr,2);
+            obj.analysis.qfem=zeros(obj.analysis.getTaskDim(),1);
+            for k=1:dim
+                obj.analysis.qfem=obj.analysis.qfem+rvr(k)*obj.u0fem(:,k);
+            end
+            obj.analysis.qnodal=obj.analysis.fromFEMVector(obj.analysis.qfem);
+        end
     
     end
 end

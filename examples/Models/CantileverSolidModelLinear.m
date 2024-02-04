@@ -40,12 +40,9 @@ classdef CantileverSolidModelLinear < ModelLinearLoad
          end
 
          function pstress = computePenalizedHMstress(obj,E,nu,pressure,penalty)
-            obj.analysis.clearCurrentLoad();
-            obj.setupVariables(E,nu,pressure);
-            obj.analysis.solveWeighted(obj.x);
+            
             obj.analysis.computeElementResults(obj.x);
             pstress=sum(obj.fe.results.nodal.all(:,14).*obj.fe.results.nodal.all(:,obj.result_number))^(1/penalty);
-            %pstress=sum(obj.fe.results.nodal.all(:,obj.result_number))^(1/penalty);
         end
        
     end

@@ -1,7 +1,7 @@
 classdef SORA < handle
     
     properties
-        model, topOpt, randVars, g, transform, form, hmv, mpps, betat, baseName;
+        model, topOpt, randVars, g, transform, form, hmv, mpps, betat, baseName, allXi;
     end
     
     methods
@@ -46,6 +46,7 @@ classdef SORA < handle
                     else
                         title([obj.baseName 'initial topology, volfr=' num2str(sum(fr_res.x)/size(fr_res.x,1))]);
                     end
+                    obj.allXi=obj.topOpt.allx;
                     savefig([obj.baseName '_topt.fig']);
 
                 end
@@ -305,19 +306,9 @@ classdef SORA < handle
                 fprintf("Design domain FORM: not succeed\n");
              end
              fprintf("Topology optimization ...\n");
+             obj.allXi=obj.topOpt.allx;
              obj.topOpt.allx=[];
-             obj.topOpt.solve();
-             % fprintf("Computing reliability ...\n");
-             % for k=1:size(obj.topOpt.allx,2)
-             %     obj.model.x = obj.topOpt.allx(:,k);
-             %     obj.topOpt.x=obj.model.x;
-             %     fr_hmv_res = obj.hmv.solve();
-             %     fr_form_res = obj.form.solve();
-             %     plBetaTop=[plBetaTop fr_hmv_res.beta_pred];
-             %     plVolTop=[plVolTop obj.topOpt.computeVolumeFraction()];
-             %     volFr=obj.topOpt.computeVolumeFraction();
-             %     fprintf("Iter :%3d  VolFr=%3.2f, G=%5.7f, BetaPred=%1.4f, BetaFORM=%1.4f\n",k,volFr,fr_hmv_res.g,fr_hmv_res.beta_pred,fr_form_res.beta);
-             % end
+             obj.topOpt.solve();           
              fr_res=obj.findBetaFrame();
              obj.topOpt.setFrame( fr_res.frame );    
              obj.topOpt.plotCurrentFrame();
@@ -335,17 +326,7 @@ classdef SORA < handle
              obj.model.setupLoad(fr_res.mpp);
              obj.topOpt.allx=[];
              obj.topOpt.solve();
-             % fprintf("Computing reliability ...\n");
-             % for k=1:size(obj.topOpt.allx,2)
-             %     obj.model.x = obj.topOpt.allx(:,k);
-             %     obj.topOpt.x=obj.model.x;
-             %     fr_hmv_res = obj.hmv.solve();
-             %     fr_form_res = obj.form.solve();
-             %     plBetaSafe=[plBetaSafe fr_hmv_res.beta_pred];
-             %     plVolSafe=[plVolSafe obj.topOpt.computeVolumeFraction()];
-             %     volFr=obj.topOpt.computeVolumeFraction();
-             %     fprintf("Iter :%3d  VolFr=%3.2f, G=%5.7f, BetaPred=%1.4f, BetaFORM=%1.4f\n",k,volFr,fr_hmv_res.g,fr_hmv_res.beta_pred,fr_form_res.beta);
-             % end
+            
              fr_res=obj.findBetaFrame();
              obj.topOpt.setFrame( fr_res.frame );    
              obj.topOpt.plotCurrentFrame();
