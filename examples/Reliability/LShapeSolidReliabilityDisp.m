@@ -24,6 +24,7 @@ volFr=0.1;
 
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTreshold, penal, volFr, true );
 topOpt.is_silent=true;
+ % topOpt.solve();
 
 % tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 5000, 2);
 % tuner.tuneMC();
@@ -35,16 +36,16 @@ topOpt.is_silent=true;
  %sora.checkTuning();
 
  
- % topOpt.solve();
+  %topOpt.solve();
 %  sora2.limitReliability();
   %sora.tabMultiMpp();
 
 % topOpt.solve();
  %sora.tabReliability();
 
- %sora2.checkTuning();
+ sora2.checkTuning();
 
-  sora_results2 = sora2.solveX();
-  sora_results3 = sora3.solveX();
+  % sora_results2 = sora2.solveX();
+  % sora_results3 = sora3.solveX();
 % form_res = form.solve()
 

@@ -7,15 +7,15 @@ E=210000;
 nu=0.3;
 
 xp=[l 0.4*l];
-P = [5 -12];
+P = [0 10];
 
 baseName='LShapeRelHM';
 
-model = LShapeModelLinear(ShapeFunctionL4,l,res,E,nu,xp,P);
+model = LShapeModelLinear(ShapeFunctionL4,l,res,E,nu,xp);
 model.setResultNode([0.4*l 0.4*l]);
 model.plotModel();
 
-randomVariables={RandomVariable("Normal",P(1),2) RandomVariable("Normal",P(2),2)};
+randomVariables={RandomVariable("Normal",P(1),4) RandomVariable("Normal",P(2),2)};
 transform=IndependentTransformation(randomVariables);
 g=loadPerformanceFunctionHM(model);
 betat=2;

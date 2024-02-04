@@ -4,7 +4,7 @@ w=0.5;
 l=8*w;
 h=4*w;
 c=0.4;
-res = 6;
+res = 10;
 E=210000;
 nu=0.3;
 
@@ -19,7 +19,7 @@ fatigueData.S = 2.8;
 fatigueData.s = 2;
 fatigueData.Dc = 0.2;
 fatigueData.Fref=0.01;
-fatigueData.Nexp=git push42150;
+fatigueData.Nexp=42150;
 
 
 xp=[l w/2 0];
@@ -54,7 +54,7 @@ topOpt.is_silent=true;
  %sora.checkTuning();
 
  
-% topOpt.solve();
+topOpt.solve();
 %sora2.limitReliability();
   %sora.tabMultiMpp();
 
@@ -62,9 +62,9 @@ topOpt.is_silent=true;
 % sora2.tabReliability();
 
 % sora2.checkTuning();
-
-sora_results2 = sora2.solveX();
-sora_results3 = sora3.solveX();
+% 
+% sora_results2 = sora2.solveX();
+% sora_results3 = sora3.solveX();
 
 % form_res = form.solve()
 
