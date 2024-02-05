@@ -5,20 +5,24 @@ classdef ChocolateModel < ModelLinear
     end
     
     methods
-        function obj = ChocolateModel( ganTh, alGanTh, notchWidth, relNotchDepth, relRoutndNotchDepth, E, nu)
+        function obj = ChocolateModel( ganTh, alGanTh, notchWidth, relNotchDepth, relRoutndNotchDepth, E, nu, alphaT, dT)
             obj.generateMesh( ganTh, alGanTh, notchWidth, relNotchDepth, relRoutndNotchDepth );
             obj.fe = SolidElasticElem( ShapeFunctionL27, obj.mesh.elems );
             obj.analysis = LinearElasticityWeighted( obj.fe, obj.mesh, false );
 
+            allganElemsSelector = Selector( @(x)( x(:,3) > ganTh ) ) ;
             %fixedFaceSelector = Selector( @(x)( abs(x(:,3) - l)<0.001 ) );
             %loadedFaceSelector = Selector( @(x)( abs(x(:,1) - l)<0.001 ) );
+
+            
 
             meshMax=max(obj.mesh.nodes);
             obj.analysis.fixClosestNode([0 0 0], ["ux" "uy" "uz"], [0 0 0] );
             obj.analysis.fixClosestNode([meshMax(1) 0 0], ["uz"], 0);
             obj.analysis.fixClosestNode([meshMax(1) meshMax(2) ganTh], ["ux" "uz"], [0 0] );
 
-            obj.analysis.loadClosestNode([meshMax(1)/2 meshMax(2)/2 meshMax(2)], ["uz"], -1);
+            obj.analysis.loadElementsThermal(allganElemsSelector,alphaT*dT);
+            %obj.analysis.loadClosestNode([meshMax(1)/2 meshMax(2)/2 meshMax(2)], ["uz"], -1);
            
             obj.fe.props.h=1;
             material = SolidMaterial('mat1');
@@ -231,8 +235,8 @@ classdef ChocolateModel < ModelLinear
             sy1 = obj.fe.results.nodal.all(n1,7);
             sx2 = obj.fe.results.nodal.all(n2,6);
             sy2 = obj.fe.results.nodal.all(n2,7);
-            %stressObj=sx1+sy1-(sx2+sy2);
-            stressObj=(sx2+sy2)-(sx1+sy1);
+            stressObj=sx1+sy1-(sx2+sy2);
+            %stressObj=(sx2+sy2)-(sx1+sy1);
         end
 
         function o = computeObjectiveValue(obj,x)

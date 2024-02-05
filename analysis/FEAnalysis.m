@@ -47,7 +47,7 @@ classdef (Abstract) FEAnalysis < handle
              selems=[];
              for k=1:ne  
                  selems = find( ...
-                            selector( ...
+                            selector.select( ...
                                 permute( ...
                                     mean( ...
                                         reshape( ...
@@ -181,6 +181,12 @@ classdef (Abstract) FEAnalysis < handle
             for k=1:max(size(obj.felems))
                 ffaces = obj.felems{k}.findFaces(obj.mesh.findNodes(faceSel)); 
                 obj.Pnodal = obj.felems{k}.loadSurfaceIntegral(mode, obj.mesh.nodes, ffaces, dofnames, di, obj.Pnodal, valueFn);
+            end
+        end
+        function loadElementsThermal(obj,elemSel,alpha)
+            for k=1:max(size(obj.felems))
+                selems = obj.selectElems(elemSel);
+                obj.Pnodal = obj.felems{k}.thermalLoad(obj.mesh.nodes, selems, obj.Pnodal, alpha);
             end
         end
         function fixClosestNode(obj, x, dofnames, values )

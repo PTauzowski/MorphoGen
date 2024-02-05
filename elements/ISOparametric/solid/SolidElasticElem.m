@@ -105,6 +105,58 @@ classdef SolidElasticElem < FiniteElement
             end
             K=K(:);
         end
+        function Pnodal = thermalLoad(obj, nodes, Telems, Pnodal, alpha, varargin)
+            nelems = size(Telems,1);
+            nnodes = size(obj.elems,2);
+            ndofs = size( obj.ndofs,2);
+            dim = nnodes * ndofs;
+            integrator = obj.sf.createIntegrator();
+            nip = size(integrator.points,1);
+            dN = obj.sf.computeGradient( integrator.points );
+            nnd = size(dN,1); 
+            dNtr = permute(dN,[2,1,3]);
+            dNtrc = cell(size(dNtr,3),1);
+            if ( nargin == 6 )
+                x=varargin{1};
+            else
+                x=ones(nelems,1);
+            end
+            for i=1:nip
+                dNtrc{i}=dNtr(:,:,i);
+            end
+            %dNx = zeros(size(dN,2),size(dN,1), nip );
+            B = zeros(6,dim);
+            Q=[alpha,alpha,alpha,0,0,0]';
+            for k=1:nelems
+                elemX = nodes(obj.elems(Telems(k),:),:);
+                Pe = zeros( dim , 1 );
+                for i=1:nip
+                    J = dNtrc{i}*elemX;
+                    detJ = J(1,1)*J(2,2)*J(3,3)-J(1,2)*J(2,1)*J(3,3)-J(1,1)*J(2,3)*J(3,2)+J(1,3)*J(2,1)*J(3,2)+J(1,2)*J(2,3)*J(3,1)-J(1,3)*J(2,2)*J(3,1);
+                    invJ   = [ (J(2,2)*J(3,3)-J(2,3)*J(3,2))	-(J(1,2)*J(3,3)-J(1,3)*J(3,2))  (J(1,2)*J(2,3)-J(1,3)*J(2,2) ); ...
+              		          -(J(2,1)*J(3,3)-J(2,3)*J(3,1))	 (J(1,1)*J(3,3)-J(1,3)*J(3,1)) -(J(1,1)*J(2,3)-J(1,3)*J(2,1) ); ...
+              		           (J(2,1)*J(3,2)-J(2,2)*J(3,1))	-(J(1,1)*J(3,2)-J(1,2)*J(3,1))  (J(1,1)*J(2,2)-J(1,2)*J(2,1) ) ]/detJ;
+                    dNx = invJ * dNtr(:,:,i);
+                    for j = 1:nnd
+                          B(1, 3*j-2) = dNx(1,j);
+                          B(2, 3*j-1) = dNx(2,j);
+                          B(3, 3*j)   = dNx(3,j);
+
+                          B(4, 3*j-1) = dNx(3,j);
+                          B(4, 3*j) = dNx(2,j);
+                          
+                          B(5, 3*j-2) = dNx(3,j);
+                          B(5, 3*j) = dNx(1,j);
+                          
+                          B(6, 3*j-2) = dNx(2,j);
+                          B(6, 3*j-1) = dNx(1,j);
+
+                    end                   
+                    Pe = Pe + abs(detJ) * integrator.weights(i) * B'*Q;
+                end
+                Pnodal(obj.elems(Telems(k),:),:) = Pnodal(obj.elems(Telems(k),:),:) + reshape(Pe,3,27)';
+            end
+        end
         function dK = computeStifnessMatrixGradMat(obj, nodes, q)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);

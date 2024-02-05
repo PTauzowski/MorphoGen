@@ -3,6 +3,8 @@ close all;
 height=15;
 E=210000;
 nu=0.3;
+alphaT=11E-6;
+dT=20;
 lb=[0.3 0.6 2];
 ub=[0.9 0.8 8];
 
@@ -12,16 +14,16 @@ s=sqrt(((ub-lb).^2/12));
 randomVariables={RandomVariable("Uniform",lb(1),ub(1)) RandomVariable("Uniform",lb(2),ub(2)) RandomVariable("Uniform",lb(3),ub(3))};
 
 transform=IndependentTransformation(randomVariables);
-g = chocolatePerformanceFunction(height,210000,0.3);
+g = chocolatePerformanceFunction(height,210000,0.3,alphaT,dT);
 %g.fullFactorialBoundsPlot(lb,ub);
-N=2000;
+N=200;
 mc= MonteCarlo(randomVariables,g,N);
 %x = mc.generateRandomSapmles(N);
 tic
 res_mc = mc.solve();
 toc
 
-save("chocolateStat2000_3.mat");
+save("chocolateStat200_dT.mat");
 
 [v, i]=max(mc.r)
 g.evaluateValue(mc.x(i,:));

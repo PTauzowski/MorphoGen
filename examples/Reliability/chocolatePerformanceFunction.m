@@ -1,14 +1,17 @@
 classdef  chocolatePerformanceFunction < Function
     properties
-        height,E,nu,model;
+        height,E,nu,alphaT,dT,model;
     end
   
     methods
-        function obj=chocolatePerformanceFunction(height,E,nu)
+        function obj=chocolatePerformanceFunction(height,E,nu,alphaT,dT)
             obj=obj@Function(3,0.0001);
             obj.height=height;
             obj.E=E;
             obj.nu=nu;
+            obj.alphaT=alphaT;
+            obj.dT=dT;
+
         end
 
         function createModel(obj,x)
@@ -17,7 +20,7 @@ classdef  chocolatePerformanceFunction < Function
             ganTh=(1-x(1,1))*obj.height;
             relRoutndNotchDepth=0.3;
             %generateMesh( obj, ganTh, alGanTh, notchWidth, relNotchDepth, relRoutndNotchDepth )
-            obj.model = ChocolateModel( ganTh, alGanTh, x(1,3), x(1,2), relRoutndNotchDepth, obj.E, obj.nu);
+            obj.model = ChocolateModel( ganTh, alGanTh, x(1,3), x(1,2), relRoutndNotchDepth, obj.E, obj.nu,obj.alphaT,obj.dT);
         end
 
         function g = computeValue(obj,x)
