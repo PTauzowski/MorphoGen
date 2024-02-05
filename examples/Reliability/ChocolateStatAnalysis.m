@@ -16,7 +16,7 @@ randomVariables={RandomVariable("Uniform",lb(1),ub(1)) RandomVariable("Uniform",
 transform=IndependentTransformation(randomVariables);
 g = chocolatePerformanceFunction(height,210000,0.3,alphaT,dT);
 %g.fullFactorialBoundsPlot(lb,ub);
-N=200;
+N=5000;
 mc= MonteCarlo(randomVariables,g,N);
 %x = mc.generateRandomSapmles(N);
 tic
