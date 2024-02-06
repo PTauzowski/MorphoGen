@@ -247,7 +247,7 @@ classdef ChocolateModel < ModelLinear
             generateMesh( obj, ganTh, alGanTh, x(3), x(2) )
         end
 
-        function FEAP_Export(obj,filename,mesh,ganTh,intTh,chemistry)
+        function FEAP_Export(obj,filename,mesh,ganTh,alGanTh,intTh,chemistry)
             myfile   = fopen ( filename, "w" );
             feapNum = [1 3 9 7 19 21 27 25 2 6 8 4 20 24 26 22 10 12 18 16  5 23 13 15 11 17 14];
             %feapNum = [1 9 2 12 21 10 4 11 3 17 25 18 23 27 24 20 26 19 5 13 6 16 22 14 8 15 7 ];
@@ -282,7 +282,11 @@ classdef ChocolateModel < ModelLinear
                 elseif abs( zCoords(k) - (nganTh + intTh/2)  ) < 1.0E-6 
                     c=chemistry/2;
                 else
-                    c=chemistry;
+                    if zCoords(k) > nganTh+(alGanTh-alGanTh/2.5)
+                        c=chemistry*1.4;
+                    else
+                        c=chemistry;
+                    end
                 end
                fprintf(myfile,"  3  %5.3f  0  0  0  %1.2f\n", zCoords(k), c ); 
             end

@@ -39,7 +39,7 @@ classdef  chocolatePerformanceFunction < Function
                 obj.model.plotModel();
                 obj.model.solveWeighted();  
                 obj.model.analysis.plotMaps(["uy" "ux" "sxx" "sxy" "syy" "sHM"],0.1);
-                obj.model.FEAP_Export('chocolateOpti.i',obj.model.mesh,obj.model.ganTh,obj.model.intTh,0.1);
+                obj.model.FEAP_Export('chocolateOpti.i',obj.model.mesh,obj.model.ganTh,obj.model.alGanTh,obj.model.intTh,0.1);
          end
 
          function fullFactorialBoundsPlot(obj, lb, ub)
