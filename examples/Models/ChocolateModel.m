@@ -279,12 +279,10 @@ classdef ChocolateModel < ModelLinear
             for k=size(zCoords(:)):-1:1
                 if ( zCoords(k) <= nganTh )
                     c=0;
-                elseif abs( zCoords(k) - (nganTh + intTh/2)  ) < 1.0E-6 
-                    c=chemistry/2;
                 else
-                    if zCoords(k) > nganTh+(alGanTh-alGanTh/2.5)
-                        c=chemistry*1.4;
-                    else
+                    if abs( zCoords(k) - (nganTh + intTh/2)  ) < 1.0E-6 
+                        c=chemistry/2;
+                    else        
                         c=chemistry;
                     end
                 end

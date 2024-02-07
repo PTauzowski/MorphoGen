@@ -3,6 +3,8 @@ classdef ReliabilityAnalysis < handle
     properties
         randVars;
         g;
+        Pf, beta;
+
     end
     
     methods(Abstract)

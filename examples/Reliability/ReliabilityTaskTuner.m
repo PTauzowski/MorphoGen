@@ -27,19 +27,15 @@ classdef ReliabilityTaskTuner < handle
             fprintf("\n* Topology optimization with reliability constraints tuner *\n");
             fprintf("Design Domain Monte Carlo sampling\n");
             obj.mcDD_res = obj.mcDD.solve();
-            fprintf("Topology optimization iterations\n");
+            obj.mcDD.printResults();
+            fprintf("\nTopology optimization iterations\n");
             mpp=obj.hmv.transform.toX(zeros(1,obj.g.dim));
             obj.model.setupLoad(mpp);
             [~, xopt]  = obj.topOpt.solve();
             obj.model.setX(xopt);
-            fprintf("Topology Monte Carlo sampling\n");
+            fprintf("\nTopology Monte Carlo sampling\n");
             obj.mcTop_res = obj.mcTop.solve();
-            fprintf("Topology safe Monte Carlo sampling\n");
-            obj.model.setX(xopt);
-            obj.hmvTop_res = obj.hmv.solve();
-         
-            fprintf("Design domain boundaries: min=%5.7f, max=%5.7f Pf=%5.7f, beta=%5.7f\n",min(obj.mcDD.r),max(obj.mcDD.r), obj.mcDD_res.Pf, obj.mcDD_res.beta);
-            fprintf("     Topology boundaries: min=%5.7f, max=%5.7f Pf=%5.7f, beta=%5.7f\n",min(obj.mcTop.r),max(obj.mcTop.r),obj.mcTop_res.Pf, obj.mcTop_res.beta);
+            obj.mcTop.printResults();
 
         end
 

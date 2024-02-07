@@ -23,7 +23,7 @@ classdef ModelLinearLoad < ModelLinear
             obj.ures=zeros(1,dim);
             for k=1:dim
                 unodal=obj.analysis.fromFEMVector(obj.u0fem(:,k));
-                obj.ures(k)=unodal(obj.result_node,1);
+                obj.ures(k)=unodal(obj.result_node,2);
             end
         end
 
