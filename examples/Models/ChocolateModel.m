@@ -48,7 +48,6 @@ classdef ChocolateModel < ModelLinear
             % interface thickness
             obj.intTh = 0.025;
             
-            
             % width of the notch 
             %notchWidth=4; 
             
@@ -69,6 +68,7 @@ classdef ChocolateModel < ModelLinear
             
             % x - width of the tile
             cx=30-notchWidth;
+            %cx=20-notchWidth;
             obj.cx=cx;
             
             % y - width of the tile
@@ -113,7 +113,7 @@ classdef ChocolateModel < ModelLinear
             Xg1_8=[0 0 0;  cx+notchWidth 0 0; notchWidth/2 notchWidth/2 0; cx+notchWidth/2 notchWidth/2 0; ...
                     0 0 notchDepth/2;  cx+notchWidth 0 notchDepth/2; notchWidth/2 notchWidth/2 notchDepth; cx+notchWidth/2 notchWidth/2 notchDepth]; 
              
-             Xg2_8=[ cx+notchWidth 0 0;  cx+notchWidth cy+notchWidth 0;  cx+notchWidth/2 notchWidth/2 0;   cx+notchWidth/2 cy+notchWidth/2 0; ...
+            Xg2_8=[ cx+notchWidth 0 0;  cx+notchWidth cy+notchWidth 0;  cx+notchWidth/2 notchWidth/2 0;   cx+notchWidth/2 cy+notchWidth/2 0; ...
                      cx+notchWidth 0 notchDepth/2;  cx+notchWidth cy+notchWidth notchDepth/2;  cx+notchWidth/2 notchWidth/2 notchDepth; cx+notchWidth/2 cy+notchWidth/2 notchDepth/2];
             
             gh=alGanTh-notchDepth;
@@ -226,7 +226,7 @@ classdef ChocolateModel < ModelLinear
             sHM=obj.fe.results.nodal(result_node,result_number);
         end
 
-        function stressObj=computeStressObjective(obj)
+        function [stressObj, sx1, sy1, sx2, sy2]=computeStressObjective(obj)
             x1=[(obj.cx+obj.notchWidth)/2 (obj.cy+obj.notchWidth)/2 0];
             x2=[obj.cx+obj.notchWidth obj.cy+obj.notchWidth 0];
             n1 = obj.mesh.findClosestNode(x1);

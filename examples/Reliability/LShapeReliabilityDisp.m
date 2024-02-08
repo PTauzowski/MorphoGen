@@ -33,18 +33,18 @@ volFr=0.25;
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTreshold, penal, volFr, true );
 topOpt.is_silent=true;
 
-% tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 1000000, 2);
-% tic;
-% tuner.tuneMC();
-% toc
+tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 1000000, 2);
+tic;
+tuner.tuneMC();
+toc
 % tuner.plotMCs(["Px" "Py"],'HMstress');
 %tuner.tuneFORM();
 
  sora2 = SORA('LShapeDispBeta20_2', model,topOpt, randomVariables, g, transform, 2);
  sora3 = SORA('LShapeDispBeta20_3', model,topOpt, randomVariables, g, transform, 3);
 
- sora2.solveX();
- sora3.solveX();
+ % sora2.solveX();
+ % sora3.solveX();
  
  % topOpt.solve();
 %  sora2.limitReliability();
