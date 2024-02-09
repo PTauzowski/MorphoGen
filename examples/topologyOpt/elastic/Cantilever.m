@@ -1,6 +1,6 @@
 clear;
 close all;
-res = 100;
+res = 40;
 l = 1;
 
 aspect=2;
@@ -30,13 +30,13 @@ analysis.loadClosestNode([aspect*l, l/2 ], ["ux" "uy"], [0 -1] );
 analysis.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
 
 analysis.printProblemInfo();
-fe.plotSolid(mesh.nodes);
+fe.plot(mesh.nodes);
 analysis.plotCurrentLoad();
 analysis.plotSupport();
 
 tic
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.4, true );
-[objF, xopt]  = topOpt.solve();
+%[objF, xopt]  = topOpt.solve();
 toc
 
 figure;
