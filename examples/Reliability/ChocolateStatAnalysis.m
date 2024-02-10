@@ -3,7 +3,7 @@ close all;
 height=15;
 E=210000;
 nu=0.3;
-alphaT=11E-6;
+alphaT=11E-1;
 dT=20;
 lb=[0.3 0.6 2];
 ub=[0.9 0.8 8];
@@ -26,7 +26,8 @@ toc
 save("chocolateStat200_dT.mat");
 
 [v, i]=max(mc.r)
-g.evaluateValue(mc.x(i,:));
+%g.evaluateValue(mc.x(i,:));
+g.evaluateValue([0.67,0.7,2]);
 
 
 
