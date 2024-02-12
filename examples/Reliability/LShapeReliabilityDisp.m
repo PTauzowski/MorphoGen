@@ -32,7 +32,7 @@ volFr=0.25;
 
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTreshold, penal, volFr, true );
 %topOpt = SIMP_MMA_TopologyOptimizationElasticCompliance(Rfilter, model.analysis, penal, volFr, true);
-%[objF, xopt]  = topOpt.solve();
+[objF, xopt]  = topOpt.solve();
 toc
 
 topOpt.is_silent=true;
@@ -49,10 +49,10 @@ topOpt.is_silent=true;
  sora4 = SORA('LShapeDispBeta20_4', model,topOpt, randomVariables, g, transform, 4);
  sora5 = SORA('LShapeDispBeta20_5', model,topOpt, randomVariables, g, transform, 5);
 
- sora2.solveX();
- sora3.solveX();
-  sora4.solveX();
- sora5.solveX();
+ % sora2.solveX();
+ % sora3.solveX();
+ %  sora4.solveX();
+ % sora5.solveX();
  
  % topOpt.solve();
 %  sora2.limitReliability();
