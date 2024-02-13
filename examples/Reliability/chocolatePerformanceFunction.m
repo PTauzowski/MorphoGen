@@ -45,6 +45,19 @@ classdef  chocolatePerformanceFunction < Function
                 fprintf('\nsxx1+syy1=%8.8f, sxx2+syy2=%8.8f, objOpt=%8.8f\n',sx1+sy1,sx2+sy2,stressObj);
          end
 
+         
+
+         function evaluateValue2(obj)
+                close all;
+                obj.model = ChocolateModel( obj.height*0.67, obj.height*0.33, 4, 0.85, 0.5, obj.E, obj.nu,obj.alphaT,obj.dT);
+                obj.model.plotModel();
+                obj.model.solveWeighted();  
+                obj.model.analysis.plotMaps(["uy" "ux" "sxx" "sxy" "syy" "sHM"],0.05);
+                obj.model.FEAP_Export('chocolateOpti.i',obj.model.mesh,obj.model.ganTh,obj.model.alGanTh,obj.model.intTh,0.1);
+                [stressObj, sx1, sy1, sx2, sy2]=obj.model.computeStressObjective();
+                fprintf('\nsxx1+syy1=%8.8f, sxx2+syy2=%8.8f, objOpt=%8.8f\n',sx1+sy1,sx2+sy2,stressObj);
+         end
+
          function fullFactorialBoundsPlot(obj, lb, ub)
                 createModel(obj,lb);
                 obj.model.plotModel();

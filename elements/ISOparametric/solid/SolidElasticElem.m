@@ -127,6 +127,7 @@ classdef SolidElasticElem < FiniteElement
             %dNx = zeros(size(dN,2),size(dN,1), nip );
             B = zeros(6,dim);
             Q=[alpha,alpha,alpha,0,0,0]';
+            obj.props.thermal(Telems)=alpha;
             for k=1:nelems
                 elemX = nodes(obj.elems(Telems(k),:),:);
                 Pe = zeros( dim , 1 );
@@ -288,6 +289,7 @@ classdef SolidElasticElem < FiniteElement
             D = obj.mat.D;
             qelems = reshape( q( obj.elems',:)', nnodes * ndofs, nelems );
             for k=1:nelems
+                et=[obj.props.thermal(k), obj.props.thermal(k), obj.props.thermal(k),0,0,0]';
                 elemX = nodes(obj.elems(k,:),:);
                 for i=1:nip
                     J = dNtr(:,:,i) * elemX;
@@ -311,7 +313,7 @@ classdef SolidElasticElem < FiniteElement
                           B(6, 3*j-1) = dNx(1,j);
                     end
                     e = B*qelems(:,k); 
-                    stress(:,k,i) = x(k)*D*e;
+                    stress(:,k,i) = x(k)*D*(e-et);
                     strain(:,k,i) = e;
                 end
             end

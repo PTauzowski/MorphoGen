@@ -24,6 +24,7 @@ classdef (Abstract) FiniteElement < handle
                      obj.sf=sf;
                      obj.elems = elems;
                      obj.props.h=1;
+                     obj.props.thermal=zeros(size(elems,1),1);
         end
         function setMaterial(obj, mat)
                      obj.mat=mat;

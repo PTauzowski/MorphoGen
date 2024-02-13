@@ -10,18 +10,19 @@ classdef ChocolateModel < ModelLinear
             obj.fe = SolidElasticElem( ShapeFunctionL27, obj.mesh.elems );
             obj.analysis = LinearElasticityWeighted( obj.fe, obj.mesh, false );
 
-            allganElemsSelector = Selector( @(x)( x(:,3) > ganTh ) ) ;
+            allganElemsSelector = Selector( @(x)( x(:,3) > ganTh ) );
+            allganTopElemsSelector = Selector( @(x)( x(:,3) > ganTh+alGanTh*0.6 ) );
             %fixedFaceSelector = Selector( @(x)( abs(x(:,3) - l)<0.001 ) );
             %loadedFaceSelector = Selector( @(x)( abs(x(:,1) - l)<0.001 ) );
 
-            
-
+           
             meshMax=max(obj.mesh.nodes);
             obj.analysis.fixClosestNode([0 0 0], ["ux" "uy" "uz"], [0 0 0] );
             obj.analysis.fixClosestNode([meshMax(1) 0 0], ["uz"], 0);
             obj.analysis.fixClosestNode([meshMax(1) meshMax(2) ganTh], ["ux" "uz"], [0 0] );
 
             obj.analysis.loadElementsThermal(allganElemsSelector,alphaT*dT);
+            obj.analysis.loadElementsThermal(allganTopElemsSelector,alphaT*0.4*dT);
             %obj.analysis.loadClosestNode([meshMax(1)/2 meshMax(2)/2 meshMax(2)], ["uz"], -1);
            
             obj.fe.props.h=1;
@@ -282,7 +283,9 @@ classdef ChocolateModel < ModelLinear
                 else
                     if abs( zCoords(k) - (nganTh + intTh/2)  ) < 1.0E-6 
                         c=chemistry/2;
-                    else        
+                    elseif abs( zCoords(k) > ganTh+0.6*alGanTh  )      
+                        c=1.4*chemistry;
+                    else
                         c=chemistry;
                     end
                 end

@@ -1,10 +1,10 @@
 clear;
 close all;
-height=15;
+height=12;
 E=210000;
 nu=0.3;
-alphaT=11E-1;
-dT=20;
+alphaT=11E-6;
+dT=-20;
 lb=[0.3 0.6 2];
 ub=[0.9 0.8 8];
 
@@ -20,14 +20,15 @@ N=5000;
 mc= MonteCarlo(randomVariables,g,N);
 %x = mc.generateRandomSapmles(N);
 tic
-res_mc = mc.solve();
+%res_mc = mc.solve();
 toc
 
-save("chocolateStat200_dT.mat");
+%save("chocolateStat200_dT.mat");
 
-[v, i]=max(mc.r)
+%[v, i]=max(mc.r)
 %g.evaluateValue(mc.x(i,:));
-g.evaluateValue([0.67,0.7,2]);
+%g.evaluateValue([0.67,0.7,2]);
+g.evaluateValue2();
 
 
 
