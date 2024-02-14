@@ -77,10 +77,10 @@ classdef ChocolateModel < ModelLinear
             obj.cy=cy;
             
             % FE x - division of the tile
-            ncx=4;
+            ncx=8;
             
             % FE y - division of the tile
-            ncy=3;
+            ncy=6;
             
             % depth FE division of the GaN layer
             ngan=2;

@@ -11,12 +11,16 @@ classdef  SpecimenFatiguePerformanceFunction < Function
             obj.lcf = LowCycleFatigue(fatigueDdata);
         end
 
-        function g = computeValue(obj,points)
+        function [g, success] = computeValue(obj,points)
             g=zeros(size(points,1),1);
+            success=true(size(points,1),1);
             for k=1:size(points,1)
-                ps=obj.model.computeHMstress(210000,0.3,[points(k,1) points(k,2)]);
-                %g(k)=obj.lcf.nCycles(ps)-1000; %2D
-                g(k)=obj.lcf.nCycles(ps); %3D
+                material = PlaneStressMaterial('mat1');
+                material.setElasticIzo(points(k,1), 0.3);
+                obj.model.fe.setMaterial( material );   
+                obj.lcf.E=points(k,1);
+                obj.lcf.sy=points(k,2);
+                g(k)=obj.lcf.nCycles(obj.model.computeMaxHMstress());
             end            
         end
 

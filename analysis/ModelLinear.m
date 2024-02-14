@@ -51,6 +51,11 @@ classdef ModelLinear < FEModel
             obj.analysis.computeElementResults(obj.x);
             sHM=obj.fe.results.nodal.all(obj.result_node,obj.result_number);
         end 
+
+        function maxsHM = computeMaxHMstress(obj)
+            obj.solveWeighted();  
+            maxsHM=max(obj.fe.results.nodal.all(:,obj.result_number));
+        end 
     
         function pstress = computePenalizedHMstress(obj,E,nu,pressure,penalty)
             obj.analysis.clearCurrentLoad();

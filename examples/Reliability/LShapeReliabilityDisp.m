@@ -2,7 +2,7 @@ clear;
 close all;
 l=3;
 c=0.4;
-res = 80;
+res = 40;
 E=210000;
 nu=0.3;
 

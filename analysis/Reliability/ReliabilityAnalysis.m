@@ -4,7 +4,6 @@ classdef ReliabilityAnalysis < handle
         randVars;
         g;
         Pf, beta;
-
     end
     
     methods(Abstract)
@@ -31,19 +30,8 @@ classdef ReliabilityAnalysis < handle
         
         function [x, r, fi] = generatePerformanceRandomSapmles(obj,nsamples)
             x=obj.generateRandomSapmles(nsamples);
-            r = zeros(nsamples,1);
-            fi=[];
-            for k=1:nsamples
-                value = obj.g.computeValue( x(k,:) );
-                if  obj.g.success
-                    r(k)=value;
-                else
-                    fi = [ fi k ];
-                end
-            end
-            if size(fi,2) > 0 
-                obj.warning="Computations of performance function failed for some points";
-            end
+            [ r , success] = obj.g.computeValue( x );
+            fi=find(success);
         end
         
         function obj = plotPerformance(obj,x,y,i)

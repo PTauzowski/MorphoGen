@@ -1,5 +1,6 @@
 
 classdef ModelLinearLoad < ModelLinear
+    
     properties
         P0fem, u0fem, ures, E, nu;
     end

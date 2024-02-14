@@ -39,24 +39,25 @@ classdef SpecimenModelLinear < ModelLinearLoad
             Fref = 0.01;
             qref = Fref / 4 / pi / r;
             qref2 = Fref / b;
+            tolerance = 1.0E-5;
             obj.analysis = LinearElasticityWeighted( obj.fe, obj.mesh, false );
-            fixedEdgeSelectorX = Selector( @(x)( (x(:,1) - 137/meter_factor) < 1E-4 ) );
-            fixedEdgeSelectorY = Selector( @(x)( x(:,2) < 1.0E-4) );
-            loadedEdgeSelectorX = Selector( @(x)( x(:,1) < 1.0E-4) );
+            fixedEdgeSelectorX = Selector( @(x)( abs(x(:,1) - 137/meter_factor) < tolerance ) );
+            fixedEdgeSelectorY = Selector( @(x)( abs(x(:,2)) < tolerance) );
+            loadedEdgeSelectorX = Selector( @(x)( abs(x(:,1)) < tolerance) );
             loadedEdgeSelectorY = Selector( @(x)( (x(:,2) - 137/meter_factor) < 1E-4 ) );
-            holeSelector1 = Selector( @(x)( (((x(:,1) - 22/meter_factor).^2 + (x(:,2) - 10/meter_factor).^2 )-(r)^2 ) + (x(:,1) > 22/meter_factor)), 0.1/meter_factor);
-            holeSelector2 = Selector( @(x)( (((x(:,1) - 22/meter_factor).^2 + (x(:,2) - 30/meter_factor).^2 )-(r)^2 ) + (x(:,1) > 22/meter_factor)), 0.1/meter_factor );
-            holeSelector3 = Selector( @(x)( (((x(:,1) - 57/meter_factor).^2 + (x(:,2) - 10/meter_factor).^2 )-(r)^2 ) + (x(:,1) > 57/meter_factor)), 0.1 /meter_factor);
-            holeSelector4 = Selector( @(x)( (((x(:,1) - 57/meter_factor).^2 + (x(:,2) - 30/meter_factor).^2 )-(r)^2 ) + (x(:,1) > 57/meter_factor)), 0.1 /meter_factor);
-            holeSelector5 = Selector( @(x)( (((x(:,1) - 107/meter_factor).^2 + (x(:,2) - 115/meter_factor).^2 )-(r)^2 ) + (x(:,2) < 115/meter_factor)), 0.1/meter_factor );
-            holeSelector6 = Selector( @(x)( (((x(:,1) - 127/meter_factor).^2 + (x(:,2) - 115/meter_factor).^2 )-(r)^2 ) + (x(:,2) < 115/meter_factor)), 0.1/meter_factor );
-            holeSelector7 = Selector( @(x)( (((x(:,1) - 107/meter_factor).^2 + (x(:,2) - 80/meter_factor).^2 )-(r)^2 ) + (x(:,2) < 80/meter_factor)), 0.1/meter_factor );
-            holeSelector8 = Selector( @(x)( (((x(:,1) - 127/meter_factor).^2 + (x(:,2) - 80/meter_factor).^2 )-(r)^2 ) + (x(:,2) < 80/meter_factor)), 0.1/meter_factor );
+            holeSelector1 = Selector( @(x)( abs(((x(:,1) - 22/meter_factor).^2 + (x(:,2) - 10/meter_factor).^2 )-(r)^2 ) < tolerance ) );
+            holeSelector2 = Selector( @(x)( (((x(:,1) - 22/meter_factor).^2 + (x(:,2) - 30/meter_factor).^2 )-(r)^2 )  < tolerance  ) );
+            holeSelector3 = Selector( @(x)( (((x(:,1) - 57/meter_factor).^2 + (x(:,2) - 10/meter_factor).^2 )-(r)^2 )  < tolerance ) );
+            holeSelector4 = Selector( @(x)( (((x(:,1) - 57/meter_factor).^2 + (x(:,2) - 30/meter_factor).^2 )-(r)^2 )  < tolerance ) );
+            holeSelector5 = Selector( @(x)( (((x(:,1) - 107/meter_factor).^2 + (x(:,2) - 115/meter_factor).^2 )-(r)^2 )  < tolerance ) );
+            holeSelector6 = Selector( @(x)( (((x(:,1) - 127/meter_factor).^2 + (x(:,2) - 115/meter_factor).^2 )-(r)^2 )  < tolerance ) );
+            holeSelector7 = Selector( @(x)( (((x(:,1) - 107/meter_factor).^2 + (x(:,2) - 80/meter_factor).^2 )-(r)^2 )  < tolerance ) );
+            holeSelector8 = Selector( @(x)( (((x(:,1) - 127/meter_factor).^2 + (x(:,2) - 80/meter_factor).^2 )-(r)^2 )  < tolerance ) );
             
             %obj.analysis.plotSelectedNodeNumbers( loadedEdgeSelector );
             
-            obj.analysis.elementLoadLineIntegral( "global", loadedEdgeSelectorX, "ux", @(x)( x(:,1)*0 - qref2 ));
-            obj.analysis.elementLoadLineIntegral( "global", loadedEdgeSelectorY, "uy", @(x)( x(:,2)*0 + qref2 ));
+            % obj.analysis.elementLoadLineIntegral( "global", loadedEdgeSelectorX, "ux", @(x)( x(:,1)*0 - qref2 ));
+            % obj.analysis.elementLoadLineIntegral( "global", loadedEdgeSelectorY, "uy", @(x)( x(:,2)*0 + qref2 ));
             
             obj.analysis.elementLoadLineIntegral( "global", holeSelector1, "ux", @(x)( x(:,1)*0 - qref ));
             obj.analysis.elementLoadLineIntegral( "global", holeSelector2, "ux", @(x)( x(:,1)*0 - qref ));

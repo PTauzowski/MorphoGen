@@ -20,7 +20,7 @@ N=5000;
 mc= MonteCarlo(randomVariables,g,N);
 %x = mc.generateRandomSapmles(N);
 tic
-res_mc = mc.solve();
+%res_mc = mc.solve();
 toc
 
 save("chocolateStat5000_dT.mat");
