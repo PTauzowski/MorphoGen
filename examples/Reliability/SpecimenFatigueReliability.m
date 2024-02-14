@@ -1,7 +1,7 @@
 clear;
 close all;
 a=10;
-div=3;
+div=15;
 c=0.4;
 E=200000;
 nu=0.3;
@@ -27,23 +27,24 @@ model = SpecimenModelLinear(ShapeFunctionL4,a,div,E,nu);
 % model.setResultNode([0.4*l 0.2*l 0.4*l]);
 model.plotModel();
 
-randomVariables={RandomVariable("Normal",P(1),1) RandomVariable("Normal",P(3),1)};
+randomVariables={RandomVariable("Normal",P(1),1) RandomVariable("Normal",P(2),1)};
 transform=IndependentTransformation(randomVariables);
 g=SpecimenFatiguePerformanceFunction(model,fatigueData);
 
 %g.tabNCycles(0.1,500,10)
 
-Rfilter = 1.2*a/div;
+Rfilter =  1*12/40/1000;
 penal = 3;
 cutTreshold = 0.005;
 volFr=0.25;
 
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTreshold, penal, volFr, true );
+topOpt.const_elems=g.model.const_elems;
 topOpt.is_silent=true;
 
-tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 1000, 2);
-tuner.tuneMC();
-tuner.plotMCs(["Px" "Py" "Pz"],'Nc');
+% tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 1000, 2);
+% tuner.tuneMC();
+% tuner.plotMCs(["Px" "Py" "Pz"],'Nc');
 
 %tuner.tuneFORM();
 
@@ -52,7 +53,7 @@ tuner.plotMCs(["Px" "Py" "Pz"],'Nc');
  %sora.checkTuning();
 
  
- % topOpt.solve();
+ topOpt.solve();
 %  sora2.limitReliability();
   %sora.tabMultiMpp();
 
