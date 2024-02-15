@@ -1,11 +1,11 @@
-classdef SpecimenModelLinear < ModelLinearLoad
+classdef SpecimenModelLinear < ModelLinear
     
     properties
         const_elems;
     end
 
     methods
-        function obj = SpecimenModelLinear(sf,a,div,E,nu)
+        function obj = SpecimenModelLinear(sf,a,div,E,nu,P)
             mesh1=Mesh();
             mesh1.addRectMesh2D( 0, 0, 12, 4*a, 2*div, 4*div, sf.pattern );
             mesh1.addRectWithHoleMesh2D( a, 22, 10, 4.25/10, div, sf.pattern );
@@ -33,22 +33,22 @@ classdef SpecimenModelLinear < ModelLinearLoad
             obj.fe.setMaterial( material );      
             mX = max(obj.mesh.nodes(:,1));
 
-            r=0.0045; %[m]
+            r=0.00425; %[m]
             b = 0.08; %[m]
 
-            Fref = 0.01;
+            Fref = 0.01*P;
             qref = Fref / 4 / pi / r;
             qref2 = Fref / b;
-            tolerance = 1.0E-5;
+            tolerance = 1.0E-6;
             obj.analysis = LinearElasticityWeighted( obj.fe, obj.mesh, false );
             fixedEdgeSelectorX = Selector( @(x)( abs(x(:,1) - 137/meter_factor) < tolerance ) );
             fixedEdgeSelectorY = Selector( @(x)( abs(x(:,2)) < tolerance) );
             loadedEdgeSelectorX = Selector( @(x)( abs(x(:,1)) < tolerance) );
             loadedEdgeSelectorY = Selector( @(x)( (x(:,2) - 137/meter_factor) < 1E-4 ) );
-            holeSelector1 = Selector( @(x)( abs(((x(:,1) - 22/meter_factor).^2 + (x(:,2) - 10/meter_factor).^2 )-(r)^2 ) < tolerance ) );
-            holeSelector2 = Selector( @(x)( (((x(:,1) - 22/meter_factor).^2 + (x(:,2) - 30/meter_factor).^2 )-(r)^2 )  < tolerance  ) );
-            holeSelector3 = Selector( @(x)( (((x(:,1) - 57/meter_factor).^2 + (x(:,2) - 10/meter_factor).^2 )-(r)^2 )  < tolerance ) );
-            holeSelector4 = Selector( @(x)( (((x(:,1) - 57/meter_factor).^2 + (x(:,2) - 30/meter_factor).^2 )-(r)^2 )  < tolerance ) );
+            holeSelector1 = Selector( @(x)( (((x(:,1) - 22/meter_factor).^2 +  (x(:,2) - 10/meter_factor).^2 )-(r)^2 ) < tolerance ) );
+            holeSelector2 = Selector( @(x)( (((x(:,1) - 22/meter_factor).^2 +  (x(:,2) - 30/meter_factor).^2 )-(r)^2 )  < tolerance  ) );
+            holeSelector3 = Selector( @(x)( (((x(:,1) - 57/meter_factor).^2 +  (x(:,2) - 10/meter_factor).^2 )-(r)^2 )  < tolerance ) );
+            holeSelector4 = Selector( @(x)( (((x(:,1) - 57/meter_factor).^2 +  (x(:,2) - 30/meter_factor).^2 )-(r)^2 )  < tolerance ) );
             holeSelector5 = Selector( @(x)( (((x(:,1) - 107/meter_factor).^2 + (x(:,2) - 115/meter_factor).^2 )-(r)^2 )  < tolerance ) );
             holeSelector6 = Selector( @(x)( (((x(:,1) - 127/meter_factor).^2 + (x(:,2) - 115/meter_factor).^2 )-(r)^2 )  < tolerance ) );
             holeSelector7 = Selector( @(x)( (((x(:,1) - 107/meter_factor).^2 + (x(:,2) - 80/meter_factor).^2 )-(r)^2 )  < tolerance ) );
@@ -69,7 +69,15 @@ classdef SpecimenModelLinear < ModelLinearLoad
             obj.analysis.elementLoadLineIntegral( "global", holeSelector8, "uy", @(x)( x(:,2)*0 + qref ));
             obj.analysis.fixNodes( fixedEdgeSelectorX, "ux"); 
             obj.analysis.fixNodes( fixedEdgeSelectorY, "uy" );
+
+            obj.result_number=17;
             
+        end
+
+        function setupLoad(obj,P)
+            material = PlaneStressMaterial('mat1');
+            material.setElasticIzo(P(1), 0.3);
+            obj.fe.setMaterial( material );   
         end
        
     end

@@ -16,7 +16,6 @@ classdef SORA < handle
             obj.transform=transform;
             obj.topOpt.is_silent=true;
             obj.betat=betat;
-            figure;
         end
 
      
@@ -295,7 +294,7 @@ classdef SORA < handle
             plVolSafe=[];
 
             zeroLoad=obj.transform.toX( zeros(1,obj.g.dim) );
-            obj.model.setOneX();
+%            obj.model.setOneX();
             fprintf("\n* FORM with reliability constraints tuner *\n");
             fprintf("Design Domain FORM\n");
             formDD_res = obj.form.solve();

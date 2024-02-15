@@ -20,7 +20,7 @@ classdef  SpecimenFatiguePerformanceFunction < Function
                 obj.model.fe.setMaterial( material );   
                 obj.lcf.E=points(k,1);
                 obj.lcf.sy=points(k,2);
-                g(k)=obj.lcf.nCycles(obj.model.computeMaxHMstress());
+                g(k)=obj.lcf.nCycles(obj.model.computeMaxHMstress())-8000;
             end            
         end
 
@@ -36,6 +36,10 @@ classdef  SpecimenFatiguePerformanceFunction < Function
             max(plNc)
             plot(plX,plNc);
             title('Life cycles');
+        end
+
+        function setupLoad(obj,P)
+            obj.lcf.sy=P(2);
         end
 
     end

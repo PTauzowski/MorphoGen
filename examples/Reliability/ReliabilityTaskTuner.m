@@ -31,6 +31,7 @@ classdef ReliabilityTaskTuner < handle
             fprintf("\nTopology optimization iterations\n");
             mpp=obj.hmv.transform.toX(zeros(1,obj.g.dim));
             obj.model.setupLoad(mpp);
+            obj.g.setupLoad(mpp);
             [~, xopt]  = obj.topOpt.solve();
             obj.model.setX(xopt);
             fprintf("\nTopology Monte Carlo sampling\n");

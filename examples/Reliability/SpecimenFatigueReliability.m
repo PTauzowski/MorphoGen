@@ -1,7 +1,7 @@
 clear;
 close all;
 a=10;
-div=10;
+div=5;
 c=0.4;
 E=200000;
 nu=0.3;
@@ -17,13 +17,12 @@ fatigueData.S = 2.8;
 fatigueData.s = 2;
 fatigueData.Dc = 0.2;
 fatigueData.Fref=0.01;
+%fatigueData.Fref=25;
 fatigueData.Nexp=42150;
 
+P = 60;
 
-% xp=[l 0.2*l 0.4*l];
-P = [1 -6];
-
-model = SpecimenModelLinear(ShapeFunctionL4,a,div,E,nu);
+model = SpecimenModelLinear(ShapeFunctionL4,a,div,E,nu,P);
 % model.setResultNode([0.4*l 0.2*l 0.4*l]);
 model.plotModel();
 
@@ -32,7 +31,7 @@ transform=IndependentTransformation(randomVariables);
 g=SpecimenFatiguePerformanceFunction(model,fatigueData);
 
 
-%g.tabNCycles(0.1,500,10)
+%g.tabNCycles(50,350,100)
 
 Rfilter = 6*12/40/1000;
 penal = 3;
@@ -44,9 +43,9 @@ topOpt.is_silent=true;
 topOpt.const_elems=g.model.const_elems;
 model.setX(topOpt.x);
 
-tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 100, 2);
-tuner.tuneMC();
-tuner.plotMCs(["Px" "Py" "Pz"],'Nc');
+% tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 1000, 2);
+% tuner.tuneMC();
+% tuner.plotMCs(["Px" "Py" "Pz"],'Nc');
 
 %tuner.tuneFORM();
 
@@ -55,17 +54,17 @@ tuner.plotMCs(["Px" "Py" "Pz"],'Nc');
  %sora.checkTuning();
 
  
-  %topOpt.solve();
-%  sora2.limitReliability();
-  %sora.tabMultiMpp();
+ %topOpt.solve();
+% sora2.limitReliability();
+ %sora.tabMultiMpp();
 
-% topOpt.solve();
+%topOpt.solve();
 % sora2.tabReliability();
 
 %sora2.checkTuning();
 
-% sora_results2 = sora2.solveX();
-% sora_results3 = sora3.solveX();
+sora_results2 = sora2.solveX();
+sora_results3 = sora3.solveX();
 
 % form_res = form.solve()
 
