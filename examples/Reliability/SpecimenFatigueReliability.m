@@ -1,7 +1,7 @@
 clear;
 close all;
 a=10;
-div=5;
+div=10;
 c=0.4;
 E=200000;
 nu=0.3;
@@ -49,8 +49,8 @@ model.setX(topOpt.x);
 
 %tuner.tuneFORM();
 
- sora2 = SORA('LShapeSolidFatigueBeta2', model,topOpt, randomVariables, g, transform, 2);
- sora3 = SORA('LShapeSolidFatigueBeta3', model,topOpt, randomVariables, g, transform, 3);
+ sora2 = SORA('SpecimenFatigueBeta2', model,topOpt, randomVariables, g, transform, 2);
+ sora3 = SORA('SpecimenFatigueBeta3', model,topOpt, randomVariables, g, transform, 3);
  %sora.checkTuning();
 
  
