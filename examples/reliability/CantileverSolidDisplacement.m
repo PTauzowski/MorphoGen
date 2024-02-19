@@ -19,7 +19,7 @@ fatigueData.S = 2.8;
 fatigueData.s = 2;
 fatigueData.Dc = 0.2;
 fatigueData.Fref=0.01;
-fatigueData.Nexp=git push42150;
+fatigueData.Nexp=42150;
 
 
 xp=[l w/2 0];
