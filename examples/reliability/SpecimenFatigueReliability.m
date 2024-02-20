@@ -35,7 +35,7 @@ g=SpecimenFatiguePerformanceFunction(model,fatigueData);
 
 Rfilter = 2*30/1000/div/3;
 penal = 3;
-cutTreshold = 0.005;
+cutTreshold = 0.01;
 volFr=0.75;
 
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTreshold, penal, volFr, false );
