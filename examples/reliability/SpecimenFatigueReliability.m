@@ -1,7 +1,7 @@
 clear;
 close all;
 a=10;
-div=10;
+div=15;
 c=0.4;
 E=200000;
 nu=0.3;
@@ -33,7 +33,7 @@ g=SpecimenFatiguePerformanceFunction(model,fatigueData);
 
 %g.tabNCycles(50,350,100)
 
-Rfilter = 6*12/40/1000;
+Rfilter = 2*30/1000/div/3;
 penal = 3;
 cutTreshold = 0.005;
 volFr=0.75;
