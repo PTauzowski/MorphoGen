@@ -20,7 +20,8 @@ fatigueData.Fref=0.01;
 %fatigueData.Fref=25;
 fatigueData.Nexp=42150;
 
-P = 60;
+%P = 60;
+P = 150;
 
 model = SpecimenModelLinear(ShapeFunctionL4,a,div,E,nu,P);
 % model.setResultNode([0.4*l 0.2*l 0.4*l]);
@@ -33,16 +34,18 @@ g=SpecimenFatiguePerformanceFunction(model,fatigueData);
 
 %g.tabNCycles(50,350,100)
 
-Rfilter = 2*30/1000/div/3;
+Rfilter = 3*30/1000/div/3;
 penal = 3;
-cutTreshold = 0.01;
+cutTreshold = 0.005;
 volFr=0.75;
 
+%topOpt = SIMP_MMA_TopologyOptimizationElasticCompliance(Rfilter, model.analysis, penal, volFr, false);
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTreshold, penal, volFr, false );
 topOpt.is_silent=true;
 topOpt.const_elems=g.model.const_elems;
 model.setX(topOpt.x);
 
+% 
 % tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 1000, 2);
 % tuner.tuneMC();
 % tuner.plotMCs(["Px" "Py" "Pz"],'Nc');

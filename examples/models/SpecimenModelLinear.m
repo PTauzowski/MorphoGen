@@ -44,7 +44,7 @@ classdef SpecimenModelLinear < ModelLinear
             fixedEdgeSelectorX = Selector( @(x)( abs(x(:,1) - 137/meter_factor) < tolerance ) );
             fixedEdgeSelectorY = Selector( @(x)( abs(x(:,2)) < tolerance) );
             loadedEdgeSelectorX = Selector( @(x)( abs(x(:,1)) < tolerance) );
-            loadedEdgeSelectorY = Selector( @(x)( (x(:,2) - 137/meter_factor) < 1E-4 ) );
+            loadedEdgeSelectorY = Selector( @(x)( abs(x(:,2) - 137/meter_factor) < tolerance ) );
             holeSelector1 = Selector( @(x)( (((x(:,1) - 22/meter_factor).^2 +  (x(:,2) - 10/meter_factor).^2 )-(r)^2 ) < tolerance ) );
             holeSelector2 = Selector( @(x)( (((x(:,1) - 22/meter_factor).^2 +  (x(:,2) - 30/meter_factor).^2 )-(r)^2 )  < tolerance  ) );
             holeSelector3 = Selector( @(x)( (((x(:,1) - 57/meter_factor).^2 +  (x(:,2) - 10/meter_factor).^2 )-(r)^2 )  < tolerance ) );
@@ -56,17 +56,17 @@ classdef SpecimenModelLinear < ModelLinear
             
             %obj.analysis.plotSelectedNodeNumbers( loadedEdgeSelector );
             
-            % obj.analysis.elementLoadLineIntegral( "global", loadedEdgeSelectorX, "ux", @(x)( x(:,1)*0 - qref2 ));
-            % obj.analysis.elementLoadLineIntegral( "global", loadedEdgeSelectorY, "uy", @(x)( x(:,2)*0 + qref2 ));
+            obj.analysis.elementLoadLineIntegral( "global", loadedEdgeSelectorX, "ux", @(x)( x(:,1)*0 - qref2 ));
+            obj.analysis.elementLoadLineIntegral( "global", loadedEdgeSelectorY, "uy", @(x)( x(:,2)*0 + qref2 ));
             
-            obj.analysis.elementLoadLineIntegral( "global", holeSelector1, "ux", @(x)( x(:,1)*0 - qref ));
-            obj.analysis.elementLoadLineIntegral( "global", holeSelector2, "ux", @(x)( x(:,1)*0 - qref ));
-            obj.analysis.elementLoadLineIntegral( "global", holeSelector3, "ux", @(x)( x(:,1)*0 - qref ));
-            obj.analysis.elementLoadLineIntegral( "global", holeSelector4, "ux", @(x)( x(:,1)*0 - qref ));
-            obj.analysis.elementLoadLineIntegral( "global", holeSelector5, "uy", @(x)( x(:,2)*0 + qref ));
-            obj.analysis.elementLoadLineIntegral( "global", holeSelector6, "uy", @(x)( x(:,2)*0 + qref ));
-            obj.analysis.elementLoadLineIntegral( "global", holeSelector7, "uy", @(x)( x(:,2)*0 + qref ));
-            obj.analysis.elementLoadLineIntegral( "global", holeSelector8, "uy", @(x)( x(:,2)*0 + qref ));
+            % obj.analysis.elementLoadLineIntegral( "global", holeSelector1, "ux", @(x)( x(:,1)*0 - qref ));
+            % obj.analysis.elementLoadLineIntegral( "global", holeSelector2, "ux", @(x)( x(:,1)*0 - qref ));
+            % obj.analysis.elementLoadLineIntegral( "global", holeSelector3, "ux", @(x)( x(:,1)*0 - qref ));
+            % obj.analysis.elementLoadLineIntegral( "global", holeSelector4, "ux", @(x)( x(:,1)*0 - qref ));
+            % obj.analysis.elementLoadLineIntegral( "global", holeSelector5, "uy", @(x)( x(:,2)*0 + qref ));
+            % obj.analysis.elementLoadLineIntegral( "global", holeSelector6, "uy", @(x)( x(:,2)*0 + qref ));
+            % obj.analysis.elementLoadLineIntegral( "global", holeSelector7, "uy", @(x)( x(:,2)*0 + qref ));
+            % obj.analysis.elementLoadLineIntegral( "global", holeSelector8, "uy", @(x)( x(:,2)*0 + qref ));
             obj.analysis.fixNodes( fixedEdgeSelectorX, "ux"); 
             obj.analysis.fixNodes( fixedEdgeSelectorY, "uy" );
 
