@@ -89,7 +89,7 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
                       B(3, 2*j-1) = dNx(2,j);
                       B(3, 2*j)   = dNx(1,j);
                     end
-                    e = %reshape( q(obj.elems(k,:),:)', nnodes * ndofs,1 );
+                    e = reshape( q(obj.elems(k,:),:)', nnodes * ndofs,1 );
                     s = x(k)*D*e;
                     strain(:,k,i) = B*qelems(:,k);
                 end
