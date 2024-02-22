@@ -2,7 +2,7 @@ classdef SIMP_MMA_TopologyOptimization < GradientBasedTopologyOptimization
     
     properties
         penal; 
-        a0,ai,ci,di,low,upp,xold1,xold2,change;
+        a0,ai,ci,di,low,upp,xold1,xold2,change,xmin, xmax;
     end
 
    

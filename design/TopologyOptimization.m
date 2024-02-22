@@ -1,4 +1,4 @@
-classdef TopologyOptimization < ConstrainedOptimization
+classdef TopologyOptimization 
     
     properties
         FEAnalysis,
@@ -15,21 +15,27 @@ classdef TopologyOptimization < ConstrainedOptimization
         totalFENumber;
         is_const;
         is_silent;
+        numberOfDesignVariables, FobjValue, x, xmin, xmax, iteration;
+        numberOfConstraints, constrValues;
     end
     
     methods (Abstract)
-        updateDesign(obj);
-        printIterationInfo(obj);
         resetAnalysis();
+        updateDesign(obj);
+        computeObjectiveFunction(obj,x);
+        printIterationInfo(obj);
+        isNotFinished(obj);
     end
     
     methods
-        function obj = TopologyOptimization(numberOfConstraints,Rmin,FEproblem,is_const)
-            obj = obj@ConstrainedOptimization(FEproblem.getTotalElemsNumber(),numberOfConstraints);
+        function obj = TopologyOptimization(numberOfConstraints,Rmin,FEanalysis,is_const)
+            obj.numberOfConstraints=numberOfConstraints;
+            obj.xmin=zeros(numberOfDesignVariables,1);
+            obj.xmax=zeros(numberOfDesignVariables,1);
             % Supressing singularity warning.
             warning('off','MATLAB:nearlySingularMatrix');
             obj.Rmin = Rmin;
-            obj.FEAnalysis=FEproblem;
+            obj.FEAnalysis=FEanalysis;
             obj.is_const=is_const;
             obj.totalFENumber = obj.FEAnalysis.getTotalElemsNumber();
             obj.const_elems=[];
@@ -38,7 +44,7 @@ classdef TopologyOptimization < ConstrainedOptimization
             obj.xmax(:)=1;
             obj.x(:)=1;
             obj.V0 = sum( obj.x );
-            obj.elem_inds = FEproblem.getElemIndices();
+            obj.elem_inds = FEanalysis.getElemIndices();
             obj.createFilteringMatrix();
             colormap(jet);
             obj.is_silent=false;
