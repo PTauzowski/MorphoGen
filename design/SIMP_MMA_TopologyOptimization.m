@@ -2,10 +2,9 @@ classdef SIMP_MMA_TopologyOptimization < GradientBasedTopologyOptimization
     
     properties
         penal; 
-        a0,ai,ci,di,low,upp,xold1,xold2,change,xmin, xmax;
+        a0,ai,ci,di,low,upp,xold1,xold2,change;
     end
 
-   
     methods
         
         function obj = SIMP_MMA_TopologyOptimization(numberOfConstraints,Rmin,FEproblem,penal,is_const)
@@ -44,12 +43,12 @@ classdef SIMP_MMA_TopologyOptimization < GradientBasedTopologyOptimization
                     obj.FobjValue, obj.gradFobjValue, 0*obj.gradFobjValue, ...
                     obj.constrValues,obj.gradConstrValues,0*obj.gradConstrValues, ...
                     obj.low,obj.upp,obj.a0,obj.ai,obj.ci,obj.di);
-                if obj.iteration > 1
-                    obj.xold2 = obj.xold1;
-                end
-                obj.xold1=obj.x;
-                obj.x=xmma;
-                obj.change = max(max(abs(obj.x-obj.xold1)));      
+            if obj.iteration > 1
+                obj.xold2 = obj.xold1;
+            end
+            obj.xold1=obj.x;
+            obj.x=xmma;
+            obj.change = max(max(abs(obj.x-obj.xold1)));      
         end
         
     end

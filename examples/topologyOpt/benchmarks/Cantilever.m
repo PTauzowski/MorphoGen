@@ -36,7 +36,7 @@ analysis.plotSupport();
 
 tic
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.4, true );
-%[objF, xopt]  = topOpt.solve();
+[objF, xopt]  = topOpt.solve();
 toc
 
 figure;

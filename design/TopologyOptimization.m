@@ -29,19 +29,19 @@ classdef TopologyOptimization
     
     methods
         function obj = TopologyOptimization(numberOfConstraints,Rmin,FEanalysis,is_const)
-            obj.numberOfConstraints=numberOfConstraints;
-            obj.xmin=zeros(numberOfDesignVariables,1);
-            obj.xmax=zeros(numberOfDesignVariables,1);
             % Supressing singularity warning.
             warning('off','MATLAB:nearlySingularMatrix');
+            obj.numberOfConstraints=numberOfConstraints;
             obj.Rmin = Rmin;
             obj.FEAnalysis=FEanalysis;
             obj.is_const=is_const;
             obj.totalFENumber = obj.FEAnalysis.getTotalElemsNumber();
-            obj.const_elems=[];
-            obj.erased_elems = false(obj.totalFENumber,1);
+            obj.xmin=zeros(obj.totalFENumber,1);
+            obj.xmax=zeros(obj.totalFENumber,1);    
             obj.xmin(:)=0.01;
             obj.xmax(:)=1;
+            obj.const_elems=[];
+            obj.erased_elems = false(obj.totalFENumber,1);
             obj.x(:)=1;
             obj.V0 = sum( obj.x );
             obj.elem_inds = FEanalysis.getElemIndices();
