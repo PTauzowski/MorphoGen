@@ -62,10 +62,10 @@ classdef ChocolateModel < ModelLinear
             straightNotchDepth=notchDepth-roundNotchDepth;
             
             % number of tiles in the x direction
-            xtiles=4;
+            xtiles=5;
             
             % number of tiles in the y direction
-            ytiles=4;
+            ytiles=5;
             
             % x - width of the tile
             cx=30-notchWidth;
@@ -77,10 +77,10 @@ classdef ChocolateModel < ModelLinear
             obj.cy=cy;
             
             % FE x - division of the tile
-            ncx=8;
+            ncx=6;
             
             % FE y - division of the tile
-            ncy=6;
+            ncy=4;
             
             % depth FE division of the GaN layer
             ngan=2;
@@ -232,10 +232,10 @@ classdef ChocolateModel < ModelLinear
             x2=[obj.cx+obj.notchWidth obj.cy+obj.notchWidth 0];
             n1 = obj.mesh.findClosestNode(x1);
             n2 = obj.mesh.findClosestNode(x2);
-            sx1 = obj.fe.results.nodal.all(n1,6);
-            sy1 = obj.fe.results.nodal.all(n1,7);
-            sx2 = obj.fe.results.nodal.all(n2,6);
-            sy2 = obj.fe.results.nodal.all(n2,7);
+            sx1 = obj.fe.results.nodal.all(n1,7);
+            sy1 = obj.fe.results.nodal.all(n1,8);
+            sx2 = obj.fe.results.nodal.all(n2,7);
+            sy2 = obj.fe.results.nodal.all(n2,8);
             stressObj=sx1+sy1-(sx2+sy2);
             %stressObj=(sx2+sy2)-(sx1+sy1);
         end
