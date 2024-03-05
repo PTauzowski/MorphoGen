@@ -9,7 +9,7 @@ P = [0 0; 1 0; 1 0.7; 2 2; 2 3; 1 3; 1 2; 0 1];
 C = [1 2; 2 3; 3 4; 4 5; 5 6; 6 7; 7 8; 8 1];
 mesh.addDelaunayMesh2D( P, C, 500 );
 fe=PlaneStressElem( sfT3, mesh.elems );
-fe.plotSolid(mesh.nodes);
+fe.plot(mesh.nodes);
 fe.props.h=1;
 material = PlaneStressMaterial('mat1');
 material.setElasticIzo(210000, 0.3);
