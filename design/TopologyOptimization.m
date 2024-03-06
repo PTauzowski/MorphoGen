@@ -1,4 +1,4 @@
-classdef TopologyOptimization 
+classdef TopologyOptimization < handle
     
     properties
         FEAnalysis,
@@ -42,7 +42,7 @@ classdef TopologyOptimization
             obj.xmax(:)=1;
             obj.const_elems=[];
             obj.erased_elems = false(obj.totalFENumber,1);
-            obj.x(:)=1;
+            obj.x=ones(obj.totalFENumber,1);
             obj.V0 = sum( obj.x );
             obj.elem_inds = FEanalysis.getElemIndices();
             obj.createFilteringMatrix();

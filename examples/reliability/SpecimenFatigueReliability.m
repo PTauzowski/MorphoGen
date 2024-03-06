@@ -1,7 +1,7 @@
 clear;
 close all;
 a=10;
-div=15;
+div=10;
 c=0.4;
 E=200000;
 nu=0.3;
@@ -45,10 +45,10 @@ topOpt.is_silent=true;
 topOpt.const_elems=g.model.const_elems;
 model.setX(topOpt.x);
 
-% 
-% tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 1000, 2);
-% tuner.tuneMC();
-% tuner.plotMCs(["Px" "Py" "Pz"],'Nc');
+ 
+tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 1000, 2);
+tuner.tuneMC();
+tuner.plotMCs(["Px" "Py" "Pz"],'Nc');
 
 %tuner.tuneFORM();
 
@@ -66,8 +66,8 @@ model.setX(topOpt.x);
 
 %sora2.checkTuning();
 
-sora_results2 = sora2.solveX();
-sora_results3 = sora3.solveX();
+% sora_results2 = sora2.solveX();
+% sora_results3 = sora3.solveX();
 
 % form_res = form.solve()
 

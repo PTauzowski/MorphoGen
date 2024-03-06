@@ -1,11 +1,12 @@
 clear;
 close all;
 
-l=3; % long edge length
+l=3;         % long edge length
+res = 30;    % short edge resolution
 
 model = LShapeModelLinear(  ShapeFunctionL4,...
                              l, ...         % long edge length
-                            40, ...         % short edge resolution
+                            res, ...         % short edge resolution
                             210000, ...     % Young Modulus
                             0.3, ...        % Poinsson's ratio
                             [l 0.4*l] ...   % Force location,xp
@@ -19,11 +20,11 @@ transform=IndependentTransformation(randomVariables);
 g=loadPerformanceFunctionDisp(model);
 
 
-topOpt = StressIntensityTopologyOptimization( Rfilter, ...
+topOpt = StressIntensityTopologyOptimizationVol( 1.2*l/res, ...
             model.analysis, ... % FEM analysis object
             0.005, ...          % stress intensity treshold for element removal 
             2, ...              % penalty factor
-            g, ...              % constraint function object
+            0.4, ...              % constraint function object
             true ...            % is finite elements uniform
  );
 
