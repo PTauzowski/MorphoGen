@@ -46,9 +46,9 @@ topOpt.const_elems=g.model.const_elems;
 model.setX(topOpt.x);
 
  
-tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 1000, 2);
-tuner.tuneMC();
-tuner.plotMCs(["Px" "Py" "Pz"],'Nc');
+% tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 1000, 2);
+% tuner.tuneMC();
+% tuner.plotMCs(["Px" "Py" "Pz"],'Nc');
 
 %tuner.tuneFORM();
 
@@ -61,8 +61,8 @@ tuner.plotMCs(["Px" "Py" "Pz"],'Nc');
 % sora2.limitReliability();
  %sora.tabMultiMpp();
 
-%topOpt.solve();
-% sora2.tabReliability();
+topOpt.solve();
+sora2.tabReliability();
 
 %sora2.checkTuning();
 
