@@ -1,7 +1,7 @@
 clear;
 close all;
 a=10;
-div=10;
+div=5;
 c=0.4;
 E=200000;
 nu=0.3;
@@ -16,14 +16,10 @@ fatigueData.sfi = 140;
 fatigueData.S = 2.8;
 fatigueData.s = 2;
 fatigueData.Dc = 0.2;
-fatigueData.Fref=0.01;
-%fatigueData.Fref=25;
+fatigueData.P=1000;
 fatigueData.Nexp=42150;
 
-%P = 60;
-P = 150;
-
-model = SpecimenModelLinear(ShapeFunctionL4,a,div,E,nu,P);
+model = SpecimenModelLinear(ShapeFunctionL4,a,div,E,nu,fatigueData.P);
 % model.setResultNode([0.4*l 0.2*l 0.4*l]);
 model.plotModel();
 
@@ -32,7 +28,7 @@ transform=IndependentTransformation(randomVariables);
 g=SpecimenFatiguePerformanceFunction(model,fatigueData);
 
 
-%g.tabNCycles(50,350,100)
+%g.tabNCycles(200,2000,100)
 
 Rfilter = 3*30/1000/div/3;
 penal = 3;
@@ -45,7 +41,7 @@ topOpt.is_silent=true;
 topOpt.const_elems=g.model.const_elems;
 model.setX(topOpt.x);
 
- 
+% 
 % tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 1000, 2);
 % tuner.tuneMC();
 % tuner.plotMCs(["Px" "Py" "Pz"],'Nc');

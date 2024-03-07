@@ -32,10 +32,12 @@ classdef LowCycleFatigue
             obj.s=fatigue_data.s;  
             obj.Dc=fatigue_data.Dc;
             obj.Nexp=fatigue_data.Nexp;
-            obj.Fref = fatigue_data.Fref;
+            P=fatigue_data.P;
+            %obj.Fref = fatigue_data.Fref;
             %obj.Fmax = [35 40 45 50 55 60 65 70 75 80 85 90 95] / 1000;
-            obj.Fmax = [50 50 50 50 50 50 50 50 50 50 50 50 50] / 1000;
+            obj.Fmax = [P P P P P P P P P P P P P] / 1000;
             obj.blocks = [ 38000 100 100 100 100 100 100 100 100 100 100 100 ];
+            obj.Fref = max(obj.Fmax);
         end
 
         function ncycles = nCyclesMulti(obj,seqref)
