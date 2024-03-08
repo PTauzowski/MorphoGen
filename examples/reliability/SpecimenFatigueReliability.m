@@ -1,7 +1,7 @@
 clear;
 close all;
 a=10;
-div=10;
+div=15;
 c=0.4;
 E=200000;
 nu=0.3;
@@ -52,8 +52,8 @@ model.setX(topOpt.x);
 
 %tuner.tuneFORM();
 
- sora2 = SORA('SpecimenFatigueBeta2', model,topOpt, randomVariables, g, transform, 2);
- sora3 = SORA('SpecimenFatigueBeta3', model,topOpt, randomVariables, g, transform, 3);
+ sora2 = SORA('SpecimenFatigueBeta4', model,topOpt, randomVariables, g, transform, 4);
+ sora3 = SORA('SpecimenFatigueBeta5', model,topOpt, randomVariables, g, transform, 5);
  %sora.checkTuning();
 
  
@@ -61,13 +61,13 @@ model.setX(topOpt.x);
 % sora2.limitReliability();
  %sora.tabMultiMpp();
 
-topOpt.solve();
-sora2.tabReliability();
+% topOpt.solve();
+% sora2.tabReliability();
 
 %sora2.checkTuning();
 
-% sora_results2 = sora2.solveX();
-% sora_results3 = sora3.solveX();
+sora_results2 = sora2.solveX();
+sora_results3 = sora3.solveX();
 
 % form_res = form.solve()
 
