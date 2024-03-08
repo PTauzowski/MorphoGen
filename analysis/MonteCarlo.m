@@ -20,6 +20,8 @@ classdef MonteCarlo < ReliabilityAnalysis
             results.beta=-norminv(results.Pf);
             obj.Pf=results.Pf;
             obj.beta=results.beta;
+            [~,i]=min(sqrt(sum(obj.x(find(obj.r<0),:).^2,2)));
+            results.mpp=obj.x(i,:);
         end
 
         function scatterPlots(obj,varNames,objName)
