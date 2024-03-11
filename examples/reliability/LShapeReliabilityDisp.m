@@ -9,13 +9,13 @@ model = LShapeModelLinear(  ShapeFunctionL4,...
                             res, ...         % short edge resolution
                             210000, ...     % Young Modulus
                             0.3, ...        % Poinsson's ratio
-                            [l 0.4*l] ...   % Force location,xp
+                            [l 0.2*l] ...   % Force location,xp
      );
 
-model.setResultNode([l l*0.4]);
+model.setResultNode([l l*0.2]);
 model.plotModel();
 
-randomVariables={RandomVariable("Normal",0,10) RandomVariable("Normal",-10,2)};
+randomVariables={RandomVariable("Normal",5,2) RandomVariable("Normal",-10,2)};
 transform=IndependentTransformation(randomVariables);
 g=loadPerformanceFunctionDisp(model);
 
@@ -28,6 +28,7 @@ topOpt = StressIntensityTopologyOptimizationVol( 1.2*l/res, ...
             true ...            % is finite elements uniform
  );
 
+
 % tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 1000000, 2);
 % tuner.tuneMC();
 % tuner.plotMCs(["Px" "Py"],'u');
@@ -36,7 +37,6 @@ sora2 = SORA('LShapeDispBeta20_2', model,topOpt, randomVariables, g, transform, 
 sora3 = SORA('LShapeDispBeta20_3', model,topOpt, randomVariables, g, transform, 3);
 sora4 = SORA('LShapeDispBeta20_4', model,topOpt, randomVariables, g, transform, 4);
 sora5 = SORA('LShapeDispBeta20_5', model,topOpt, randomVariables, g, transform, 5);
-
 
 sora2.solveX();
 sora3.solveX();

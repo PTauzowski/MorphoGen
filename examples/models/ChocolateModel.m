@@ -1,12 +1,14 @@
 classdef ChocolateModel < ModelLinear
 
     properties
-        ganTh, alGanTh, intTh, cx, cy, notchWidth;
+        ganTh, alGanTh, intTh, cx, cy, notchWidth, nTempVars;
     end
     
     methods
         function obj = ChocolateModel( ganTh, alGanTh, notchWidth, relNotchDepth, relRoutndNotchDepth, E, nu, alphaT, dT)
             obj.generateMesh( ganTh, alGanTh, notchWidth, relNotchDepth, relRoutndNotchDepth );
+            zCoords = sort(unique(round(obj.mesh.nodes(:,3)*10000)/10000));
+            obj.nTempVars=size(find(zCoords-ganTh>=0),1)-3;
             obj.fe = SolidElasticElem( ShapeFunctionL27, obj.mesh.elems );
             obj.analysis = LinearElasticityWeighted( obj.fe, obj.mesh, false );
 
@@ -32,7 +34,8 @@ classdef ChocolateModel < ModelLinear
             obj.fe.setMaterial(material);
             
             obj.x=ones(1,obj.analysis.getTotalElemsNumber());
-            obj.result_number=13;            
+            obj.result_number=13;
+
         end
 
         function generateMesh( obj, ganTh, alGanTh, notchWidth, relNotchDepth, relRoutndNotchDepth )

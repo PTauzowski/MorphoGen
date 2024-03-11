@@ -23,8 +23,9 @@ classdef  chocolatePerformanceFunction < Function
             obj.model = ChocolateModel( ganTh, alGanTh, x(1,3), x(1,2), relRoutndNotchDepth, obj.E, obj.nu,obj.alphaT,obj.dT);
         end
 
-        function g = computeValue(obj,x)
+        function [g, fi] = computeValue(obj,x)
             g = zeros(size(x,1),1);
+            fi=[];
             obj.stresses=zeros(size(x,1),4);
             for k=1:size(x,1)
                 createModel(obj,x(k,:));

@@ -18,15 +18,15 @@ g = chocolatePerformanceFunction(height,210000,0.3,alphaT,dT);
 %g.fullFactorialBoundsPlot(lb,ub);
 N=5000;
 mc= MonteCarlo(randomVariables,g,N);
-%x = mc.generateRandomSapmles(N);
+x = mc.generateRandomSapmles(N);
 tic
-%res_mc = mc.solve();
+res_mc = mc.solve();
 toc
 
 %save("chocolateStat5000_dT.mat");
 
-[v, i]=max(mc.r)
-g.evaluateValue(mc.x(i,:))
+%[v, i]=max(mc.r)
+%g.evaluateValue(mc.x(i,:))
 %g.evaluateValue([0.67,0.7,2]);
 %g.evaluateValue2();
 
