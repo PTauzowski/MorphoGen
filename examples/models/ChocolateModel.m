@@ -1,7 +1,7 @@
 classdef ChocolateModel < ModelLinear
 
     properties
-        ganTh, alGanTh, intTh, cx, cy, notchWidth, nTempVars;
+        ganTh, alGanTh, intTh, tileXWidth, tileYWidth, notchWidth, nTempVars;
     end
     
     methods
@@ -42,42 +42,73 @@ classdef ChocolateModel < ModelLinear
             obj.ganTh=ganTh;
             obj.alGanTh=alGanTh;
             obj.notchWidth=notchWidth;
-            
-            % GaN layer thickness
-            %ganTh=5;
-            
-            % AlGanLayer thickness
-            %alGanTh = 10;
+          
             
             % interface thickness
             obj.intTh = 0.025;
             
-            % width of the notch 
-            %notchWidth=4; 
-            
             %depth of the notch
-            notchDepth=relNotchDepth*alGanTh; %0.875
+            notchDepth=relNotchDepth*alGanTh; 
             
             %depth of the part ow the notch which is rounded
-            roundNotchDepth=relRoutndNotchDepth*notchDepth; %0.3
+            roundNotchDepth=relRoutndNotchDepth*notchDepth; 
             
             %depth of the part ow the notch which is straight  
             straightNotchDepth=notchDepth-roundNotchDepth;
+
+            % middle point of rounded noth relative height
+            middleRoundedHeight = 0.25*roundNotchDepth;
+
+            % middle point distance from noth bottom (middle of the notch)
+            middleRoundedPlaneDistance = 0.125*notchWidth;
+
+             % x - width of the tile
+            obj.tileXWidth=30;
+        
+            % y - width of the tile
+            obj.tileYWidth=20;
+
+
+            % coordinates of shape points
+
+            xr1=middleRoundedPlaneDistance;
+            x1=notchWidth/2;
+            x2=x1+obj.tileXWidth;
+            x3=obj.tileXWidth+obj.notchWidth;
+            xr2=x3-middleRoundedPlaneDistance;
+
+            yr1=middleRoundedPlaneDistance;
+            y1=notchWidth/2;
+            y2=y1+obj.tileYWidth;
+            y3=obj.tileYWidth+obj.notchWidth;
+            yr2=y3-middleRoundedPlaneDistance;
+
+
+            % top of gan layer
+            zGt = ganTh;
             
+            % top of interface layer
+            zIt = zGt+obj.intTh;
+            
+            % bottom of noth
+            zNb = zIt+obj.alGanTh-obj.notchWidth;
+            
+            %rounded middle point
+            zRm = zNb+middleRoundedHeight;
+
+            %rounded notch top point
+            zRt = zNb+roundNotchDepth;
+
+            %top of the structure
+            zTop = obj.ganTh+obj.intTh+obj.alGanTh;
+            
+
+            % Mesh resolutions
             % number of tiles in the x direction
             xtiles=5;
             
             % number of tiles in the y direction
-            ytiles=5;
-            
-            % x - width of the tile
-            cx=30-notchWidth;
-            %cx=20-notchWidth;
-            obj.cx=cx;
-            
-            % y - width of the tile
-            cy=20-notchWidth; 
-            obj.cy=cy;
+            ytiles=5; 
             
             % FE x - division of the tile
             ncx=6;
@@ -86,7 +117,7 @@ classdef ChocolateModel < ModelLinear
             ncy=4;
             
             % depth FE division of the GaN layer
-            ngan=2;
+            ngan=1;
             
             % FE depth division of the rouned part of the notch
             nround=1;
@@ -100,129 +131,70 @@ classdef ChocolateModel < ModelLinear
             % value of the chemistry imposed
             chemistry=0.1;
             
-            % generated FEAP input file name 
-            FEAPfilename = "chocolate4gan2.i";
-            
+          
             % One tile model generation
-            ShapeFn = ShapeFunctionL8;
+            ShapeFn8 = ShapeFunctionL8;
             ShapeFn27 = ShapeFunctionL27;
+
             mesh = Mesh();
             mesh2 = Mesh();
-            % Xg1_8=[0 0 0;  cx+notchWidth 0 0; notchWidth/2 notchWidth/2 0; cx+notchWidth/2 notchWidth/2 0; ...
-            %        0 0 notchDepth/4;  cx+notchWidth 0 notchDepth/4; notchWidth/2 notchWidth/2 notchDepth/2; cx+notchWidth/2 notchWidth/2 notchDepth/2]; 
+            
+            %gan layer objects
+            
+            ganTileGeom = [  x1 y1 0;    x2 y1   0;  x1 y2   0;  x2 y2   0; ...
+                             x1 y1 zGt;  x2 y1 zGt;  x1 y2 zGt;  x2 y2 zGt];
+
+            ganNotch1 = [ 0 0 0;   x3 0 0;   x1 y1 0;   x2 y1 0; ...
+                          0 0 zGt; x3 0 zGt; x1 y1 zGt; x2 y1 zGt ];
+
+            ganNotch2 = [ 0 y3 0;   0 0 0;   x1 y2 0;   x1 y1 0; ...
+                          0 y3 zGt; 0 0 zGt; x1 y2 zGt; x1 y1 zGt];
+             
+
+            thTileGeom = [  x1 y1 zGt;    x2 y1   zGt;  x1 y2   zGt;  x2 y2   zGt; ...
+                            x1 y1 zIt;  x2 y1 zIt;  x1 y2 zIt;  x2 y2 zIt];
+
+            thNotch1 = [ 0 0 zGt;   x3 0 zGt;   x1 y1 zGt;   x2 y1 zGt; ...
+                          0 0 zIt; x3 0 zIt; x1 y1 zIt; x2 y1 zIt ];
+
+            thNotch2 = [ 0 y3 zGt;   0 0 zGt;   x1 y2 zGt;   x1 y1 zGt; ...
+                          0 y3 zIt; 0 0 zIt; x1 y2 zIt; x1 y1 zIt];
+            
+            rNotch1 = [ 0   0   zIt;  x3/2 0   zIt; x3  0   zIt; ...
+                        xr1 yr1 zIt;  x3/2 yr1 zIt; xr2 yr1 zIt; ...
+                        x1  y1  zIt;  x3/2 y1  zIt; x2 y1   zIt; ...
+                        ]
+            
+            
+            mesh.addShapedMesh3D( ShapeFn8, ganNotch1, [ncx,nnotch,ngan], ShapeFn27.localNodes );
+            mesh.addShapedMesh3D( ShapeFn8, ganNotch2, [ncy,nnotch,ngan], ShapeFn27.localNodes );
+            mesh.addShapedMesh3D( ShapeFn8, thNotch1, [ncx,nnotch,1], ShapeFn27.localNodes );
+            mesh.addShapedMesh3D( ShapeFn8, thNotch2, [ncy,nnotch,1], ShapeFn27.localNodes );
+            mesh.duplicateTransformedMeshDeg3D( [x3/2  y3/2 ], 180, [0 0 0] );
+            mesh.addShapedMesh3D( ShapeFn8, ganTileGeom, [ncx,ncy,ngan], ShapeFn27.localNodes );
+            mesh.addShapedMesh3D( ShapeFn8, thTileGeom,  [ncx,ncy,1], ShapeFn27.localNodes );
+
+            %mesh2.addShapedMesh3D( ShapeFn27, Xg2_27, [ncy,nnotch,nround], ShapeFn27.localNodes );
+            %mesh2.duplicateTransformedMeshDeg3D( [(cx+notchWidth)/2  (cy+notchWidth)/2 ], 180, [0 0 0] );
+            % mesh.mergeMesh(mesh2);
+            % mesh.addRectMesh3D(notchWidth/2,notchWidth/2,0,cx,cy,roundNotchDepth,ncx,ncy,nround,ShapeFn27.localNodes);
+            % mesh.addRectMesh3D(notchWidth/2,notchWidth/2,roundNotchDepth,cx,cy,straightNotchDepth,ncx,ncy,nstr,ShapeFn27.localNodes);
+            % mesh.nodes=mesh.nodes+[0 0 obj.intTh];
+            % mesh.addRectMesh3D(notchWidth/2,notchWidth/2,0, cx,cy,obj.intTh,ncx,ncy,1,ShapeFn27.localNodes);
             % 
-            % Xg2_8=[ cx+notchWidth 0 0;  cx+notchWidth cy+notchWidth 0;  cx+notchWidth/2 notchWidth/2 0;   cx+notchWidth/2 cy+notchWidth/2 0; ...
-            %         cx+notchWidth 0 notchDepth/4;  cx+notchWidth cy+notchWidth notchDepth/4;  cx+notchWidth/2 notchWidth/2 notchDepth/2;   cx+notchWidth/2 cy+notchWidth/2 notchDepth/2];
-            
-            Xg1_8=[0 0 0;  cx+notchWidth 0 0; notchWidth/2 notchWidth/2 0; cx+notchWidth/2 notchWidth/2 0; ...
-                    0 0 notchDepth/2;  cx+notchWidth 0 notchDepth/2; notchWidth/2 notchWidth/2 notchDepth; cx+notchWidth/2 notchWidth/2 notchDepth]; 
-             
-            Xg2_8=[ cx+notchWidth 0 0;  cx+notchWidth cy+notchWidth 0;  cx+notchWidth/2 notchWidth/2 0;   cx+notchWidth/2 cy+notchWidth/2 0; ...
-                     cx+notchWidth 0 notchDepth/2;  cx+notchWidth cy+notchWidth notchDepth/2;  cx+notchWidth/2 notchWidth/2 notchDepth; cx+notchWidth/2 cy+notchWidth/2 notchDepth/2];
-            
-            gh=alGanTh-notchDepth;
-            gs=gh+roundNotchDepth/8;
-            Xg1_27=[0 0 0;  (cx+notchWidth)/2 0 0; cx+notchWidth 0 0; ...
-                    notchWidth/4 notchWidth/4 0; (cx+notchWidth)/2 notchWidth/4 0;  cx+3*notchWidth/4 notchWidth/4 0; ...
-                    notchWidth/2 notchWidth/2 0; (cx+notchWidth)/2 notchWidth/2 0;  cx+notchWidth/2 notchWidth/2 0; ...
-                    0 0 gh/2;  (cx+notchWidth)/2 0 gh/2; cx+notchWidth 0 gh/2;...
-                    notchWidth/4 notchWidth/4 gs/2; (cx+notchWidth)/2 notchWidth/4 gs/2;  cx+3*notchWidth/4 notchWidth/4 gs/2; ...
-                    notchWidth/2 notchWidth/2 roundNotchDepth/2; (cx+notchWidth)/2 notchWidth/2 roundNotchDepth/2;  cx+notchWidth/2 notchWidth/2 roundNotchDepth/2; ...
-                    0 0 gh;  (cx+notchWidth)/2 0 gh; cx+notchWidth 0 gh;...
-                    notchWidth/4 notchWidth/4 gs; (cx+notchWidth)/2 notchWidth/4 gs;  cx+3*notchWidth/4 notchWidth/4 gs; ...
-                    notchWidth/2 notchWidth/2 roundNotchDepth; (cx+notchWidth)/2 notchWidth/2 roundNotchDepth;  cx+notchWidth/2 notchWidth/2 roundNotchDepth]; 
-            
-            Xg2_27=[cx+notchWidth   0              0;     cx+notchWidth      (cy+notchWidth)/2  0;  cx+notchWidth      cy+notchWidth  0; ...
-                    cx+3*notchWidth/4 notchWidth/4 0;     cx+3*notchWidth/4  (cy+notchWidth)/2  0;  cx+3*notchWidth/4   cy+3*notchWidth/4    0; ...
-                    cx+notchWidth/2 notchWidth/2   0;     cx+notchWidth/2    (cy+notchWidth)/2    0;  cx+notchWidth/2   cy+notchWidth/2    0; ...
-                    cx+notchWidth   0              gh/2;  cx+notchWidth      (cy+notchWidth)/2  gh/2;  cx+notchWidth      cy+notchWidth  gh/2; ...
-                    cx+3*notchWidth/4 notchWidth/4 gs/2;  cx+3*notchWidth/4  (cy+notchWidth)/2  gs/2;  cx+3*notchWidth/4   cy+3*notchWidth/4    gs/2; ...
-                    cx+notchWidth/2 notchWidth/2   roundNotchDepth/2;  cx+notchWidth/2    (cy+notchWidth)/2    roundNotchDepth/2;  cx+notchWidth/2   cy+notchWidth/2    roundNotchDepth/2; ...
-                    cx+notchWidth   0              gh;  cx+notchWidth      (cy+notchWidth)/2  gh;  cx+notchWidth      cy+notchWidth  gh; ...
-                    cx+3*notchWidth/4 notchWidth/4 gs;  cx+3*notchWidth/4  (cy+notchWidth)/2  gs;  cx+3*notchWidth/4   cy+3*notchWidth/4    gs; ...
-                    cx+notchWidth/2 notchWidth/2   roundNotchDepth;  cx+notchWidth/2    (cy+notchWidth)/2    roundNotchDepth;  cx+notchWidth/2   cy+notchWidth/2    roundNotchDepth]; 
-            
-            
-            mesh.addShapedMesh3D( ShapeFn27, Xg1_27, [ncx,nnotch,nround], ShapeFn27.localNodes );
-            mesh.duplicateTransformedMeshDeg3D( [(cx+notchWidth)/2  (cy+notchWidth)/2 ], 180, [0 0 0] );
-            mesh2.addShapedMesh3D( ShapeFn27, Xg2_27, [ncy,nnotch,nround], ShapeFn27.localNodes );
-            mesh2.duplicateTransformedMeshDeg3D( [(cx+notchWidth)/2  (cy+notchWidth)/2 ], 180, [0 0 0] );
-            mesh.mergeMesh(mesh2);
-            mesh.addRectMesh3D(notchWidth/2,notchWidth/2,0,cx,cy,roundNotchDepth,ncx,ncy,nround,ShapeFn27.localNodes);
-            mesh.addRectMesh3D(notchWidth/2,notchWidth/2,roundNotchDepth,cx,cy,straightNotchDepth,ncx,ncy,nstr,ShapeFn27.localNodes);
-            mesh.nodes=mesh.nodes+[0 0 obj.intTh];
-            mesh.addRectMesh3D(notchWidth/2,notchWidth/2,0, cx,cy,obj.intTh,ncx,ncy,1,ShapeFn27.localNodes);
-            
-            Xg1a_27=[0 0 0;  (cx+notchWidth)/2 0 0; cx+notchWidth 0 0; ...
-                     notchWidth/4 notchWidth/4 0; (cx+notchWidth)/2 notchWidth/4 0;  cx+3*notchWidth/4 notchWidth/4 0; ...
-                     notchWidth/2 notchWidth/2 0; (cx+notchWidth)/2 notchWidth/2 0;  cx+notchWidth/2 notchWidth/2 0; ...
-            
-                     0 0 obj.intTh/2;  (cx+notchWidth)/2 0 obj.intTh/2; cx+notchWidth 0 obj.intTh/2;...
-                     notchWidth/4 notchWidth/4 obj.intTh/2; (cx+notchWidth)/2 notchWidth/4 obj.intTh/2;  cx+3*notchWidth/4 notchWidth/4 obj.intTh/2; ...
-                     notchWidth/2 notchWidth/2 obj.intTh/2; (cx+notchWidth)/2 notchWidth/2 obj.intTh/2;  cx+notchWidth/2 notchWidth/2 obj.intTh/2; ...
-            
-                     0 0 obj.intTh;  (cx+notchWidth)/2 0 obj.intTh; cx+notchWidth 0 obj.intTh;...
-                     notchWidth/4 notchWidth/4 obj.intTh; (cx+notchWidth)/2 notchWidth/4 obj.intTh;  cx+3*notchWidth/4 notchWidth/4 obj.intTh; ...
-                     notchWidth/2 notchWidth/2 obj.intTh; (cx+notchWidth)/2 notchWidth/2 obj.intTh;  cx+notchWidth/2 notchWidth/2 obj.intTh]; 
-            
-            Xg2a_27=[cx+notchWidth   0              0;     cx+notchWidth      (cy+notchWidth)/2  0;  cx+notchWidth      cy+notchWidth  0; ...
-                    cx+3*notchWidth/4 notchWidth/4 0;     cx+3*notchWidth/4  (cy+notchWidth)/2  0;  cx+3*notchWidth/4   cy+3*notchWidth/4    0; ...
-                    cx+notchWidth/2 notchWidth/2   0;     cx+notchWidth/2    (cy+notchWidth)/2    0;  cx+notchWidth/2   cy+notchWidth/2    0; ...
-            
-                    cx+notchWidth   0              obj.intTh/2;  cx+notchWidth      (cy+notchWidth)/2  obj.intTh/2;  cx+notchWidth      cy+notchWidth  obj.intTh/2; ...
-                    cx+3*notchWidth/4 notchWidth/4 obj.intTh/2;  cx+3*notchWidth/4  (cy+notchWidth)/2  obj.intTh/2;  cx+3*notchWidth/4   cy+3*notchWidth/4    obj.intTh/2; ...
-                    cx+notchWidth/2 notchWidth/2   obj.intTh/2;  cx+notchWidth/2    (cy+notchWidth)/2  obj.intTh/2;  cx+notchWidth/2   cy+notchWidth/2    obj.intTh/2; ...
-             
-                    cx+notchWidth   0              obj.intTh;  cx+notchWidth      (cy+notchWidth)/2  obj.intTh;  cx+notchWidth      cy+notchWidth  obj.intTh; ...
-                    cx+3*notchWidth/4 notchWidth/4 obj.intTh;  cx+3*notchWidth/4  (cy+notchWidth)/2  obj.intTh;  cx+3*notchWidth/4   cy+3*notchWidth/4    obj.intTh; ...
-                    cx+notchWidth/2 notchWidth/2   obj.intTh;  cx+notchWidth/2    (cy+notchWidth)/2  obj.intTh;  cx+notchWidth/2   cy+notchWidth/2    obj.intTh]; 
-            
-            mesh2=Mesh();
-            mesh2.addShapedMesh3D( ShapeFn27, Xg1a_27, [ncx,nnotch,1], ShapeFn27.localNodes );
-            mesh2.addShapedMesh3D( ShapeFn27, Xg2a_27, [ncy,nnotch,1], ShapeFn27.localNodes );
-            mesh2.duplicateTransformedMeshDeg3D( [(cx+notchWidth)/2  (cy+notchWidth)/2 ], 180, [0 0 0] );
-            mesh.mergeMesh(mesh2);
-            
-            
-            mesh.nodes=mesh.nodes+[0 0 ganTh];
-            mesh.addRectMesh3D(notchWidth/2,notchWidth/2,0, cx,cy,ganTh,ncx,ncy,ngan,ShapeFn27.localNodes);
-            
-            
-            Xg1a_27=[0 0 0;  (cx+notchWidth)/2 0 0; cx+notchWidth 0 0; ...
-                     notchWidth/4 notchWidth/4 0; (cx+notchWidth)/2 notchWidth/4 0;  cx+3*notchWidth/4 notchWidth/4 0; ...
-                     notchWidth/2 notchWidth/2 0; (cx+notchWidth)/2 notchWidth/2 0;  cx+notchWidth/2 notchWidth/2 0; ...
-            
-                     0 0 ganTh/2;  (cx+notchWidth)/2 0 ganTh/2; cx+notchWidth 0 ganTh/2;...
-                     notchWidth/4 notchWidth/4 ganTh/2; (cx+notchWidth)/2 notchWidth/4 ganTh/2;  cx+3*notchWidth/4 notchWidth/4 ganTh/2; ...
-                     notchWidth/2 notchWidth/2 ganTh/2; (cx+notchWidth)/2 notchWidth/2 ganTh/2;  cx+notchWidth/2 notchWidth/2 ganTh/2; ...
-            
-                     0 0 ganTh;  (cx+notchWidth)/2 0 ganTh; cx+notchWidth 0 ganTh;...
-                     notchWidth/4 notchWidth/4 ganTh; (cx+notchWidth)/2 notchWidth/4 ganTh;  cx+3*notchWidth/4 notchWidth/4 ganTh; ...
-                     notchWidth/2 notchWidth/2 ganTh; (cx+notchWidth)/2 notchWidth/2 ganTh;  cx+notchWidth/2 notchWidth/2 ganTh]; 
-            
-            Xg2a_27=[cx+notchWidth   0              0;     cx+notchWidth      (cy+notchWidth)/2  0;  cx+notchWidth      cy+notchWidth  0; ...
-                    cx+3*notchWidth/4 notchWidth/4 0;     cx+3*notchWidth/4  (cy+notchWidth)/2  0;  cx+3*notchWidth/4   cy+3*notchWidth/4    0; ...
-                    cx+notchWidth/2 notchWidth/2   0;     cx+notchWidth/2    (cy+notchWidth)/2    0;  cx+notchWidth/2   cy+notchWidth/2    0; ...
-            
-                    cx+notchWidth   0              ganTh/2;  cx+notchWidth      (cy+notchWidth)/2  ganTh/2;  cx+notchWidth      cy+notchWidth  ganTh/2; ...
-                    cx+3*notchWidth/4 notchWidth/4 ganTh/2;  cx+3*notchWidth/4  (cy+notchWidth)/2  ganTh/2;  cx+3*notchWidth/4   cy+3*notchWidth/4    ganTh/2; ...
-                    cx+notchWidth/2 notchWidth/2   ganTh/2;  cx+notchWidth/2    (cy+notchWidth)/2  ganTh/2;  cx+notchWidth/2   cy+notchWidth/2    ganTh/2; ...
-             
-                    cx+notchWidth   0              ganTh;  cx+notchWidth      (cy+notchWidth)/2  ganTh;  cx+notchWidth      cy+notchWidth  ganTh; ...
-                    cx+3*notchWidth/4 notchWidth/4 ganTh;  cx+3*notchWidth/4  (cy+notchWidth)/2  ganTh;  cx+3*notchWidth/4   cy+3*notchWidth/4    ganTh; ...
-                    cx+notchWidth/2 notchWidth/2   ganTh;  cx+notchWidth/2    (cy+notchWidth)/2    ganTh;  cx+notchWidth/2   cy+notchWidth/2    ganTh]; 
-            
-            mesh2=Mesh();
-            mesh2.addShapedMesh3D( ShapeFn27, Xg1a_27, [ncx,nnotch,ngan], ShapeFn27.localNodes );
-            mesh2.addShapedMesh3D( ShapeFn27, Xg2a_27, [ncy,nnotch,ngan], ShapeFn27.localNodes );
-            mesh2.duplicateTransformedMeshDeg3D( [(cx+notchWidth)/2  (cy+notchWidth)/2 ], 180, [0 0 0] );
-            mesh.mergeMesh(mesh2);
+            % 
+            % 
+            % mesh2=Mesh();
+            % mesh2.addShapedMesh3D( ShapeFn27, Xg1a_27, [ncx,nnotch,ngan], ShapeFn27.localNodes );
+            % mesh2.addShapedMesh3D( ShapeFn27, Xg2a_27, [ncy,nnotch,ngan], ShapeFn27.localNodes );
+            % mesh2.duplicateTransformedMeshDeg3D( [(cx+notchWidth)/2  (cy+notchWidth)/2 ], 180, [0 0 0] );
+            % mesh.mergeMesh(mesh2);
             
             % copy tiles in x direction
-            mesh.array(1,xtiles-1);
+            %mesh.array(1,xtiles-1);
             
             % copy tiles in y direction
-            mesh.array(2,ytiles-1);
+            %mesh.array(2,ytiles-1);
             obj.mesh=mesh;
         end
 
@@ -239,7 +211,7 @@ classdef ChocolateModel < ModelLinear
             sy1 = obj.fe.results.nodal.all(n1,8);
             sx2 = obj.fe.results.nodal.all(n2,7);
             sy2 = obj.fe.results.nodal.all(n2,8);
-            stressObj=sx1+sy1-(sx2+sy2);
+            stressObj= -( sx1+sy1 - (sx2+sy2) );
             %stressObj=(sx2+sy2)-(sx1+sy1);
         end
 
