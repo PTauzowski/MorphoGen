@@ -21,7 +21,6 @@ classdef  chocolatePerformanceFunction < Function
             relRoutndNotchDepth=0.3;
             %generateMesh( obj, ganTh, alGanTh, notchWidth, relNotchDepth, relRoutndNotchDepth )
             obj.model = ChocolateModel( ganTh, alGanTh, x(1,3), x(1,2), relRoutndNotchDepth, obj.E, obj.nu,obj.alphaT,obj.dT);
-            obj.model.plotModel();
         end
 
         function [g, fi] = computeValue(obj,x)

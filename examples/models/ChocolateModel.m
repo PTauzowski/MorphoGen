@@ -1,7 +1,7 @@
 classdef ChocolateModel < ModelLinear
 
     properties
-        ganTh, alGanTh, intTh, tileXWidth, tileYWidth, notchWidth, nTempVars;
+        ganTh, alGanTh, intTh, tileXWidth, tileYWidth, notchWidth, nTempVars,xt,xn;
     end
     
     methods
@@ -17,7 +17,6 @@ classdef ChocolateModel < ModelLinear
             %fixedFaceSelector = Selector( @(x)( abs(x(:,3) - l)<0.001 ) );
             %loadedFaceSelector = Selector( @(x)( abs(x(:,1) - l)<0.001 ) );
 
-           
             meshMax=max(obj.mesh.nodes);
             obj.analysis.fixClosestNode([0 0 0], ["ux" "uy" "uz"], [0 0 0] );
             obj.analysis.fixClosestNode([meshMax(1) 0 0], ["uz"], 0);
@@ -57,10 +56,10 @@ classdef ChocolateModel < ModelLinear
             straightNotchDepth=notchDepth-roundNotchDepth;
 
             % middle point of rounded noth relative height
-            middleRoundedHeight = 0.25*roundNotchDepth;
+            middleRoundedHeight = 0.15*roundNotchDepth;
 
             % middle point distance from noth bottom (middle of the notch)
-            middleRoundedPlaneDistance = 0.125*notchWidth;
+            middleRoundedPlaneDistance = 0.3*notchWidth;
 
              % x - width of the tile
             obj.tileXWidth=30;
@@ -83,6 +82,9 @@ classdef ChocolateModel < ModelLinear
             y3=obj.tileYWidth+obj.notchWidth;
             yr2=y3-middleRoundedPlaneDistance;
 
+            obj.xt=[ x3/2 y3/2 0 ];
+            obj.xn=[ x3 y3 0 ];
+
 
             % top of gan layer
             zGt = ganTh;
@@ -91,7 +93,7 @@ classdef ChocolateModel < ModelLinear
             zIt = zGt+obj.intTh;
             
             % bottom of noth
-            zNb = zIt+obj.alGanTh-obj.notchWidth;
+            zNb = zIt+obj.alGanTh-notchDepth;
             
             %rounded middle point
             zRm = zNb+middleRoundedHeight;
@@ -111,19 +113,19 @@ classdef ChocolateModel < ModelLinear
             ytiles=5; 
             
             % FE x - division of the tile
-            ncx=6;
+            ncx=4;
             
             % FE y - division of the tile
-            ncy=4;
+            ncy=2;
             
             % depth FE division of the GaN layer
             ngan=1;
             
             % FE depth division of the rouned part of the notch
-            nround=1;
+            nround=2;
             
             % FE depth division of the straight part of the notch
-            nstr=2;
+            nstr=1;
             
             % FE  width division of the half notch (second half is symetrical if inside)
             nnotch=2;
@@ -159,42 +161,57 @@ classdef ChocolateModel < ModelLinear
 
             thNotch2 = [ 0 y3 zGt;   0 0 zGt;   x1 y2 zGt;   x1 y1 zGt; ...
                           0 y3 zIt; 0 0 zIt; x1 y2 zIt; x1 y1 zIt];
+
+            allGanRound = [ x1 y1 zIt;   x2 y1 zIt;   x1 y2 zIt;   x2 y2 zIt; ...
+                            x1 y1 zRt;   x2 y1 zRt;   x1 y2 zRt;   x2 y2 zRt];
             
+            allGanStright = [ x1 y1 zRt;   x2 y1 zRt;   x1 y2 zRt;   x2 y2 zRt; ...
+                            x1 y1 zTop;   x2 y1 zTop;   x1 y2 zTop;   x2 y2 zTop];
+            
+            zrm1=(zNb+zIt)/2;
+            zrm2=(zRm+zIt)/2;
+            zrm3=(zRt+zIt)/2;
+
             rNotch1 = [ 0   0   zIt;  x3/2 0   zIt; x3  0   zIt; ...
-                        xr1 yr1 zIt;  x3/2 yr1 zIt; xr2 yr1 zIt; ...
+                        x1/2 y1/2 zIt;  x3/2 y1/2 zIt; x3-x1/2 y1/2 zIt; ...
                         x1  y1  zIt;  x3/2 y1  zIt; x2 y1   zIt; ...
-                        ]
+                        0   0   zrm1;  x3/2 0   zrm1; x3  0   zrm1; ...
+                        xr1 yr1 zrm2;  x3/2 yr1 zrm2; xr2 yr1 zrm2; ...
+                        x1  y1  zrm3;  x3/2 y1  zrm3; x2 y1   zrm3; ...
+                        0   0   zNb;  x3/2 0   zNb; x3  0   zNb; ...
+                        xr1 yr1 zRm;  x3/2 yr1 zRm; xr2 yr1 zRm; ...
+                        x1  y1  zRt;  x3/2 y1  zRt; x2 y1   zRt];
+
+            rNotch2 = [ 0    y3      zIt; 0    y3/2 zIt; 0    0    zIt; ...
+                        x1/2 y3-y1/2 zIt; x1/2 y3/2 zIt; x1/2 y1/2 zIt; ...
+                        x1   y2      zIt; x1   y3/2 zIt; x1 y1 zIt; ...
+                        0    y3      zrm1; 0    y3/2 zrm1; 0    0    zrm1; ...
+                        xr1  yr2     zrm2; xr1  y3/2 zrm2; xr1 yr1   zrm2; ...
+                        x1   y2      zrm3; x1   y3/2 zrm3; x1 y1     zrm3; ...
+                        0    y3      zNb; 0     y3/2 zNb; 0    0     zNb; ...
+                        xr1  yr2     zRm; xr1   y3/2 zRm; xr1 yr1    zRm; ...
+                        x1   y2      zRt; x1    y3/2 zRt; x1  y1     zRt; ...
+
+                ];
             
             
             mesh.addShapedMesh3D( ShapeFn8, ganNotch1, [ncx,nnotch,ngan], ShapeFn27.localNodes );
             mesh.addShapedMesh3D( ShapeFn8, ganNotch2, [ncy,nnotch,ngan], ShapeFn27.localNodes );
             mesh.addShapedMesh3D( ShapeFn8, thNotch1, [ncx,nnotch,1], ShapeFn27.localNodes );
             mesh.addShapedMesh3D( ShapeFn8, thNotch2, [ncy,nnotch,1], ShapeFn27.localNodes );
+            mesh.addShapedMesh3D( ShapeFn27,rNotch1,  [ncx,nnotch,nround], ShapeFn27.localNodes );
+            mesh.addShapedMesh3D( ShapeFn27,rNotch2,  [ncy,nnotch,nround], ShapeFn27.localNodes );
             mesh.duplicateTransformedMeshDeg3D( [x3/2  y3/2 ], 180, [0 0 0] );
             mesh.addShapedMesh3D( ShapeFn8, ganTileGeom, [ncx,ncy,ngan], ShapeFn27.localNodes );
             mesh.addShapedMesh3D( ShapeFn8, thTileGeom,  [ncx,ncy,1], ShapeFn27.localNodes );
-
-            %mesh2.addShapedMesh3D( ShapeFn27, Xg2_27, [ncy,nnotch,nround], ShapeFn27.localNodes );
-            %mesh2.duplicateTransformedMeshDeg3D( [(cx+notchWidth)/2  (cy+notchWidth)/2 ], 180, [0 0 0] );
-            % mesh.mergeMesh(mesh2);
-            % mesh.addRectMesh3D(notchWidth/2,notchWidth/2,0,cx,cy,roundNotchDepth,ncx,ncy,nround,ShapeFn27.localNodes);
-            % mesh.addRectMesh3D(notchWidth/2,notchWidth/2,roundNotchDepth,cx,cy,straightNotchDepth,ncx,ncy,nstr,ShapeFn27.localNodes);
-            % mesh.nodes=mesh.nodes+[0 0 obj.intTh];
-            % mesh.addRectMesh3D(notchWidth/2,notchWidth/2,0, cx,cy,obj.intTh,ncx,ncy,1,ShapeFn27.localNodes);
-            % 
-            % 
-            % 
-            % mesh2=Mesh();
-            % mesh2.addShapedMesh3D( ShapeFn27, Xg1a_27, [ncx,nnotch,ngan], ShapeFn27.localNodes );
-            % mesh2.addShapedMesh3D( ShapeFn27, Xg2a_27, [ncy,nnotch,ngan], ShapeFn27.localNodes );
-            % mesh2.duplicateTransformedMeshDeg3D( [(cx+notchWidth)/2  (cy+notchWidth)/2 ], 180, [0 0 0] );
-            % mesh.mergeMesh(mesh2);
+            mesh.addShapedMesh3D( ShapeFn8, allGanRound, [ncx,ncy,nround], ShapeFn27.localNodes );
+            mesh.addShapedMesh3D( ShapeFn8, allGanStright, [ncx,ncy,nstr], ShapeFn27.localNodes );
             
             % copy tiles in x direction
-            %mesh.array(1,xtiles-1);
+            mesh.array(1,xtiles-1);
             
             % copy tiles in y direction
-            %mesh.array(2,ytiles-1);
+            mesh.array(2,ytiles-1);
             obj.mesh=mesh;
         end
 
@@ -203,10 +220,8 @@ classdef ChocolateModel < ModelLinear
         end
 
         function [stressObj, sx1, sy1, sx2, sy2]=computeStressObjective(obj)
-            x1=[(obj.cx+obj.notchWidth)/2 (obj.cy+obj.notchWidth)/2 0];
-            x2=[obj.cx+obj.notchWidth obj.cy+obj.notchWidth 0];
-            n1 = obj.mesh.findClosestNode(x1);
-            n2 = obj.mesh.findClosestNode(x2);
+            n1 = obj.mesh.findClosestNode(obj.xt);
+            n2 = obj.mesh.findClosestNode(obj.xn);
             sx1 = obj.fe.results.nodal.all(n1,7);
             sy1 = obj.fe.results.nodal.all(n1,8);
             sx2 = obj.fe.results.nodal.all(n2,7);

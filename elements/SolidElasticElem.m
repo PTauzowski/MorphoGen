@@ -112,6 +112,7 @@ classdef SolidElasticElem < FiniteElement
             dim = nnodes * ndofs;
             integrator = obj.sf.createIntegrator();
             nip = size(integrator.points,1);
+            N=obj.sf.computeValue( integrator.points );
             dN = obj.sf.computeGradient( integrator.points );
             nnd = size(dN,1); 
             dNtr = permute(dN,[2,1,3]);
@@ -130,6 +131,8 @@ classdef SolidElasticElem < FiniteElement
             obj.props.thermal(Telems)=alpha;
             for k=1:nelems
                 elemX = nodes(obj.elems(Telems(k),:),:);
+%                temp=obj.props.nodalTemp(obj.elems(Telems(k),:));
+             %   tempCoeff=temp*N;
                 Pe = zeros( dim , 1 );
                 for i=1:nip
                     J = dNtrc{i}*elemX;
@@ -152,7 +155,8 @@ classdef SolidElasticElem < FiniteElement
                           B(6, 3*j-2) = dNx(2,j);
                           B(6, 3*j-1) = dNx(1,j);
 
-                    end                   
+                    end  
+                    %Q=[alpha*tempCoeff(i),alpha*tempCoeff(i),alpha*tempCoeff(i),0,0,0]';
                     Pe = Pe + abs(detJ) * integrator.weights(i) * B'*Q;
                 end
                 Pnodal(obj.elems(Telems(k),:),:) = Pnodal(obj.elems(Telems(k),:),:) + reshape(Pe,3,27)';
