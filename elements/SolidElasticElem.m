@@ -3,10 +3,10 @@ classdef SolidElasticElem < FiniteElement
         function obj = SolidElasticElem(sf,p)
              obj = obj@FiniteElement(sf,p);
              obj.ndofs=["ux" "uy" "uz"];
-             obj.results.names  = ["exx" "eyy" "ezz" "exy" "eyz" "exz" "sxx" "syy" "szz" "sxy" "syz" "sxz" "sHM" "rho"];
+             obj.results.names  = ["exx" "eyy" "ezz" "exy" "eyz" "exz" "sxx" "syy" "szz" "sxy" "syz" "sxz" "sHM" "rho" "T"];
              obj.results.descriptions  = ["strain member exx" "strain member eyy" "strain member ezz" ...
                  "strain member exy" "strain member eyz" "strain member exz" "stress member sxx" "stress member syy" "stress member szz" ...
-                 "stress member sxy" "stress member syz" "stress member sxz" "Huber-Mises stress" "Top opt density"];
+                 "stress member sxy" "stress member syz" "stress member sxz" "Huber-Mises stress" "Top opt density" "Nodal temperature"];
         end
         function setIsotropicMaterial( obj, E, nu, rho )
             D = E / ( 1.0 + nu ) / ( 1 - 2.0 * nu ) * [ 1-nu nu nu 0 0 0; ...
@@ -131,8 +131,8 @@ classdef SolidElasticElem < FiniteElement
             obj.props.thermal(Telems)=alpha;
             for k=1:nelems
                 elemX = nodes(obj.elems(Telems(k),:),:);
-%                temp=obj.props.nodalTemp(obj.elems(Telems(k),:));
-             %   tempCoeff=temp*N;
+                temps=obj.props.ndT(obj.elems(Telems(k),:));
+                tempGP=temps*N';
                 Pe = zeros( dim , 1 );
                 for i=1:nip
                     J = dNtrc{i}*elemX;
@@ -156,7 +156,7 @@ classdef SolidElasticElem < FiniteElement
                           B(6, 3*j-1) = dNx(1,j);
 
                     end  
-                    %Q=[alpha*tempCoeff(i),alpha*tempCoeff(i),alpha*tempCoeff(i),0,0,0]';
+                    Q=[alpha*tempGP(i),alpha*tempGP(i),alpha*tempGP(i),0,0,0]';
                     Pe = Pe + abs(detJ) * integrator.weights(i) * B'*Q;
                 end
                 Pnodal(obj.elems(Telems(k),:),:) = Pnodal(obj.elems(Telems(k),:),:) + reshape(Pe,3,27)';
@@ -468,25 +468,12 @@ classdef SolidElasticElem < FiniteElement
             patch('Vertices', nodes, 'Faces', allfaces(ifaces,:),'FaceColor','none','EdgeColor','k');
             patch('Vertices', nodes, 'Faces', allfaces(ifaces,:),'FaceColor',col);
         end
-        function plotMap(obj,nodes,q,valueName,scd)
+        function plotMap(obj,nodes,q,C,scd)
             hold, axis off;
             daspect([1 1 1]);
             colormap('jet');
             colorbar;
-            valueIndex = find(obj.results.names == valueName);
-            if size(valueIndex,2)==0
-                valueIndex = find(obj.ndofs == valueName);
-                if size(valueIndex,2)==0
-                    error("Map name " + valueName + " not implemented in element:" + class(obj));
-                else
-                    C = q(:,valueIndex);
-                    title("displacement "+valueName);
-                end
-            else
-                C = obj.results.nodal.all(:,valueIndex);
-                title(obj.results.descriptions(valueIndex));
-            end
-             allfaces = reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))';
+            allfaces = reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))';
             [~,ifaces] = unique( sort(reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))',2),'rows' );
             patch('Vertices', nodes+scd*q, 'Faces', allfaces(ifaces,:), 'FaceVertexCData', C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
         end

@@ -4,13 +4,14 @@ classdef  chocolatePerformanceFunction < Function
     end
   
     methods
-        function obj=chocolatePerformanceFunction(height,E,nu,alphaT,dT)
+        function obj=chocolatePerformanceFunction(height,E,nu,alphaT,dT,x0)
             obj=obj@Function(3,0.0001);
             obj.height=height;
             obj.E=E;
             obj.nu=nu;
             obj.alphaT=alphaT;
             obj.dT=dT;
+            obj.createModel( x0 );
 
         end
 
@@ -29,6 +30,7 @@ classdef  chocolatePerformanceFunction < Function
             obj.stresses=zeros(size(x,1),4);
             for k=1:size(x,1)
                 createModel(obj,x(k,:));
+                obj.model.setTempVars(x(k,4:end));
                 obj.model.solveWeighted();  
                 %obj.model.analysis.plotMaps(["uy" "ux" "sxx" "sxy" "syy" "sHM"],0.1);
                 [g(k) obj.stresses(k,1) obj.stresses(k,2) obj.stresses(k,3) obj.stresses(k,4)]=obj.model.computeStressObjective();
@@ -42,6 +44,7 @@ classdef  chocolatePerformanceFunction < Function
                 obj.model.plotModel();
                 obj.model.solveWeighted();  
                 obj.model.analysis.plotMaps(["uy" "ux" "sxx" "sxy" "syy" "sHM"],0.1);
+                obj.model.fe.plotMap(obj.model.mesh.nodes,obj.analysis.qnodal,obj.fe.props.ndT,0.1);
                 obj.model.FEAP_Export('chocolateOpti.i',obj.model.mesh,obj.model.ganTh,obj.model.alGanTh,obj.model.intTh,0.1);
                 [stressObj, sx1, sy1, sx2, sy2]=obj.model.computeStressObjective();
                 fprintf('\nsxx1+syy1=%8.8f, sxx2+syy2=%8.8f, objOpt=%8.8f\n',sx1+sy1,sx2+sy2,stressObj);

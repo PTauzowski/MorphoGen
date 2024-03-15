@@ -1,14 +1,14 @@
 classdef ChocolateModel < ModelLinear
 
     properties
-        ganTh, alGanTh, intTh, tileXWidth, tileYWidth, notchWidth, nTempVars,xt,xn;
+        ganTh, alGanTh, intTh, tileXWidth, tileYWidth, notchWidth, nTempVars,xt,xn,zCoords;
     end
     
     methods
         function obj = ChocolateModel( ganTh, alGanTh, notchWidth, relNotchDepth, relRoutndNotchDepth, E, nu, alphaT, dT)
             obj.generateMesh( ganTh, alGanTh, notchWidth, relNotchDepth, relRoutndNotchDepth );
-            zCoords = sort(unique(round(obj.mesh.nodes(:,3)*10000)/10000));
-            obj.nTempVars=size(find(zCoords-ganTh>=0),1)-3;
+            obj.zCoords = sort(unique(round(obj.mesh.nodes(:,3)*10000)/10000),'descend');
+            obj.nTempVars=size(find((round((obj.zCoords-ganTh)*10000)/10000)>0),1)-3;
             obj.fe = SolidElasticElem( ShapeFunctionL27, obj.mesh.elems );
             obj.analysis = LinearElasticityWeighted( obj.fe, obj.mesh, false );
 
@@ -21,19 +21,28 @@ classdef ChocolateModel < ModelLinear
             obj.analysis.fixClosestNode([0 0 0], ["ux" "uy" "uz"], [0 0 0] );
             obj.analysis.fixClosestNode([meshMax(1) 0 0], ["uz"], 0);
             obj.analysis.fixClosestNode([meshMax(1) meshMax(2) ganTh], ["ux" "uz"], [0 0] );
-
-            obj.analysis.loadElementsThermal(allganElemsSelector,alphaT*dT);
-            obj.analysis.loadElementsThermal(allganTopElemsSelector,alphaT*0.4*dT);
-            %obj.analysis.loadClosestNode([meshMax(1)/2 meshMax(2)/2 meshMax(2)], ["uz"], -1);
            
             obj.fe.props.h=1;
+            obj.fe.props.ndT=zeros(1,size(obj.mesh.nodes,1));
             material = SolidMaterial('mat1');
             material.setElasticIzo(E, nu);
             material.setElasticIzoGrad();
             obj.fe.setMaterial(material);
+
+
+            obj.analysis.loadElementsThermal(allganElemsSelector,alphaT*dT);
+            obj.analysis.loadElementsThermal(allganTopElemsSelector,alphaT*0.4*dT);
+            %obj.analysis.loadClosestNode([meshMax(1)/2 meshMax(2)/2 meshMax(2)], ["uz"], -1);
             
             obj.x=ones(1,obj.analysis.getTotalElemsNumber());
             obj.result_number=13;
+        end
+
+        function setTempVars(obj,x)            
+            for k=1:obj.nTempVars
+                ni = find((round((obj.mesh.nodes(:,3)-obj.zCoords(k))*10000)/10000)==0);
+                obj.fe.props.ndT(ni)=x(k);
+            end
 
         end
 

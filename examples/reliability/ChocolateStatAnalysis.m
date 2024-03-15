@@ -8,33 +8,43 @@ dT=-20;
 
  % x(1) - gan, alGan proportion,  x(2) - relNotchDepth ,    x(3) - notchWidth
  % 0.2358    0.4383    5.0757 - test
-lb=[0.2 0.1 1];
-ub=[0.8 0.9 8];
-x0=(lb+ub)/2;
+lbg=[0.2 0.1 1];
+ubg=[0.8 0.9 8];
+x0g=(lbg+ubg)/2;
 
-m=(ub+lb)/2;
-s=sqrt(((ub-lb).^2/12));
 
-randomVariables={RandomVariable("Uniform",lb(1),ub(1)) RandomVariable("Uniform",lb(2),ub(2)) RandomVariable("Uniform",lb(3),ub(3))};
 
-transform=IndependentTransformation(randomVariables);
-g = chocolatePerformanceFunction(height,210000,0.3,alphaT,dT);
+g = chocolatePerformanceFunction(height,210000,0.3,alphaT,dT,x0g);
+ntv=g.model.nTempVars;
+lbt=zeros(1,ntv);
+ubt=ones(1,ntv);
+x0t=ones(1,ntv)*0.5;
+
+lb=[lbg lbt];
+ub=[ubg ubt];
+x0=[x0g x0t];
+
 fn_g = @(x)( g.computeValue(x) );
 %g.fullFactorialBoundsPlot(lb,ub);
 N=100;
+randomVariables=cell(1,size(x0,2));
+for k=1:size(x0,2)
+    randomVariables{k}=RandomVariable("Uniform",lb(k),ub(k));
+end
+transform=IndependentTransformation(randomVariables);
 mc= MonteCarlo(randomVariables,g,N);
 %x = mc.generateRandomSapmles(N);
 tic
-%res_mc = mc.solve();
-xopt = fmincon(fn_g,x0,[],[],[],[],lb,ub)
+res_mc = mc.solve();
+%xopt = fmincon(fn_g,x0,[],[],[],[],lb,ub)
 %xopt = fmincon(fn_g,x0)
 toc
 
 %save("chocolateStat5000_dT.mat");
 
-%[v, i]=max(mc.r)
-%g.evaluateValue(mc.x(i,:))
-g.evaluateValue(xopt);
+[v, i]=max(mc.r)
+g.evaluateValue(mc.x(i,:))
+%g.evaluateValue(xopt);
 %g.createModel([0.2358    0.4383    5.0757]);
 %g.evaluateValue2();
 
