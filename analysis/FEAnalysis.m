@@ -317,9 +317,22 @@ classdef (Abstract) FEAnalysis < handle
                 figure, hold on, axis off;
                 daspect([1 1 1]);
                 dg     = norm( max(obj.mesh.nodes) - min(obj.mesh.nodes) );
-                maxs = max( abs(min(min(obj.qnodal))), abs(max(max(obj.qnodal)) ) );
+                maxs = max( abs(min(min(obj.qnodal))), abs(max(max(obj.qnodal)) ) )
                 for k=1:max(size(obj.felems))
-                   obj.felems{k}.plotMap( obj.mesh.nodes, obj.qnodal, mapName, dg / maxs * scd );
+                   valueIndex = find(obj.felems{k}.results.names == mapName);
+                   if size(valueIndex,2)==0
+                        valueIndex = find(obj.felems{k}.ndofs == mapName);
+                        if size(valueIndex,2)==0
+                            error("Map name " + mapName + " not implemented in element:" + class(obj.felems{k}));
+                        else
+                            C = obj.qnodal(:,valueIndex);
+                            title("displacement "+mapName);
+                        end
+                    else
+                        C = obj.results.nodal.all(:,valueIndex);
+                        title(obj.results.descriptions(valueIndex));
+                    end
+                   obj.felems{k}.plotMap( obj.mesh.nodes, obj.qnodal, C, dg / maxs * scd );
                 end
             end
         end

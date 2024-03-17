@@ -237,24 +237,11 @@ classdef PlaneElem < FiniteElement
             patch('Vertices', nodes, 'Faces', obj.elems(:,obj.sf.contour),'FaceColor','none','EdgeColor','k');
             patch('Vertices', nodes, 'Faces', obj.elems(:,obj.sf.contour),'FaceColor',[0.8 0.8 0.8]);
         end
-        function plotMap(obj,nodes,q,valueName,scd)
+        function plotMap(obj,nodes,q,C,scd)
             hold, axis off;
             daspect([1 1 1]);
             colormap('jet');
             colorbar;
-            valueIndex = find(obj.results.names == valueName);
-            if size(valueIndex,2)==0
-                valueIndex = find(obj.ndofs == valueName);
-                if size(valueIndex,2)==0
-                    error("Map name " + valueName + " not implemented in element:" + class(obj));
-                else
-                    C = q(:,valueIndex);
-                    title("displacement "+valueName);
-                end
-            else
-                C = obj.results.nodal.all(:,valueIndex);
-                title(obj.results.descriptions(valueIndex));
-            end
             patch('Vertices', nodes+scd*q, 'Faces', obj.elems(:,obj.sf.contour), 'FaceVertexCData', C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
         end
     end
