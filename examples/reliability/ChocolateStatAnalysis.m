@@ -3,7 +3,7 @@ close all;
 height=12;
 E=210000;
 nu=0.3;
-alphaT=1;
+alphaT=1 ;
 dT=-20;
 
  % x(1) - gan, alGan proportion,  x(2) - relNotchDepth ,    x(3) - notchWidth
