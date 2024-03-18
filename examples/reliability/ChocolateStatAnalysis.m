@@ -12,8 +12,6 @@ lbg=[0.2 0.1 1];
 ubg=[0.8 0.9 8];
 x0g=(lbg+ubg)/2;
 
-
-
 g = chocolatePerformanceFunction(height,210000,0.3,alphaT,dT,x0g);
 ntv=g.model.nTempVars;
 lbt=zeros(1,ntv);
@@ -35,16 +33,16 @@ transform=IndependentTransformation(randomVariables);
 mc= MonteCarlo(randomVariables,g,N);
 %x = mc.generateRandomSapmles(N);
 tic
-res_mc = mc.solve();
-%xopt = fmincon(fn_g,x0,[],[],[],[],lb,ub)
+%res_mc = mc.solve();
+xopt = fmincon(fn_g,x0,[],[],[],[],lb,ub)
 %xopt = fmincon(fn_g,x0)
 toc
 
-%save("chocolateStat5000_dT.mat");
+%save("chocolateStatNew100_vdT.mat");
 
-[v, i]=max(mc.r)
-g.evaluateValue(mc.x(i,:))
-%g.evaluateValue(xopt);
+%[v, i]=max(mc.r)
+%g.evaluateValue(mc.x(i,:))
+g.evaluateValue(xopt);
 %g.createModel([0.2358    0.4383    5.0757]);
 %g.evaluateValue2();
 

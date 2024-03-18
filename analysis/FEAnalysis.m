@@ -317,7 +317,7 @@ classdef (Abstract) FEAnalysis < handle
                 figure, hold on, axis off;
                 daspect([1 1 1]);
                 dg     = norm( max(obj.mesh.nodes) - min(obj.mesh.nodes) );
-                maxs = max( abs(min(min(obj.qnodal))), abs(max(max(obj.qnodal)) ) )
+                maxs = max( abs(min(min(obj.qfem))), abs(max(max(obj.qfem)) ) )
                 for k=1:max(size(obj.felems))
                    valueIndex = find(obj.felems{k}.results.names == mapName);
                    if size(valueIndex,2)==0
@@ -329,8 +329,8 @@ classdef (Abstract) FEAnalysis < handle
                             title("displacement "+mapName);
                         end
                     else
-                        C = obj.results.nodal.all(:,valueIndex);
-                        title(obj.results.descriptions(valueIndex));
+                        C = obj.felems{k}.results.nodal.all(:,valueIndex);
+                        title(obj.felems{k}.results.descriptions(valueIndex));
                     end
                    obj.felems{k}.plotMap( obj.mesh.nodes, obj.qnodal, C, dg / maxs * scd );
                 end

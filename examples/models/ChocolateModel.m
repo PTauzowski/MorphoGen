@@ -2,18 +2,21 @@ classdef ChocolateModel < ModelLinear
 
     properties
         ganTh, alGanTh, intTh, tileXWidth, tileYWidth, notchWidth, nTempVars,xt,xn,zCoords;
+        allganElemsSelector,allganTopElemsSelector,alphaT, dT;
     end
     
     methods
         function obj = ChocolateModel( ganTh, alGanTh, notchWidth, relNotchDepth, relRoutndNotchDepth, E, nu, alphaT, dT)
+            obj.alphaT=alphaT;
+            obj.dT=dT;
             obj.generateMesh( ganTh, alGanTh, notchWidth, relNotchDepth, relRoutndNotchDepth );
             obj.zCoords = sort(unique(round(obj.mesh.nodes(:,3)*10000)/10000),'descend');
             obj.nTempVars=size(find((round((obj.zCoords-ganTh)*10000)/10000)>0),1)-3;
             obj.fe = SolidElasticElem( ShapeFunctionL27, obj.mesh.elems );
             obj.analysis = LinearElasticityWeighted( obj.fe, obj.mesh, false );
 
-            allganElemsSelector = Selector( @(x)( x(:,3) > ganTh ) );
-            allganTopElemsSelector = Selector( @(x)( x(:,3) > ganTh+alGanTh*0.6 ) );
+            obj.allganElemsSelector = Selector( @(x)( x(:,3) > ganTh ) );
+            obj.allganTopElemsSelector = Selector( @(x)( x(:,3) > ganTh+alGanTh*0.6 ) );
             %fixedFaceSelector = Selector( @(x)( abs(x(:,3) - l)<0.001 ) );
             %loadedFaceSelector = Selector( @(x)( abs(x(:,1) - l)<0.001 ) );
 
@@ -29,9 +32,6 @@ classdef ChocolateModel < ModelLinear
             material.setElasticIzoGrad();
             obj.fe.setMaterial(material);
 
-
-            obj.analysis.loadElementsThermal(allganElemsSelector,alphaT*dT);
-            obj.analysis.loadElementsThermal(allganTopElemsSelector,alphaT*0.4*dT);
             %obj.analysis.loadClosestNode([meshMax(1)/2 meshMax(2)/2 meshMax(2)], ["uz"], -1);
             
             obj.x=ones(1,obj.analysis.getTotalElemsNumber());
@@ -40,9 +40,11 @@ classdef ChocolateModel < ModelLinear
 
         function setTempVars(obj,x)            
             for k=1:obj.nTempVars
-                ni = find((round((obj.mesh.nodes(:,3)-obj.zCoords(k))*10000)/10000)==0);
+                ni = find((round((obj.mesh.nodes(:,3)-obj.zCoords(obj.nTempVars-k+1))*10000)/10000)==0);
                 obj.fe.props.ndT(ni)=x(k);
             end
+            obj.analysis.loadElementsThermal(obj.allganElemsSelector,obj.alphaT*obj.dT);
+            %obj.analysis.loadElementsThermal(obj.allganTopElemsSelector,obj.alphaT*0.4*obj.dT);
 
         end
 
@@ -275,20 +277,23 @@ classdef ChocolateModel < ModelLinear
         
             fprintf(myfile,"\n EDIS\n");
             fprintf(myfile,"  gap 0.001\n");
-            nganTh=ganTh;
-            for k=size(zCoords(:)):-1:1
-                if ( zCoords(k) <= nganTh )
-                    c=0;
-                else
-                    if abs( zCoords(k) - (nganTh + intTh/2)  ) < 1.0E-6 
-                        c=chemistry/2;
-                    elseif abs( zCoords(k) > ganTh+0.6*alGanTh  )      
-                        c=1.4*chemistry;
-                    else
-                        c=chemistry;
-                    end
-                end
-               fprintf(myfile,"  3  %5.3f  0  0  0  %1.2f\n", zCoords(k), c ); 
+            % nganTh=ganTh;
+            % for k=size(zCoords(:)):-1:1
+            %     if ( zCoords(k) <= nganTh )
+            %         c=0;
+            %     else
+            %         if abs( zCoords(k) - (nganTh + intTh/2)  ) < 1.0E-6 
+            %             c=chemistry/2;
+            %         elseif abs( zCoords(k) > ganTh+0.6*alGanTh  )      
+            %             c=1.4*chemistry;
+            %         else
+            %             c=chemistry;
+            %         end
+            %     end
+            %    fprintf(myfile,"  3  %5.3f  0  0  0  %1.2f\n", zCoords(k), c ); 
+            % end
+            for k=1:obj.nTempVars
+                fprintf(myfile,"  3  %5.3f  0  0  0  %1.2f\n", zCoords(obj.nTempVars-k+1), chemistry(k) ); 
             end
                   
           meshMax=max(mesh.nodes);

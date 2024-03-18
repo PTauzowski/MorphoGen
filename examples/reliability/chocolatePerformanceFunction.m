@@ -42,10 +42,14 @@ classdef  chocolatePerformanceFunction < Function
                 close all;
                 createModel(obj,x(1,:));
                 obj.model.plotModel();
+                obj.model.setTempVars(x(4:end));
                 obj.model.solveWeighted();  
                 obj.model.analysis.plotMaps(["uy" "ux" "sxx" "sxy" "syy" "sHM"],0.1);
-                obj.model.fe.plotMap(obj.model.mesh.nodes,obj.analysis.qnodal,obj.fe.props.ndT,0.1);
-                obj.model.FEAP_Export('chocolateOpti.i',obj.model.mesh,obj.model.ganTh,obj.model.alGanTh,obj.model.intTh,0.1);
+                figure, hold on, axis off;
+                daspect([1 1 1]);
+                obj.model.fe.plotMap(obj.model.mesh.nodes,obj.model.analysis.qnodal,obj.model.fe.props.ndT',0.1);
+                title("Thermal load");
+                obj.model.FEAP_Export('chocolateOptiNew.i',obj.model.mesh,obj.model.ganTh,obj.model.alGanTh,obj.model.intTh,0.14*x(4:end));
                 [stressObj, sx1, sy1, sx2, sy2]=obj.model.computeStressObjective();
                 fprintf('\nsxx1+syy1=%8.8f, sxx2+syy2=%8.8f, objOpt=%8.8f\n',sx1+sy1,sx2+sy2,stressObj);
          end

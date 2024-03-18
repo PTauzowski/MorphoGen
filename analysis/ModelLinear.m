@@ -20,7 +20,7 @@ classdef ModelLinear < FEModel
         end
         
         function solveWeighted(obj)
-            obj.analysis.solveWeighted(obj.x);
+            obj.analysis.qfem=obj.analysis.solveWeighted(obj.x);
             obj.analysis.initializeResults();
             obj.analysis.computeElementResults();
         end
