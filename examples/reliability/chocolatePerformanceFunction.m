@@ -28,13 +28,16 @@ classdef  chocolatePerformanceFunction < Function
             g = zeros(size(x,1),1);
             fi=[];
             obj.stresses=zeros(size(x,1),4);
-            for k=1:size(x,1)
+            N=size(x,1);
+            tm=Timer(N,2);
+            for k=1:N
                 createModel(obj,x(k,:));
                 obj.model.setTempVars(x(k,4:end));
                 obj.model.solveWeighted();  
                 %obj.model.analysis.plotMaps(["uy" "ux" "sxx" "sxy" "syy" "sHM"],0.1);
                 [g(k) obj.stresses(k,1) obj.stresses(k,2) obj.stresses(k,3) obj.stresses(k,4)]=obj.model.computeStressObjective();
                % obj.model.FEAP_Export('chocolateOpti.i',obj.model.mesh,obj.model.ganTh,obj.model.intTh,0.1);
+               tm.timeMonitoring(k);
             end
         end
 
