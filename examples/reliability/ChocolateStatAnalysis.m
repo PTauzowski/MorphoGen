@@ -24,7 +24,7 @@ x0=[x0g x0t];
 
 fn_g = @(x)( g.computeValue(x) );
 %g.fullFactorialBoundsPlot(lb,ub);
-N=10;
+N=10000;
 randomVariables=cell(1,size(x0,2));
 for k=1:size(x0,2)
     randomVariables{k}=RandomVariable("Uniform",lb(k),ub(k));
@@ -38,7 +38,7 @@ res_mc = mc.solve();
 %xopt = fmincon(fn_g,x0)
 toc
 
-%save("chocolateStatNew100_vdT.mat");
+save("chocolateOptiHeat10000_vdT.mat");
 
 [v, i]=min(mc.r)
 g.evaluateValue(mc.x(i,:))

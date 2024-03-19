@@ -18,7 +18,7 @@ classdef Timer
                 tm=toc-obj.startTime;
                 stm=datestr(datenum(0, 0, 0, 0, 0, tm), 'HH:MM:SS');
                 stmr=datestr(datenum(0, 0, 0, 0, 0, (obj.N-k)/k*tm), 'HH:MM:SS');
-                fprintf("Iteration: %6d, elapsed time :%s, remaining time: %s \n",k,stm,stmr);
+                fprintf("Iter: %6d, elapsed time :%s, remaining time: %s \n",k,stm,stmr);
             end
         end
     end
