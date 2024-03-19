@@ -40,7 +40,7 @@ classdef ChocolateModel < ModelLinear
 
         function setTempVars(obj,x)            
             for k=1:obj.nTempVars
-                ni = find((round((obj.mesh.nodes(:,3)-obj.zCoords(obj.nTempVars-k+1))*10000)/10000)==0);
+                ni = find((round((obj.mesh.nodes(:,3)-obj.zCoords(k))*10000)/10000)==0);
                 obj.fe.props.ndT(ni)=x(k);
             end
             obj.analysis.loadElementsThermal(obj.allganElemsSelector,obj.alphaT*obj.dT);
@@ -241,13 +241,13 @@ classdef ChocolateModel < ModelLinear
             %stressObj=(sx2+sy2)-(sx1+sy1);
         end
 
-        function o = computeObjectiveValue(obj,x)
-            ganTh=h0*(1-x(1));
-            alGanTh = h0*x(1);
-            w=ganTh*x(2);
-            r=h0*x(3);
-            generateMesh( obj, ganTh, alGanTh, x(3), x(2) )
-        end
+        % function o = computeObjectiveValue(obj,x)
+        %     ganTh=h0*(1-x(1));
+        %     alGanTh = h0*x(1);
+        %     w=ganTh*x(2);
+        %     r=h0*x(3);
+        %     generateMesh( obj, ganTh, alGanTh, x(3), x(2) )
+        % end
 
         function FEAP_Export(obj,filename,mesh,ganTh,alGanTh,intTh,chemistry)
             myfile   = fopen ( filename, "w" );
@@ -273,34 +273,16 @@ classdef ChocolateModel < ModelLinear
             end
             fprintf( myfile, "\n");
         
-            zCoords = sort(unique(round(mesh.nodes(:,3)*10000)/10000));
-        
             fprintf(myfile,"\n EDIS\n");
-            fprintf(myfile,"  gap 0.001\n");
-            % nganTh=ganTh;
-            % for k=size(zCoords(:)):-1:1
-            %     if ( zCoords(k) <= nganTh )
-            %         c=0;
-            %     else
-            %         if abs( zCoords(k) - (nganTh + intTh/2)  ) < 1.0E-6 
-            %             c=chemistry/2;
-            %         elseif abs( zCoords(k) > ganTh+0.6*alGanTh  )      
-            %             c=1.4*chemistry;
-            %         else
-            %             c=chemistry;
-            %         end
-            %     end
-            %    fprintf(myfile,"  3  %5.3f  0  0  0  %1.2f\n", zCoords(k), c ); 
-            % end
+            fprintf(myfile,"  gap 0.001\n")
             for k=1:obj.nTempVars
-                fprintf(myfile,"  3  %5.3f  0  0  0  %1.2f\n", zCoords(obj.nTempVars-k+1), chemistry(k) ); 
+                fprintf(myfile,"  3  %5.3f  0  0  0  %1.2f\n", obj.zCoords(k), chemistry(k) ); 
             end
                   
           meshMax=max(mesh.nodes);
           n1 = mesh.findClosestNode(  [0 0 0] );
           n2 = mesh.findClosestNode(  [meshMax(1) 0 0] );
           n3 = mesh.findClosestNode(  [meshMax(1) meshMax(2) ganTh] );
-          xMax = zCoords(end);
           fprintf(myfile,"\n");  
            
           fprintf(myfile,"\n");
