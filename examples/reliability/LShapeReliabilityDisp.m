@@ -2,7 +2,7 @@ clear;
 close all;
 
 l=3;         % long edge length
-res = 40;    % short edge resolution
+res = 30;    % short edge resolution
 
 model = LShapeModelLinear(  ShapeFunctionL4,...
                              l, ...         % long edge length
@@ -15,7 +15,7 @@ model = LShapeModelLinear(  ShapeFunctionL4,...
 model.setResultNode([l l*0.2]);
 model.plotModel();
 
-randomVariables={RandomVariable("Normal",5,2) RandomVariable("Normal",-10,2)};
+randomVariables={RandomVariable("Normal",3,1) RandomVariable("Normal",-3,3)};
 transform=IndependentTransformation(randomVariables);
 g=loadPerformanceFunctionDisp(model);
 
@@ -24,7 +24,7 @@ topOpt = StressIntensityTopologyOptimizationVol( 1.2*l/res, ...
             model.analysis, ... % FEM analysis object
             0.005, ...          % stress intensity treshold for element removal 
             2, ...              % penalty factor
-            0.4, ...              % constraint function object
+            0.3, ...              % constraint function object
             true ...            % is finite elements uniform
  );
 
