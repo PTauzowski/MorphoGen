@@ -29,7 +29,7 @@ classdef  chocolatePerformanceFunction < Function
             fi=[];
             obj.stresses=zeros(size(x,1),4);
             N=size(x,1);
-            tm=Timer(N,2);
+            tm=Timer('Iter :',N,5);
             for k=1:N
                 createModel(obj,x(k,:));
                 obj.model.setTempVars(x(k,4:end));

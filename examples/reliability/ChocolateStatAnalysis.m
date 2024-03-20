@@ -24,7 +24,7 @@ x0=[x0g x0t];
 
 fn_g = @(x)( g.computeValue(x) );
 %g.fullFactorialBoundsPlot(lb,ub);
-N=10;
+N=20;
 randomVariables=cell(1,size(x0,2));
 for k=1:size(x0,2)
     randomVariables{k}=RandomVariable("Uniform",lb(k),ub(k));
