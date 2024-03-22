@@ -11,7 +11,7 @@ classdef  loadPerformanceFunctionDisp < Function
         end
 
         function [g, fi] = computeValue(obj,points)
-            g=obj.model.computeLinearDisplacement(points)+0.0198;
+            g=obj.model.computeLinearDisplacement(points)+0.015;
             fi=[];
         end
 

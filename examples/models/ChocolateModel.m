@@ -124,13 +124,13 @@ classdef ChocolateModel < ModelLinear
             ytiles=5; 
             
             % FE x - division of the tile
-            ncx=4;
+            ncx=6;
             
             % FE y - division of the tile
-            ncy=2;
+            ncy=4;
             
             % depth FE division of the GaN layer
-            ngan=1;
+            ngan=2;
             
             % FE depth division of the rouned part of the notch
             nround=2;
@@ -275,8 +275,12 @@ classdef ChocolateModel < ModelLinear
         
             fprintf(myfile,"\n EDIS\n");
             fprintf(myfile,"  gap 0.001\n")
-            for k=1:obj.nTempVars
-                fprintf(myfile,"  3  %5.3f  0  0  0  %1.2f\n", obj.zCoords(k), chemistry(k) ); 
+            for k=1:size(obj.zCoords,1)
+                if k<=obj.nTempVars
+                    fprintf(myfile,"  3  %5.3f  0  0  0  %1.2f\n", obj.zCoords(k), chemistry(k) ); 
+                else
+                    fprintf(myfile,"  3  %5.3f  0  0  0  %1.2f\n", obj.zCoords(k), 0.0 ); 
+                end
             end
                   
           meshMax=max(mesh.nodes);

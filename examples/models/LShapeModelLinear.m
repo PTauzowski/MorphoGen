@@ -18,8 +18,8 @@ classdef LShapeModelLinear < ModelLinearLoad
             obj.analysis.createNextRightHandSideVector();
             obj.analysis.loadClosestNode(xp,["ux" "uy"], [0 1]);
             obj.analysis.createNextRightHandSideVector();
-            obj.analysis.fixNodes( fixedEdgeSelector, ["ux" "uy"] );  
-            %obj.analysis.fixClosestNode([0,l],["ux" "uy"],[0 0]);
+            obj.analysis.fixNodes( fixedEdgeSelector, [ "uy"] );  
+            obj.analysis.fixClosestNode([0,l],["ux" "uy"],[0 0]);
             obj.analysis.printProblemInfo();
             obj.analysis.initializeResults();
             obj.x=ones(obj.analysis.getTotalElemsNumber(),1);
