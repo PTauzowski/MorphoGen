@@ -33,16 +33,16 @@ transform=IndependentTransformation(randomVariables);
 mc= MonteCarlo(randomVariables,g,N);
 %x = mc.generateRandomSapmles(N);
 tic
-res_mc = mc.solve();
-%xopt = fmincon(fn_g,x0,[],[],[],[],lb,ub)
+%res_mc = mc.solve();
+xopt = fmincon(fn_g,x0,[],[],[],[],lb,ub)
 %xopt = fmincon(fn_g,x0)
 toc
 
-save("chocolateOptiHeat8000_vdT.mat");
+save("chocolateOptiThermal_vdT2.mat");
 
-[v, i]=min(mc.r)
-g.evaluateValue(mc.x(i,:))
-%g.evaluateValue(xopt);
+% [v, i]=min(mc.r)
+% g.evaluateValue(mc.x(i,:))
+g.evaluateValue(xopt);
 %g.createModel([0.2358    0.4383    5.0757]);
 %g.evaluateValue2();
 
