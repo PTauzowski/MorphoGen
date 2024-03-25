@@ -17,8 +17,8 @@ classdef Timer
         function timeMonitoring(obj,k)
             if mod(k,obj.Ni)==0
                 tm=toc-obj.startTime;
-                stm=datestr(datenum(0, 0, 0, 0, 0, tm), 'HH:MM:SS');
-                stmr=datestr(datenum(0, 0, 0, 0, 0, (obj.N-k)/k*tm), 'HH:MM:SS');
+                stm=datestr(datenum(0, 0, 0, 0, 0, tm), 'DD:HH:MM:SS');
+                stmr=datestr(datenum(0, 0, 0, 0, 0, (obj.N-k)/k*tm), 'DD:HH:MM:SS');
                 fprintf("%s: %6d, elapsed time :%s, remaining time: %s \n",obj.prompt,k,stm,stmr);
             end
         end

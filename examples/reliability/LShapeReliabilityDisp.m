@@ -16,7 +16,8 @@ model.setResultNode([l l*0.2]);
 model.plotModel();
 
 % [5.8 -7.7
-randomVariables={RandomVariable("Lognormal",-1,1) RandomVariable("Normal",-6,2)};
+%randomVariables={RandomVariable("Lognormal",-1,1) RandomVariable("Normal",-6,2)};
+randomVariables={RandomVariable("Normal",-2,3) RandomVariable("Normal",-6,1)};
 transform=IndependentTransformation(randomVariables);
 g=loadPerformanceFunctionDisp(model);
 
@@ -25,7 +26,7 @@ topOpt = StressIntensityTopologyOptimizationVol( 1.2*l/res, ...
             model.analysis, ... % FEM analysis object
             0.005, ...          % stress intensity treshold for element removal 
             2, ...              % penalty factor
-            0.3, ...           % constraint function object
+            0.4, ...           % constraint function object
             true ...            % is finite elements uniform
  );
 
