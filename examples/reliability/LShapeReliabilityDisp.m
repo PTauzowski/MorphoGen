@@ -16,7 +16,8 @@ model.setResultNode([l l*0.2]);
 model.plotModel();
 
 % [5.8 -7.7
-randomVariables={RandomVariable("Lognormal",-1,1) RandomVariable("Normal",-6,2)};
+%randomVariables={RandomVariable("Lognormal",-1,1) RandomVariable("Normal",-6,2)};
+randomVariables={RandomVariable("Normal",-2,3) RandomVariable("Normal",-6,1)};
 transform=IndependentTransformation(randomVariables);
 g=loadPerformanceFunctionDisp(model);
 
@@ -30,9 +31,9 @@ topOpt = StressIntensityTopologyOptimizationVol( 1.2*l/res, ...
  );
 
 
-tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 1000000, 2);
-tuner.tuneMC();
-tuner.plotMCs(["Px" "Py"],'u');
+% tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 1000000, 2);
+% tuner.tuneMC();
+% tuner.plotMCs(["Px" "Py"],'u');
 
 sora2 = SORA('LShapeDispBeta20_2', model,topOpt, randomVariables, g, transform, 2);
 sora3 = SORA('LShapeDispBeta20_3', model,topOpt, randomVariables, g, transform, 3);
@@ -43,6 +44,6 @@ sora5 = SORA('LShapeDispBeta20_5', model,topOpt, randomVariables, g, transform, 
 %  sora2.solveX();
 % % sora3.solveX();
 % % sora4.solveX();
-% sora5.solveX();
+ sora5.solveX();
 
 

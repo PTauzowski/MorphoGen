@@ -22,6 +22,7 @@ classdef SORA < handle
         
         function results = solveX(obj)
             mpp=obj.hmv.transform.toX(zeros(1,obj.g.dim));
+            mpp2=mpp;
             obj.model.setupLoad(mpp);
             inProgress=true;
             iter=1;
@@ -50,7 +51,8 @@ classdef SORA < handle
 
                 end
                 conv=norm(obj.transform.toU(fr_res.mpp)-obj.transform.toU(mpp));
-                fprintf("\nconv=%1.5f, frame=%3d/%3d, beta_form=%5.7f, g=%5.7f, beta_pred=%5.7f, vol=%5.7f, ",conv,fr_res.frame,fr_res.lastframe,fr_res.beta_pred,fr_res.g,fr_res.beta_pred,obj.topOpt.computeVolumeFraction());
+                conv2=norm(obj.transform.toU(fr_res.mpp)-obj.transform.toU(mpp2));
+                fprintf("\nconv=%1.5f, conv2=%1.5f, frame=%3d/%3d, beta_form=%5.7f, g=%5.7f, beta_pred=%5.7f, vol=%5.7f, ",conv,conv2,fr_res.frame,fr_res.lastframe,fr_res.beta_pred,fr_res.g,fr_res.beta_pred,obj.topOpt.computeVolumeFraction());
                 fprintf("mpp: ");
                 for k=1:size(mpp,2)
                    fprintf("x(%1d)=%3.4f ",k,mpp(k));
@@ -77,6 +79,7 @@ classdef SORA < handle
                     fprintf("\n\n");
                     return;
                 end
+                mpp2=mpp;
                 mpp=fr_res.mpp;
                 obj.model.setupLoad(fr_res.mpp);
                 iter=iter+1;

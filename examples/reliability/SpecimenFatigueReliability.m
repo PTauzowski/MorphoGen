@@ -1,7 +1,7 @@
 clear;
 close all;
 a=10;
-div=5;
+div=15;
 c=0.4;
 E=200000;
 nu=0.3;
@@ -53,12 +53,12 @@ model.setX(topOpt.x);
  %sora.checkTuning();
 
  
- %topOpt.solve();
-% sora2.limitReliability();
- %sora.tabMultiMpp();
+ topOpt.solve();
+ sora2.limitReliability();
+ %sora2.tabMultiMpp();
 
-topOpt.solve();
-sora2.tabReliability();
+% topOpt.solve();
+% sora2.tabReliability();
 
 %sora2.checkTuning();
 

@@ -40,7 +40,7 @@ classdef ReliabilityTaskTuner < handle
         end
 
          function obj = tuneFORM(obj)
-            obj.model.x(:)=1;
+            obj.model.setOneX()
             fprintf("\n* FORM with reliability constraints tuner *\n");
             fprintf("Design Domain FORM\n");
             obj.formDD_res = obj.form.solve();
