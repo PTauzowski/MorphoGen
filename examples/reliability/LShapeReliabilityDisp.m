@@ -2,7 +2,7 @@ clear;
 close all;
 
 l=3;         % long edge length
-res = 30;    % short edge resolution
+res = 40;    % short edge resolution
 
 model = LShapeModelLinear(  ShapeFunctionL4,...
                              l, ...         % long edge length
