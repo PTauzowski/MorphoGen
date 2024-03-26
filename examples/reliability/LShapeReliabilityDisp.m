@@ -26,7 +26,7 @@ topOpt = StressIntensityTopologyOptimizationVol( 1.2*l/res, ...
             model.analysis, ... % FEM analysis object
             0.005, ...          % stress intensity treshold for element removal 
             2, ...              % penalty factor
-            0.3, ...           % constraint function object
+            0.4, ...           % constraint function object
             true ...            % is finite elements uniform
  );
 
