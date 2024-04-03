@@ -34,15 +34,16 @@ mc= MonteCarlo(randomVariables,g,N);
 %x = mc.generateRandomSapmles(N);
 tic
 %res_mc = mc.solve();
-xopt = fmincon(fn_g,x0,[],[],[],[],lb,ub)
+%xopt = fmincon(fn_g,x0,[],[],[],[],lb,ub)
 %xopt = fmincon(fn_g,x0)
 toc
 
-save("chocolateOptiThermal_vdT2.mat");
+%save("chocolateOptiThermal_vdT2.mat");
 
 % [v, i]=min(mc.r)
 % g.evaluateValue(mc.x(i,:))
-g.evaluateValue(xopt);
+x0(1:3)=[0.7830    0.8724    2.7589  ];
+g.evaluateValue(x0);
 %g.createModel([0.2358    0.4383    5.0757]);
 %g.evaluateValue2();
 
