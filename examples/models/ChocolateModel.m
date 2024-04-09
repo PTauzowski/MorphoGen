@@ -118,10 +118,10 @@ classdef ChocolateModel < ModelLinear
 
             % Mesh resolutions
             % number of tiles in the x direction
-            xtiles=5;
+            xtiles=3;
             
             % number of tiles in the y direction
-            ytiles=5; 
+            ytiles=3; 
             
             % FE x - division of the tile
             ncx=8;
@@ -274,7 +274,7 @@ classdef ChocolateModel < ModelLinear
             fprintf( myfile, "\n");
         
             fprintf(myfile,"\n EDIS\n");
-            fprintf(myfile,"  gap 0.001\n")
+            fprintf(myfile,"  gap 0.0001\n")
             for k=1:size(obj.zCoords,1)
                 if k<=obj.nTempVars
                     fprintf(myfile,"  3  %5.3f  0  0  0  %1.2f\n", obj.zCoords(k), chemistry(k) ); 
