@@ -1,12 +1,12 @@
 classdef Mesh < handle
     
     properties
-        nodes, elems;
+        nodes;
         tolerance = 10000;
     end
     
     methods
-        function el2 = merge( obj, newNodes, newElems )
+        function MergedElems = merge( obj, newNodes, newElems )
             [~,si1,si2] = unique( round(newNodes .* obj.tolerance), 'rows', 'stable' );
             newNodes = newNodes( si1, : );
             newElems = si2(newElems);
@@ -15,8 +15,7 @@ classdef Mesh < handle
             end
            if size( obj.nodes, 1 ) == 0 
                   obj.nodes = newNodes;
-                  obj.elems = newElems;
-                  el2 = newElems;
+                  MergedElems = newElems;
            else
                 [~,i1,i2] = intersect( round(obj.nodes .* obj.tolerance), round(newNodes.*obj.tolerance), 'rows' );
                 nidx  = 1:size(newNodes,1);
@@ -27,49 +26,20 @@ classdef Mesh < handle
                 ninds = zeros( size(newNodes,1), 1);
                 ninds(i2)=i1;
                 ninds(nidx)=noi;
-                el2 = newElems;
-                el2(:) = ninds( newElems(:) );
-                obj.elems = [ obj.elems; el2 ];
+                MergedElems = newElems;
+                MergedElems(:) = ninds( newElems(:) );
           end
         end
-        function el2 = mergeMesh( obj, newMesh )
-            el2 = obj.merge(newMesh.nodes, newMesh.elems );
+        function newIndices = mergeMesh( obj, newMesh )
+            [~, iNodes, iNewNodes] = intersect( round(obj.nodes .* obj.tolerance), round(newMesh.nodes.*obj.tolerance), 'rows' );
+            uniqueIndices=1:size(newMesh.nodes,1);
+            uniqueIndices(iNewNodes)=[];
+            newIndices=1:size(newMesh.nodes,1);
+            newIndices(iNewNodes)=iNodes;
+            newIndices(uniqueIndices)=1:size(uniqueIndices,2)+size(obj.nodes,1);
+            obj.nodes=[obj.nodes; newMesh.nodes(uniqueIndices,:)];
         end
-        function el2 = append( obj, newNodes, newElems )
-            nnodes=size(obj.nodes,1);
-            obj.nodes = [ obj.nodes; newNodes ];
-            obj.elems = [ obj.elems; newElems+nnodes ];
-            
-        end
-        function el2 = connect( obj, sel, newNodes, newElems )
-            [~,si1,si2] = unique( round(newNodes .* obj.tolerance), 'rows', 'stable' );
-            newNodes = newNodes( si1, : );
-            newElems = si2(newElems);
-           if size( obj.nodes, 1 ) == 0 
-                  obj.nodes = newNodes;
-                  obj.elems = newElems;
-                  el2 = newElems;
-           else
-                [~,i1,i2] = intersect( round(obj.nodes .* obj.tolerance), round(newNodes.*obj.tolerance), 'rows' );
-                sn1 = find(sel.select( obj.nodes ));
-                sn2 = find(sel.select( newNodes ));
-                [C,ia] = setdiff( i2, sn2 );
-                i1(ia) = [];
-                i2(ia) = [];
-                nidx  = 1:size(newNodes,1);
-                nidx( i2 ) = [];
-                noi   = 1:size(nidx,2);
-                noi = noi + size(obj.nodes,1);
-                obj.nodes = [ obj.nodes; newNodes(nidx,:) ];
-                ninds = zeros( size(newNodes,1), 1);
-                ninds(i2)=i1;
-                ninds(nidx)=noi;
-                el2 = newElems;
-                el2(:) = ninds( newElems(:) );
-                obj.elems = [ obj.elems; el2 ];
-           end
-            
-        end
+        
         function obj = transformDeg2D( obj, x0, angleDeg, xm )
             angleRad = angleDeg*pi/180;
             obj.nodes = [ x0(1)+(obj.nodes(:,1)-x0(1)).*cos(angleRad)-(obj.nodes(:,2)-x0(2)).*sin(angleRad)...
@@ -82,12 +52,12 @@ classdef Mesh < handle
         function fnodes = findNodes(obj, selector)
             fnodes=find(selector.select(obj.nodes));
         end
-        function felems = findElems( obj, selector )
+        function felems = findElems( obj, elems, selector )
               fnodes = obj.findNodes( selector)';
-              found = ismember(obj.elems, fnodes);
-              felems = find(sum(found,2)==size(obj.elems,2));
+              found = ismember(elems, fnodes);
+              felems = find(sum(found,2)==size(elems,2));
         end
-        function obj = addRectMesh2D( obj, x1, y1, dx, dy, nx, ny, pattern )
+        function elems = addRectMesh2D( obj, x1, y1, dx, dy, nx, ny, pattern )
             dim = max(max( pattern ));
             nn = ( dim *  nx + 1 ) * ( dim *  ny + 1 );
             ne = size( pattern, 1 ); 
@@ -105,9 +75,9 @@ classdef Mesh < handle
                 newElems(k,i) = grid( ix + pattern(i,1),  iy + pattern(i,2) ) ;
               end
             end
-            obj.merge( newNodes, newElems );
+            elems = obj.merge( newNodes, newElems );
         end
-        function obj = addDelaunayMesh2D( obj, P, C, nnodes )
+        function elems = addDelaunayMesh2D( obj, P, C, nnodes )
             xv = unifrnd(min(P(:,1)),max(P(:,1)),1,nnodes);
             yv = unifrnd(min(P(:,2)),max(P(:,2)),1,nnodes);
             in = inpolygon(xv,yv,P(:,1),P(:,2));
@@ -118,10 +88,10 @@ classdef Mesh < handle
             in = inpolygon(ic(:,1),ic(:,2),P(:,1),P(:,2));
             %new_elems=delaunay(DT.ConnectivityList);
             %IO = isInterior(DT);
-            obj.append( DT.Points, DT.ConnectivityList(in,:) );
+            elems = obj.merge( DT.Points, DT.ConnectivityList(in,:) );
             %obj.append( new_nodes, new_elems );
         end
-        function obj = addRectMeshTriangular2D( obj, mode, x1, y1, dx, dy, nx, ny )
+        function elems = addRectMeshTriangular2D( obj, mode, x1, y1, dx, dy, nx, ny )
             ddx = dx/nx;
             ddy = dy/ny;
             offX =[0:ddx:(dx-ddx)] + x1;
@@ -141,9 +111,9 @@ classdef Mesh < handle
                 otherwise
                 error('no triangular generator in mode :'+mode)    ;
             end
-            obj.merge( newNodes, newElems );
+            elems = obj.merge( newNodes, newElems );
         end
-        function obj = addRectMeshTetrahedral3D( obj, mode, x, dx, nx )
+        function elems = addRectMeshTetrahedral3D( obj, mode, x, dx, nx )
             ddx = dx./nx;
 
             offX =[0:ddx(1):(dx(1)-ddx(1))] + x(1);
@@ -169,9 +139,9 @@ classdef Mesh < handle
                 otherwise
                 error('no triangular generator in mode :'+mode)    ;
             end
-            obj.merge( newNodes, newElems );
+            elems = obj.merge( newNodes, newElems );
         end
-        function obj = addRectMesh3D( obj, x1, y1, z1, dx, dy, dz, nx, ny, nz, lnodes )
+        function elems = addRectMesh3D( obj, x1, y1, z1, dx, dy, dz, nx, ny, nz, lnodes )
             ddx=dx/nx;
             ddy=dy/ny;
             ddz=dz/nz;
@@ -192,82 +162,86 @@ classdef Mesh < handle
                     end
                 end
             end
-            obj.merge(newNodes, newElems);
+            elems = obj.merge(newNodes, newElems);
         end
-        function obj = addShapedMesh2D( obj, sf, x, ndiv, pattern )
+        function elems = addShapedMesh2D( obj, sf, x, ndiv, pattern )
             baseMesh = Mesh();
-            baseMesh.addRectMesh2D( -1, -1, 2, 2, ndiv, ndiv, pattern );
+            baseElems = baseMesh.addRectMesh2D( -1, -1, 2, 2, ndiv, ndiv, pattern );
             baseMesh.nodes = sf.computeValue( baseMesh.nodes ) * x;
-            obj.merge( baseMesh.nodes, baseMesh.elems );
+            elems = obj.merge( baseMesh.nodes, baseElems );
         end
-        function obj = addObjectMesh2D( obj, so, ndiv1, ndiv2, pattern )
+        function elems = addObjectMesh2D( obj, so, ndiv1, ndiv2, pattern )
             baseMesh = Mesh();
-            baseMesh.addRectMesh2D( -1, -1, 2, 2, ndiv1, ndiv2, pattern );
+            baseElems = baseMesh.addRectMesh2D( -1, -1, 2, 2, ndiv1, ndiv2, pattern );
             baseMesh.nodes = so.computeValue( baseMesh.nodes );
-            obj.merge( baseMesh.nodes, baseMesh.elems );
+            elems = obj.merge( baseMesh.nodes, baseElems );
         end
-        function obj = addObjectMesh3D( obj, so, ndiv1, ndiv2, ndiv3, lnodes )
+        function elems = addObjectMesh3D( obj, so, ndiv1, ndiv2, ndiv3, lnodes )
             baseMesh = Mesh();
-            baseMesh.addRectMesh3D( -1, -1, -1, 2, 2, 2, ndiv1, ndiv2, ndiv3, lnodes );
+            baseElems = baseMesh.addRectMesh3D( -1, -1, -1, 2, 2, 2, ndiv1, ndiv2, ndiv3, lnodes );
             baseMesh.nodes = so.computeValue( baseMesh.nodes );
-            obj.merge( baseMesh.nodes, baseMesh.elems );
+            elems = obj.merge( baseMesh.nodes, baseElems );
         end
-        function obj = addShapedMesh3D( obj, sf, x, ndiv, pattern )
+        function elems = addShapedMesh3D( obj, sf, x, ndiv, pattern )
             baseMesh = Mesh();
-            baseMesh.addRectMesh3D( -1, -1, -1, 2, 2, 2, ndiv(1), ndiv(2), ndiv(3), pattern );
+            baseElems = baseMesh.addRectMesh3D( -1, -1, -1, 2, 2, 2, ndiv(1), ndiv(2), ndiv(3), pattern );
             baseMesh.nodes = sf.computeValue( baseMesh.nodes ) * x;
-            obj.merge( baseMesh.nodes, baseMesh.elems );
+            elems = obj.merge( baseMesh.nodes, baseElems );
         end
-        function obj = addRectWithHoleInCornerMesh2D( obj, ri, x00, y00, s, div, pattern )
+        function elems = addRectWithHoleInCornerMesh2D( obj, ri, x00, y00, s, div, pattern )
             xs = x00 - s;
             ys = y00 + s;
             alpha = 240*pi/180; 
             beta  = 315*pi/180;
             x1 = xs+ri*cos(alpha);
             mesh = Mesh();
-            mesh.addRectMesh2D( -1, -1, 2, 2, div, div, pattern );
+            elems = mesh.addRectMesh2D( -1, -1, 2, 2, div, div, pattern );
             mesh.nodes = [ 0.5*( 1-mesh.nodes(:,2) ).*((x00-x1)/2*mesh.nodes(:,1)+(x00+x1)/2)+0.5*(mesh.nodes(:,2)+1).*(xs+ri*cos( (beta-alpha)/2 .* mesh.nodes(:,1) + (beta+alpha)/2)) ...
                            0.5*( 1-mesh.nodes(:,2) ).*(y00)+0.5*(mesh.nodes(:,2)+1).*(ys+ri*sin( (beta-alpha)/2 .* mesh.nodes(:,1) + (beta+alpha)/2)) ];
-            obj.merge( mesh.nodes, mesh.elems );
+            elems = [ elems; obj.merge( mesh.nodes, elems ) ];
             mesh = Mesh();
-            mesh.addRectMesh2D( -1, -1, 2, 2, div, div, pattern );
+            elems1 = mesh.addRectMesh2D( -1, -1, 2, 2, div, div, pattern );
             alpha1 = alpha;           
             alpha = -45*pi/180;
             beta  = pi/6;         
             y1 = ys+ri*sin(beta);
             mesh.nodes = [ 0.5*( mesh.nodes(:,1)+1 ).*x00+0.5*(1-mesh.nodes(:,1)).*(xs+ri*cos( (beta-alpha)/2 .* mesh.nodes(:,2) + (beta+alpha)/2)) ...
                            0.5*( mesh.nodes(:,1)+1 ).*((y1-y00)/2*mesh.nodes(:,2)+(y00+y1)/2)+0.5*(1-mesh.nodes(:,1)).*(ys+ri*sin( (beta-alpha)/2 .* mesh.nodes(:,2) + (beta+alpha)/2)) ];           
-            obj.merge( mesh.nodes, mesh.elems );
-            obj.addShapedMesh2D( ShapeFunctionL4(), [80 y00; x1 y00; 80 40; x1 ys+ri*sin(alpha1)], [div div], pattern );
-            obj.addShapedMesh2D( ShapeFunctionL4(),  [xs+ri*cos(beta) ys+ri*sin(beta); x00 y1; x00-40 x00-80; x00 x00-80], [div div], pattern );
+            % elems2 = obj.merge( mesh.nodes, elems );
+            % elems3 = obj.addShapedMesh2D( ShapeFunctionL4(), [80 y00; x1 y00; 80 40; x1 ys+ri*sin(alpha1)], [div div], pattern );
+            % elems4 = obj.addShapedMesh2D( ShapeFunctionL4(),  [xs+ri*cos(beta) ys+ri*sin(beta); x00 y1; x00-40 x00-80; x00 x00-80], [div div], pattern );
+            elems = [ elems; obj.merge( mesh.nodes, elems1 ) ];
+            elems = [ elems; ...
+                      obj.addShapedMesh2D( ShapeFunctionL4(), [80 y00; x1 y00; 80 40; x1 ys+ri*sin(alpha1)], [div div], pattern ); ...
+                      obj.addShapedMesh2D( ShapeFunctionL4(),  [xs+ri*cos(beta) ys+ri*sin(beta); x00 y1; x00-40 x00-80; x00 x00-80], [div div], pattern )];
         end
-        function obj = addRectWithHoleMesh2D( obj, a, x0, y0, holefactor, div, pattern )
+        function elems = addRectWithHoleMesh2D( obj, a, x0, y0, holefactor, div, pattern )
             r=a*holefactor;
             mesh = Mesh();
-            mesh.addRectMesh2D( -1, -1, 2, 2, div, div, pattern );
+            elems = mesh.addRectMesh2D( -1, -1, 2, 2, div, div, pattern );
             mesh.nodes = [ 0.5*( 1-mesh.nodes(:,1)).*(x0-a)+0.5*(mesh.nodes(:,1)+1).*(x0-r*cos( pi/8 .* mesh.nodes(:,2) + pi/8)) ...
                            0.5*( 1-mesh.nodes(:,1)).*(a/2.*mesh.nodes(:,2)+y0+a/2)+0.5*(mesh.nodes(:,1)+1).*(y0+r.*sin( pi/8.*mesh.nodes(:,2)+pi/8)) ];
             mesh2 = Mesh();
-            mesh2.addRectMesh2D( -1, -1, 2, 2, div, div, pattern );
+            elems2 = mesh2.addRectMesh2D( -1, -1, 2, 2, div, div, pattern );
             mesh2.nodes  = [ 0.5*( mesh2.nodes(:,1)+1).*(x0+a)+0.5*(1-mesh2.nodes(:,1)).*(x0+r*cos( pi/8 .* mesh2.nodes(:,2) + pi/8)) ...
                          0.5*( mesh2.nodes(:,1)+1).*(a/2.*mesh2.nodes(:,2)+y0+a/2)+0.5*(1-mesh2.nodes(:,1)).*(y0+r.*sin( pi/8.*mesh2.nodes(:,2)+pi/8)) ];
 
-            mesh.merge( mesh2.nodes, mesh2.elems );                              
-            mesh.duplicateTransformedMeshDeg2D( [x0 y0], 90, [0 0] );
-            mesh.duplicateTransformedMeshDeg2D( [x0 y0], 180, [0 0] );
+            elems = [ elems; mesh.merge( mesh2.nodes, elems2 ); ...                             
+                        mesh.duplicateTransformedMeshDeg2D( [x0 y0], 90, [0 0] ); ...
+                        mesh.duplicateTransformedMeshDeg2D( [x0 y0], 180, [0 0] ) ];
             
-            obj.merge(mesh.nodes,mesh.elems);
+            elems = obj.merge(mesh.nodes, elems);
         end
-        function obj = addRing2D( obj, x0, y0 , r1, r2, nr, nfi, pattern )
+        function elems = addRing2D( obj, x0, y0 , r1, r2, nr, nfi, pattern )
              mesh = Mesh();
-             mesh.addRectMesh2D( r1, 0, r2-r1, 2*pi, nr, nfi, pattern );
+             elems = mesh.addRectMesh2D( r1, 0, r2-r1, 2*pi, nr, nfi, pattern );
              newNodes = [ x0+mesh.nodes(:,1).*cos( mesh.nodes(:,2) ) y0+mesh.nodes(:,1).*sin( mesh.nodes(:,2) ) ];
-             obj.merge( newNodes, mesh.elems );
+             elems = obj.merge( newNodes, elems );
         end
-        function obj = addQuarterCircle( obj, x0 , R, nr, pattern )
+        function elems = addQuarterCircle( obj, x0 , R, nr, pattern )
              mesh1 = Mesh();
              shapeFn = ShapeFunctionL4();
-             mesh1.addShapedMesh2D( shapeFn, x0+[ 0 0; R/2 0; 0 R/2; R/2/1.41 R/2/1.41 ], nr, pattern );
+             elems1 = mesh1.addShapedMesh2D( shapeFn, x0+[ 0 0; R/2 0; 0 R/2; R/2/1.41 R/2/1.41 ], nr, pattern );
 
              sfL2 = ShapeFunctionL2();
              sl1 = ShapeObjectRectangular(sfL2,[0 R/2; R/2/1.41 R/2/1.41 ]);
@@ -277,31 +251,31 @@ classdef Mesh < handle
 
              ms1 = MorphSpace(sl1,sc1);
              ms2 = MorphSpace(sl2,sc2);
-                
-             mesh1.addObjectMesh2D( ms1, nr, nr, pattern );
-             mesh1.addObjectMesh2D( ms2, nr, nr, pattern );
+             elems=[ elems1; ...   
+                        mesh1.addObjectMesh2D( ms1, nr, nr, pattern );...
+                        mesh1.addObjectMesh2D( ms2, nr, nr, pattern ) ];
              %mesh1.addShapedMesh2D( shapeFn, x0+[ R/2 0; R 0; R/2/1.41 R/2/1.41; R/1.41 R/1.41 ], nr, pattern );
              %mesh1.addShapedMesh2D( shapeFn, x0+[ 0 R/2; R/2/1.41 R/2/1.41; 0 R; R/1.41 R/1.41  ], nr, pattern );
-             obj.merge( mesh1.nodes, mesh1.elems );
+             elems = obj.merge( mesh1.nodes, elems );
         end
-        function obj = addHalfCircle( obj, x0 , R, nr, pattern )
-            obj.addQuarterCircle( x0 , R, nr, pattern );
+        function elems = addHalfCircle( obj, x0 , R, nr, pattern )
+            elems1 = obj.addQuarterCircle( x0 , R, nr, pattern );
             obj.transformMeshDeg2D( x0, 90, [0 0] );
-            obj.addQuarterCircle( x0 , R, nr, pattern );
+            elems = [ elems1; obj.addQuarterCircle( x0 , R, nr, pattern ) ];
         end
-        function obj = addCircle( obj, x0 , R, nr, pattern )
-            obj.addQuarterCircle( x0 , R, nr, pattern );
+        function elems = addCircle( obj, x0 , R, nr, pattern )
+            elems = obj.addQuarterCircle( x0 , R, nr, pattern );
             obj.transformMeshDeg2D( x0, 90, [0 0] );
-            obj.addQuarterCircle( x0 , R, nr, pattern );
+            elems = [elems; obj.addQuarterCircle( x0 , R, nr, pattern )];
             obj.transformMeshDeg2D( x0, 90, [0 0] );
-            obj.addQuarterCircle( x0 , R, nr, pattern );
+            elems = [elems; obj.addQuarterCircle( x0 , R, nr, pattern )];
             obj.transformMeshDeg2D( x0, 90, [0 0] );
-            obj.addQuarterCircle( x0 , R, nr, pattern );
+            elems = [elems; obj.addQuarterCircle( x0 , R, nr, pattern )];
         end
-        function obj = addQuarterCylinder( obj, x0 , R, h, nr, pattern )
+        function elems = addQuarterCylinder( obj, x0 , R, h, nr, pattern )
              mesh1 = Mesh();
              shapeFn = ShapeFunctionL8();
-             mesh1.addShapedMesh3D( shapeFn, x0+[ 0 0 0; R/2 0 0; 0 R/2 0; R/2/1.41 R/2/1.41 0; 0 0 h; R/2 0 h; 0 R/2 h; R/2/1.41 R/2/1.41 h], [nr(1) nr(1) nr(2)], pattern );
+             elems = mesh1.addShapedMesh3D( shapeFn, x0+[ 0 0 0; R/2 0 0; 0 R/2 0; R/2/1.41 R/2/1.41 0; 0 0 h; R/2 0 h; 0 R/2 h; R/2/1.41 R/2/1.41 h], [nr(1) nr(1) nr(2)], pattern );
 
              sfL2 = ShapeFunctionL4();
              sl1 = ShapeObjectRectangular(sfL2,x0+[0 R/2 0; R/2/1.41 R/2/1.41 0; 0 R/2 h; R/2/1.41 R/2/1.41 h ]);
@@ -312,16 +286,16 @@ classdef Mesh < handle
              ms1 = MorphSpace(sl1,sc1);
              ms2 = MorphSpace(sl2,sc2);
                 
-             mesh1.addObjectMesh3D( ms1, nr(1), nr(1), nr(2), pattern );
-             mesh1.addObjectMesh3D( ms2, nr(1), nr(1), nr(2), pattern );
+             elems = [ elems; mesh1.addObjectMesh3D( ms1, nr(1), nr(1), nr(2), pattern ) ];
+             elems = [ elems; elemsmesh1.addObjectMesh3D( ms2, nr(1), nr(1), nr(2), pattern ) ];
              %mesh1.addShapedMesh2D( shapeFn, x0+[ R/2 0; R 0; R/2/1.41 R/2/1.41; R/1.41 R/1.41 ], nr, pattern );
              %mesh1.addShapedMesh2D( shapeFn, x0+[ 0 R/2; R/2/1.41 R/2/1.41; 0 R; R/1.41 R/1.41  ], nr, pattern );
-             obj.merge( mesh1.nodes, mesh1.elems );
+             elems = obj.merge( mesh1.nodes, elems );
         end
-        function obj = addHalfCylinder( obj, x0 , R, h, nr, localNodes )
-            obj.addQuarterCylinder( x0 , R, h, nr, localNodes );
+        function elems = addHalfCylinder( obj, x0 , R, h, nr, localNodes )
+            elems = obj.addQuarterCylinder( x0 , R, h, nr, localNodes );
             obj.transformMesh3DDegXY( x0, 90, [0 0 0] );
-            obj.addQuarterCylinder( x0 , R, h, nr, localNodes );
+            elems = [ elems; obj.addQuarterCylinder( x0 , R, h, nr, localNodes ) ]; 
         end
         function obj = addCylinder( obj, x0 , R, h, nr, localNodes )
             obj.addQuarterCylinder( x0 , R, h, nr, localNodes );
