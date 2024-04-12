@@ -297,36 +297,34 @@ classdef Mesh < handle
             obj.transformMesh3DDegXY( x0, 90, [0 0 0] );
             elems = [ elems; obj.addQuarterCylinder( x0 , R, h, nr, localNodes ) ]; 
         end
-        function obj = addCylinder( obj, x0 , R, h, nr, localNodes )
-            obj.addQuarterCylinder( x0 , R, h, nr, localNodes );
+        function elems = addCylinder( obj, x0 , R, h, nr, localNodes )
+            elems = obj.addQuarterCylinder( x0 , R, h, nr, localNodes );
             obj.transformMesh3DDegXY( x0, 90, [0 0 0] );
-            obj.addQuarterCylinder( x0 , R, h, nr, localNodes );
+            elems=[elems; obj.addQuarterCylinder( x0 , R, h, nr, localNodes )];
             obj.transformMesh3DDegXY( x0, 90, [0 0 0] );
-            obj.addQuarterCylinder( x0 , R, h, nr, localNodes );
+            elems=[elems; obj.addQuarterCylinder( x0 , R, h, nr, localNodes )];
             obj.transformMesh3DDegXY( x0, 90, [0 0 0] );
-            obj.addQuarterCylinder( x0 , R, h, nr, localNodes );
+            elems=[elems; obj.addQuarterCylinder( x0 , R, h, nr, localNodes )];
         end
-        function addPipe3D(obj,x0,r,R,al1,al2,h1,h2,nr,nc,nz,lnodes)
+        function elems = addPipe3D(obj,x0,r,R,al1,al2,h1,h2,nr,nc,nz,lnodes)
             mesh=Mesh();
-            mesh.addRectMesh3D( r, deg2rad(al1), h1, R-r, deg2rad(al2-al1), h2-h1, nr, nc, nz, lnodes)
+            elems = mesh.addRectMesh3D( r, deg2rad(al1), h1, R-r, deg2rad(al2-al1), h2-h1, nr, nc, nz, lnodes);
             mesh.transformToCylindrical3D(x0);
-            obj.mergeMesh(mesh);
+            elems = obj.merge(mesh.nodes,elems);
         end
 
-        function obj = addrectPipe(obj,w,h,l1,th,nth,lnodes)
+        function elems = addrectPipe(obj,w,h,l1,th,nth,lnodes)
             nx=round(l1/th)*nth;
             ny=round((w-2*th)/th)*nth;
             nz=round((h-2*th)/th)*nth;
-            obj.addRectMesh3D( 0, 0, 0, l1, th, th, nx, nth, nth, lnodes );
-            obj.addRectMesh3D( 0, 0, h-th, l1, th, th, nx, nth, nth, lnodes );
-            obj.addRectMesh3D( 0, w-th, h-th, l1, th, th, nx, nth, nth, lnodes );
-            obj.addRectMesh3D( 0, w-th, 0, l1, th, th, nx, nth, nth, lnodes );
-
-            obj.addRectMesh3D( 0, 0, th, l1, th, h-2*th, nx, nth, nz, lnodes );
-            obj.addRectMesh3D( 0, w-th, th, l1, th, h-2*th, nx, nth, nz, lnodes );
-
-            obj.addRectMesh3D( 0, th, 0, l1, w-2*th, th, nx, ny, nth, lnodes );
-            obj.addRectMesh3D( 0, th, h-th, l1, w-2*th, th, nx, ny, nth, lnodes );
+            elems = [   obj.addRectMesh3D( 0, 0, 0, l1, th, th, nx, nth, nth, lnodes );...
+                        obj.addRectMesh3D( 0, 0, h-th, l1, th, th, nx, nth, nth, lnodes );...
+                        obj.addRectMesh3D( 0, w-th, h-th, l1, th, th, nx, nth, nth, lnodes );...
+                        obj.addRectMesh3D( 0, w-th, 0, l1, th, th, nx, nth, nth, lnodes );...
+                        obj.addRectMesh3D( 0, 0, th, l1, th, h-2*th, nx, nth, nz, lnodes );...
+                        obj.addRectMesh3D( 0, w-th, th, l1, th, h-2*th, nx, nth, nz, lnodes );...
+                        obj.addRectMesh3D( 0, th, 0, l1, w-2*th, th, nx, ny, nth, lnodes );...
+                        obj.addRectMesh3D( 0, th, h-th, l1, w-2*th, th, nx, ny, nth, lnodes ) ];
         end
 
         function obj = addLshape( obj, l, h, nh, pattern )
