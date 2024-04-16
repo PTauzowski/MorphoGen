@@ -118,10 +118,10 @@ classdef ChocolateModel < ModelLinear
 
             % Mesh resolutions
             % number of tiles in the x direction
-            xtiles=3;
+            xtiles=4;
             
             % number of tiles in the y direction
-            ytiles=3; 
+            ytiles=4; 
             
             % FE x - division of the tile
             ncx=8;
