@@ -327,29 +327,29 @@ classdef Mesh < handle
                         obj.addRectMesh3D( 0, th, h-th, l1, w-2*th, th, nx, ny, nth, lnodes ) ];
         end
 
-        function obj = addLshape( obj, l, h, nh, pattern )
+        function elems = addLshape( obj, l, h, nh, pattern )
             nl = round(l/h*nh+0.5);
-            obj.addRectMesh2D( 0, 0, h, h, nh, nh, pattern );
-            obj.addRectMesh2D( 0, h, h, l-h, nh, nl-nh, pattern );
-            obj.addRectMesh2D( h, 0, l-h, h, nl-nh, nh, pattern );
+            elems = [   obj.addRectMesh2D( 0, 0, h, h, nh, nh, pattern ); ...
+                        obj.addRectMesh2D( 0, h, h, l-h, nh, nl-nh, pattern ); ...
+                        obj.addRectMesh2D( h, 0, l-h, h, nl-nh, nh, pattern )   ];
         end
-        function obj = addLshape3D( obj, l, h, nh, lnodes )
+        function elems = addLshape3D( obj, l, h, nh, lnodes )
             nl = round(l/h*nh+0.5);
-            obj.addRectMesh3D( 0, 0, 0, h,   h, h,   nh,    nh, nh,    lnodes);
-            obj.addRectMesh3D( 0, 0, h, h,   h, l-h, nh,    nh, nl-nh, lnodes);
-            obj.addRectMesh3D( h, 0, 0, l-h, h, h,   nl-nh, nh, nh,    lnodes );
+            elems = [   obj.addRectMesh3D( 0, 0, 0, h,   h, h,   nh,    nh, nh,    lnodes);
+                        obj.addRectMesh3D( 0, 0, h, h,   h, l-h, nh,    nh, nl-nh, lnodes);
+                        obj.addRectMesh3D( h, 0, 0, l-h, h, h,   nl-nh, nh, nh,    lnodes) ];
         end
-        function obj = duplicateTransformedMeshDeg2D( obj, x0, angleDeg, xm )
+        function elems = duplicateTransformedMeshDeg2D( obj, x0, angleDeg, xm , oldelems)
             angleRad = angleDeg*pi/180;
-            obj.merge( [ x0(1)+(obj.nodes(:,1)-x0(1)).*cos(angleRad)-(obj.nodes(:,2)-x0(2)).*sin(angleRad)...
-                         x0(2)+(obj.nodes(:,1)-x0(1)).*sin(angleRad)+(obj.nodes(:,2)-x0(2)).*cos(angleRad)] + xm, obj.elems );
+            elems = obj.merge( [ x0(1)+(obj.nodes(:,1)-x0(1)).*cos(angleRad)-(obj.nodes(:,2)-x0(2)).*sin(angleRad)...
+                                 x0(2)+(obj.nodes(:,1)-x0(1)).*sin(angleRad)+(obj.nodes(:,2)-x0(2)).*cos(angleRad)] + xm, oldelems );
                   
         end
-        function obj = duplicateTransformedMeshDeg3D( obj, x0, angleDeg, xm )
+        function elems = duplicateTransformedMeshDeg3D( obj, x0, angleDeg, xm, oldelems )
             angleRad = angleDeg*pi/180;
-            obj.merge( [ x0(1)+(obj.nodes(:,1)-x0(1)).*cos(angleRad)-(obj.nodes(:,2)-x0(2)).*sin(angleRad)...
+            elems = obj.merge( [ x0(1)+(obj.nodes(:,1)-x0(1)).*cos(angleRad)-(obj.nodes(:,2)-x0(2)).*sin(angleRad)...
                          x0(2)+(obj.nodes(:,1)-x0(1)).*sin(angleRad)+(obj.nodes(:,2)-x0(2)).*cos(angleRad)...
-                         obj.nodes(:,3)] + xm, obj.elems );
+                         obj.nodes(:,3)] + xm, oldelems );
                   
         end
         function obj = array( obj, coord, n )
@@ -376,53 +376,53 @@ classdef Mesh < handle
                           x0(2)+(obj.nodes(:,1)-x0(1)).*sin(angleRad)+(obj.nodes(:,2)-x0(2)).*cos(angleRad) obj.nodes(:,3)] + xm;
                   
         end
-        function obj = transformToPolar2D( obj, x0, y0 )
+        function elems = transformToPolar2D( obj, x0, y0, oldelems )
              newNodes = [ x0+obj.nodes(:,1).*cos( obj.nodes(:,2) ) y0+obj.nodes(:,1).*sin( obj.nodes(:,2) ) ];
              [~,si1,si2] = unique( round(newNodes .* obj.tolerance), 'rows', 'stable' );
             obj.nodes = newNodes( si1, : );
-            obj.elems = si2(obj.elems);
+            elems = si2(oldelems);
         end
-        function obj = transformToCylindrical3D( obj, x0 )
+        function elems = transformToCylindrical3D( obj, x0, oldelems )
              newNodes = [ x0(1)+obj.nodes(:,1).*cos( obj.nodes(:,2) ) x0(2)+obj.nodes(:,1).*sin( obj.nodes(:,2) ) obj.nodes(:,3) ];
              [~,si1,si2] = unique( round(newNodes .* obj.tolerance), 'rows', 'stable' );
             obj.nodes = newNodes( si1, : );
-            obj.elems = si2(obj.elems);
+            elems = si2(oldelems);
         end
-        function removeNodes( obj, selector )
+        function elems = removeNodes( obj, selector, oldelems )
             nodesToRemove=find(selector.select(obj.nodes));
             nodesToLeave=find(1-selector.select(obj.nodes));
-            elemsToRemove=find(sum(ismember(obj.elems,nodesToRemove),2)>0);
+            elemsToRemove=find(sum(ismember(oldelems,nodesToRemove),2)>0);
             oldnn=size(obj.nodes,1);
             numbers=zeros(oldnn,1);
             numbers(nodesToLeave)=1:size(nodesToLeave,1);
-            obj.elems=numbers(obj.elems);
+            elems=numbers(oldelems);
             obj.nodes(nodesToRemove,:)=[];
-            obj.elems(elemsToRemove,:)=[];
+            elems(elemsToRemove,:)=[];
         end
-        function removeNodesByNumbers( obj, nodesToRemove )
+        function removeNodesByNumbers( obj, nodesToRemove, oldelems )
             nodesToLeave=1:size(obj.nodes,1);
             nodesToLeave(nodesToRemove)=[];
-            elemsToRemove=find(sum(ismember(obj.elems,nodesToRemove),2)>0);
+            elemsToRemove=find(sum(ismember(oldelemss,nodesToRemove),2)>0);
             oldnn=size(obj.nodes,1);
             numbers=zeros(oldnn,1);
             numbers(nodesToLeave)=1:size(nodesToLeave,1);
-            obj.elems=numbers(obj.elems);
+            elems=numbers(oldelems);
             obj.nodes(nodesToRemove,:)=[];
-            obj.elems(elemsToRemove,:)=[];
+            elems(elemsToRemove,:)=[];
         end
-        function removeElemsByNumbers( obj, elemsToRemove )
-            elemsToLeave=(1:size(obj.elems,1))';
+        function elems = removeElemsByNumbers( obj, elemsToRemove, oldelems )
+            elemsToLeave=(1:size(oldelems,1))';
             elemsToLeave(elemsToRemove)=[];
-            nrem=obj.elems(elemsToLeave,:);
+            nrem=oldelems(elemsToLeave,:);
             nodesToLeave=unique(nrem(:));
             nodesToRemove=(1:size(obj.nodes,1))';
             nodesToRemove(nodesToLeave)=[];
             oldnn=size(obj.nodes,1);
             mapNodeNumbers=zeros(oldnn,1);
             mapNodeNumbers(nodesToLeave)=1:size(nodesToLeave,1);
-            obj.elems=mapNodeNumbers(obj.elems);
+            elems=mapNodeNumbers(oldelems);
             obj.nodes(nodesToRemove,:)=[];
-            obj.elems(elemsToRemove,:)=[];
+            elems(elemsToRemove,:)=[];
         end
         function transformNodesXY( obj, transformFn )
             obj.nodes = transformFn( obj.nodes );
@@ -430,16 +430,14 @@ classdef Mesh < handle
         function laplacianSmoothing(n)
             
         end
-        function importFEMesh( obj, mesh )
+        function elems = importFEMesh( obj, mesh )
             obj.nodes=mesh.Nodes';
-            obj.elems=mesh.Elements';
+            elems=mesh.Elements';
         end
-        function exportMeshToFile(obj, filenamebase)
-            nodes=obj.nodes;
-            elems=obj.elems;
+        function exportMeshToFile(obj, filenamebase, elems)
             save([filenamebase '_mesh.mat'],"nodes","elems");
             dlmwrite([filenamebase '_nodes.txt'],obj.nodes,'delimiter','\t','precision','%7.3f');
-            dlmwrite([filenamebase '_elems.txt'],obj.elems,'delimiter','\t','precision',6,'-append');
+            dlmwrite([filenamebase '_elems.txt'],elems,'delimiter','\t','precision',6,'-append');
         end
     end
 end
