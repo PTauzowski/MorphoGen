@@ -17,7 +17,7 @@ model.plotModel();
 
 % [5.8 -7.7
 %randomVariables={RandomVariable("Lognormal",-1,1) RandomVariable("Normal",-6,2)};
-randomVariables={RandomVariable("Normal",-1,3) RandomVariable("Normal",-6,1)};
+randomVariables={RandomVariable("Normal",-1,3) RandomVariable("Normal",-4,1)};
 transform=IndependentTransformation(randomVariables);
 g=loadPerformanceFunctionDisp(model);
 
