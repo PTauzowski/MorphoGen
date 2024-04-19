@@ -20,7 +20,7 @@ th=0.05;
 % FE division along thickness
 nth=1;
 
-basename='TrussZ_torsion';
+basename='TrussZ_bending_torsion';
 
 
 
@@ -47,15 +47,17 @@ Ty6=0;
 Tz5=0;
 Tz6=0;
 
-q=0.1; qy=0.00; lb=1; Tf=0.0;
+q=0.1; qy=0.00; lb=1; Tf=0.0; qr=1;
 My=0; Mz=0; Tz=0; Ty=0; Tr=0;
 
-%setting torsion moment equivalent nodal forcess
-%My=q*lb^2/8;     
+%setting torsion moment, bending moment and shear forces in one
+%superposition mode
+
+My=q*lb^2/8;    
 %Mz=qy*lb^2/8;   
-%Tz=q*lb/2;     
-%Ty=qy*lb/2;    
-Tr=110*q;        %Tr=0;
+%Tz=q*lb/2;       
+%Ty=qy*lb/2;     
+Tr=qr;       
 
 
 % computation of loads for FE structure
@@ -148,7 +150,8 @@ topOpt.setConstElems(const_elems);
 [objF, xopt]  = topOpt.solve();
 toc;
 save([basename '.mat']);
-
+title('Bending with torsion');
+savefig([basename '.fig']);
 % 
 % figure;
 % tic

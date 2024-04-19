@@ -48,13 +48,14 @@ Tz5=0;
 Tz6=0;
 
 q=0.1; qy=0.00; lb=1; Tf=0.0;
+My=0; Mz=0; Tz=0; Ty=0; Tr=0;
 
 %setting shear force load
-My=q*lb^2/8;     My=0;
-Mz=qy*lb^2/8;    Mz=0;
-Tz=q*lb/2;       %Tz=0;
-Ty=qy*lb/2;      Ty=0;
-Tr=110*q;        Tr=0;
+%My=q*lb^2/8;     
+%Mz=qy*lb^2/8;   
+Tz=q*lb/2;      
+%Ty=qy*lb/2;     
+%Tr=110*q;       
 
 
 % computation of loads for FE structure
