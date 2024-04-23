@@ -389,7 +389,7 @@ classdef SolidElasticElem < FiniteElement
             %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col);
             %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col,"FaceAlpha",0.3);
         end
-        function plotSolidSelected(obj,nodes,elem_inds,varargin)
+        function faces = plotSolidSelected(obj,nodes,elem_inds,varargin)
             hold on, axis off;
             daspect([1 1 1]);
             if nargin == 3
@@ -400,7 +400,8 @@ classdef SolidElasticElem < FiniteElement
             allfaces = reshape(obj.elems(elem_inds,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(find(elem_inds),1))';
             [~,ifaces] = unique( sort(reshape(obj.elems(elem_inds,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(find(elem_inds),1))',2),'rows' );
             patch('Vertices', nodes, 'Faces', allfaces(ifaces,:),'FaceColor','none','EdgeColor','k');
-            patch('Vertices', nodes, 'Faces', allfaces(ifaces,:),'FaceColor',col);
+            patch('Vertices', nodes, 'Faces', allfaces(ifaces,:),'FaceColor',col,'EdgeColor','k');
+            faces = allfaces(ifaces,:);
         end
         function plotMap(obj,nodes,q,valueName,scd)
             hold, axis off;

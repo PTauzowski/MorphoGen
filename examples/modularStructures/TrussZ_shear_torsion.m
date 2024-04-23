@@ -20,7 +20,7 @@ th=0.05;
 % FE division along thickness
 nth=1;
 
-basename='TrussZ_bending_torsion';
+basename='TrussZ_shear_torsion';
 
 
 
@@ -151,6 +151,14 @@ toc;
 save([basename '.mat']);
 title('Shear with torsion');
 savefig([basename '.fig']);
+
+figure;
+topOpt.plotCurrentFrame();
+view(-115,10);
+colorbar('off');
+saveas(gcf,[basename '.svg']);
+saveas(gcf,[basename '.png']);
+
 % 
 % figure;
 % tic

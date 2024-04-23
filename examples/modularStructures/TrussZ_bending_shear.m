@@ -153,6 +153,14 @@ save([basename '.mat']);
 title('Bending with shear');
 savefig([basename '.fig']);
 
+figure;
+topOpt.plotCurrentFrame();
+view(-115,10);
+colorbar('off');
+saveas(gcf,[basename '.svg']);
+saveas(gcf,[basename '.png']);
+
+
 % 
 % figure;
 % tic

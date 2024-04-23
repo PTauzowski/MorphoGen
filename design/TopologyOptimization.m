@@ -165,6 +165,7 @@ classdef TopologyOptimization < ConstrainedOptimization
                     obj.FEAnalysis.felems{i}.plotSolidSelected(obj.FEAnalysis.mesh.nodes,x(elem_inds{i})>0.5);
                     %obj.FEproblem.felems{i}.plotSolidSelected([200-obj.FEproblem.mesh.nodes(:,1) obj.FEproblem.mesh.nodes(:,2:3)],x(elem_inds{i})>0.5);
                     obj.FEAnalysis.felems{i}.plotSolidSelected(obj.FEAnalysis.mesh.nodes,obj.const_elems,[0.6,0.6,0.6]);
+                    %createTopologyfigure(obj.FEAnalysis.mesh.nodes, f1, f2);
                 end
             else
                 for i=1:size( obj.FEAnalysis.felems, 1)

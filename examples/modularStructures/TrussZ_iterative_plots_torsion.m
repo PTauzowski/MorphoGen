@@ -159,12 +159,18 @@ load([basename '.mat']);
 % topOpt.setConstElems(const_elems);
 % [objF, xopt]  = topOpt.solve();
 
+figure;
+topOpt.plotFrame();
+view(-115,10);
+colorbar('off');
+saveas(gcf,'topFinal.svg');
+
 toc
 figure;
 % Generate some sample data
 x = 1:size(topOpt.plotCn(:))-1;
-y1 = topOpt.plotFobj(2:end);
-y2 = topOpt.plotCn(end)-topOpt.plotCn(2:end);
+y1 = 100*topOpt.plotFobj(2:end)/topOpt.V0;
+y2 = (topOpt.plotCn(end)-topOpt.plotCn(2:end))/topOpt.plotCn(end);
 
 smooth_factor=10;
 y1 = smoothdata(y1, 'movmean', smooth_factor);
@@ -174,7 +180,7 @@ y2 = smoothdata(y2, 'movmean', smooth_factor);
 figure;
 yyaxis left; % Left y-axis
 plot(x, y1, 'b','LineWidth', 2);
-ylabel('Objective function - volume fraction [%]', 'FontSize', 24);
+ylabel('Objective function - volume fraction [%]', 'FontSize', 240);
 
 yyaxis right; % Right y-axis
 plot(x, y2, 'r','LineWidth', 2);
@@ -182,7 +188,43 @@ ylabel('Constraint', 'FontSize', 24);
 
 xlabel('iteration', 'FontSize', 24);
 title('Objective function and displacement constraint');
-set(gca, 'FontSize', 2);
+set(gca, 'FontSize', 24);
+
+
+figure;
+topOpt.setFrame(1);
+topOpt.plotFrame();
+view(-115,10);
+colorbar('off');
+saveas(gcf,'topBegin.svg');
+
+figure;
+topOpt.setFrame(149);
+topOpt.plotFrame();
+view(-115,10);
+colorbar('off');
+saveas(gcf,'top149.svg');
+
+figure;
+topOpt.setFrame(155);
+topOpt.plotFrame();
+view(-115,10);
+colorbar('off');
+saveas(gcf,'top155.svg');
+
+figure;
+topOpt.setFrame(160);
+topOpt.plotFrame();
+view(-115,10);
+colorbar('off');
+saveas(gcf,'top160.svg');
+
+figure;
+topOpt.setFrame(149);
+topOpt.plotFrame();
+view(-115,10);
+colorbar('off');
+saveas(gcf,'top149.svg');
 
 % Optionally, you can adjust the limits of each y-axis independently
 % ylim([-1.2, 1.2]); % For the left axis
