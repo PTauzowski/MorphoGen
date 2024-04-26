@@ -3,8 +3,8 @@ classdef Pylon2DModel < ModelLinearLoad
     methods
         function obj = Pylon2DModel(sf,h,h1,b,b1,resb,E,nu,xp,resX)
             resh=resb*round(h/b);
-            resh1=resb*round(h/h1);
-            resb1=resb*round(b1/b);
+            resh1=round(resh*h1/h);
+            resb1=round(resb*b1/b);
 
             x1=-b1/2;
             x2=-b/2;
@@ -44,8 +44,8 @@ classdef Pylon2DModel < ModelLinearLoad
             % obj.analysis.loadClosestNode(obj.xp,["ux" "uy" "uz"], [0 0 1]);
             % obj.analysis.createNextRightHandSideVector();
 
-            obj.analysis.loadClosestNode([-b1/2   h-h1],["ux" "uy" ], [0 -1]);
-            obj.analysis.loadClosestNode([ b1/2   h-h1],["ux" "uy" ], [0 -1]);
+            obj.analysis.loadClosestNode([-b1/2   h-h1],["ux" "uy" ], [1 -1]);
+            obj.analysis.loadClosestNode([ b1/2   h-h1],["ux" "uy" ], [1 -1]);
            
           
             obj.analysis.fixClosestNode([-b/2   0],["ux" "uy" ],[ 0 0]);

@@ -17,7 +17,7 @@ model.plotModel();
 
 % [5.8 -7.7
 %randomVariables={RandomVariable("Lognormal",-1,1) RandomVariable("Normal",-6,2)};
-randomVariables={RandomVariable("Normal",-1,3) RandomVariable("Normal",-4,1)};
+randomVariables={RandomVariable("Normal",-1,4) RandomVariable("Normal",-4,1)};
 transform=IndependentTransformation(randomVariables);
 g=loadPerformanceFunctionDisp(model);
 
@@ -41,9 +41,9 @@ sora4 = SORA('LShapeDispBeta20_4', model,topOpt, randomVariables, g, transform, 
 sora5 = SORA('LShapeDispBeta20_5', model,topOpt, randomVariables, g, transform, 5);
 
 % %sora0.solveX();
-%  sora2.solveX();
-% % sora3.solveX();
-% % sora4.solveX();
- sora5.solveX();
+sora2.solveX();
+sora3.solveX();
+sora4.solveX();
+sora5.solveX();
 
 

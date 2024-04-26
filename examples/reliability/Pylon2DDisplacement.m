@@ -1,11 +1,11 @@
 clear;
 close all;
 h=15;
-h1=7;
+h1=5;
 b=4;
 b1=10;
 c=0.4;
-resb = 40;
+resb = 60;
 E=210000;
 nu=0.3;
 
@@ -38,7 +38,7 @@ g=loadPylonDisplacementPerformanceFunction(model,fatigueData);
 Rfilter = 1.2*b/resb;
 penal = 3;
 cutTreshold = 0.005;
-volFr=0.15;
+volFr=0.3;
 
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTreshold, penal, volFr, true );
 topOpt.is_silent=true;
