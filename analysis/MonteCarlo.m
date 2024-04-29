@@ -8,6 +8,7 @@ classdef MonteCarlo < ReliabilityAnalysis
     end
     
     methods
+        
         function obj = MonteCarlo(randVars, g, nsamples)
             obj = obj@ReliabilityAnalysis(randVars,g);
             obj.nsamples=nsamples;
@@ -18,6 +19,8 @@ classdef MonteCarlo < ReliabilityAnalysis
             [obj.x, obj.r, obj.fi] = obj.generatePerformanceRandomSapmles(obj.nsamples);
             results.Pf = max(size(find(obj.r<0)))/(obj.nsamples-size(obj.fi,2));
             results.beta=-norminv(results.Pf);
+            results.mv=mean(obj.r);
+            results.sd=std(obj.r);
             obj.Pf=results.Pf;
             obj.beta=results.beta;
             [~,i]=min(sqrt(sum(obj.x(find(obj.r<0),:).^2,2)));
@@ -39,6 +42,7 @@ classdef MonteCarlo < ReliabilityAnalysis
                 title(strjoin([varNames(1) " x " varNames(2) " x " objName]));
             end
         end
+
         function printResults(obj)
             mv=mean(obj.r);
             sd=std(obj.r);
