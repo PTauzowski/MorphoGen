@@ -28,7 +28,7 @@ topOpt = StressIntensityTopologyOptimizationVol( 1.2*l/res, ...
             model.analysis, ... % FEM analysis object
             0.005, ...          % stress intensity treshold for element removal 
             2, ...              % penalty factor
-            0.5, ...           % constraint function object
+            0.3, ...           % constraint function object
             true ...            % is finite elements uniform
  );
 
@@ -39,7 +39,7 @@ Pdest=[6, -10];
  % [topMin,topMax] = tuner.getBoundsTopologies(0.3,0.6);
  % tuner.fullReliabilityTuning(Pdest,topMin,topMax);
 
-g.threshold = 0.04;
+g.threshold = 0.0055;
 
 %tuner.tuneMC();
 % tuner.plotMCs(["Px" "Py"],'u');
@@ -51,8 +51,8 @@ sora3 = SORA('LShapeDispBeta20_3', model,topOpt, randomVariables, g, transform, 
 sora4 = SORA('LShapeDispBeta20_4', model,topOpt, randomVariables, g, transform, 4);
 sora5 = SORA('LShapeDispBeta20_5', model,topOpt, randomVariables, g, transform, 5);
 
- sora2.solveX();
- sora3.solveX();
+ % sora2.solveX();
+ % sora3.solveX();
  sora4.solveX();
  sora5.solveX();
 
