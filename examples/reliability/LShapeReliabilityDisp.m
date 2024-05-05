@@ -2,7 +2,7 @@ clear;
 close all;
 
 l=3;         % long edge length
-res = 30;    % short edge resolution
+res = 40;    % short edge resolution
 
 model = LShapeModelLinear(  ShapeFunctionL4,...
                              l, ...         % long edge length
@@ -46,13 +46,13 @@ g.threshold = 0.0055;
 
 %tuner.fullReliabilityTuning([6, -10]);
 
-sora2 = SORA('LShapeDispBeta20_2', model,topOpt, randomVariables, g, transform, 2);
-sora3 = SORA('LShapeDispBeta20_3', model,topOpt, randomVariables, g, transform, 3);
-sora4 = SORA('LShapeDispBeta20_4', model,topOpt, randomVariables, g, transform, 4);
-sora5 = SORA('LShapeDispBeta20_5', model,topOpt, randomVariables, g, transform, 5);
+sora2 = SORA('LShapeDispBeta40_2', model,topOpt, randomVariables, g, transform, 2);
+sora3 = SORA('LShapeDispBeta40_3', model,topOpt, randomVariables, g, transform, 3);
+sora4 = SORA('LShapeDispBeta40_4', model,topOpt, randomVariables, g, transform, 4);
+sora5 = SORA('LShapeDispBeta40_5', model,topOpt, randomVariables, g, transform, 5);
 
- % sora2.solveX();
- % sora3.solveX();
+ sora2.solveX();
+ sora3.solveX();
  sora4.solveX();
  sora5.solveX();
 

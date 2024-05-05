@@ -194,9 +194,9 @@ classdef Mesh < handle
             end
             obj.merge(newNodes, newElems);
         end
-        function obj = addShapedMesh2D( obj, sf, x, ndiv, pattern )
+        function obj = addShapedMesh2D( obj, sf, x, ndiv1, ndiv2, pattern )
             baseMesh = Mesh();
-            baseMesh.addRectMesh2D( -1, -1, 2, 2, ndiv, ndiv, pattern );
+            baseMesh.addRectMesh2D( -1, -1, 2, 2, ndiv1, ndiv2, pattern );
             baseMesh.nodes = sf.computeValue( baseMesh.nodes ) * x;
             obj.merge( baseMesh.nodes, baseMesh.elems );
         end
