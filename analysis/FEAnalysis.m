@@ -153,7 +153,7 @@ classdef (Abstract) FEAnalysis < handle
         end
         
         function prepareRHSVectors(obj)
-            setCurrentLoadToRightHandSideVectors(obj,size(obj.Pfem,2));
+            obj.setCurrentLoadToRightHandSideVectors(size(obj.Pfem,2));
             obj.Pnodal(:)=0;
         end
 

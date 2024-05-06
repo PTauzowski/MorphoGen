@@ -31,6 +31,21 @@ classdef ReliabilityTaskTuner < handle
              obj.topOpt.Vend=vfDest;
         end
 
+        function mpps = checkModality(obj,perf)
+            mpps=[];
+            P = cellfun(@(x) x.mean, obj.randVars);
+            for k=1:obj.g.dim
+                Pc=P;
+                Pc(k)=Pc(k)+perf*obj.randVars{k}.sd;
+                form_res=obj.form.solve(Pc);
+                mpps=[mpps; form_res.mpp ];
+                Pc=P;
+                Pc(k)=Pc(k)-perf*obj.randVars{k}.sd;
+                form_res=obj.form.solve(Pc);
+                mpps=[mpps; form_res.mpp ];
+            end
+        end
+
         function [xmin, xmax] = getBoundsTopologies(obj, vmin, vmax)
              xmin=-1; kmin=-1;
              xmax=-1; kmax=-1;

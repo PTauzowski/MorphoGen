@@ -10,9 +10,9 @@ classdef AMV < GradientBasedReliabilityAnalysis
             obj.betat=betat;
         end
         
-        function results = solve(obj)
+        function results = solve(obj,x0)
             dim = obj.getDim();
-            u   = zeros( 1, dim );
+            u   = obj.transform.toU(x0);
             [g, dg] = computeGu( obj, u );
             if  norm(dg)<1.0E-20
                      results.n = -1;

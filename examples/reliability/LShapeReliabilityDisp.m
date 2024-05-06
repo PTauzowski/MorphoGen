@@ -2,7 +2,7 @@ clear;
 close all;
 
 l=3;         % long edge length
-res = 40;    % short edge resolution
+res = 30;    % short edge resolution
 
 model = LShapeModelLinear(  ShapeFunctionL4,...
                              l, ...         % long edge length
@@ -19,7 +19,7 @@ model.plotModel();
 %randomVariables={RandomVariable("Lognormal",-1,1) RandomVariable("Normal",-6,2)};
 %randomVariables={RandomVariable("Normal",-1,4) RandomVariable("Normal",-4,1)};
 randomVariables={RandomVariable("Normal",7,1) RandomVariable("Normal",-4,1)};
-%randomVariables={RandomVariable("Normal",5,2) RandomVariable("Normal",-5,1)};
+%randomVariables={RandomVariable("Normal",0,2) RandomVariable("Normal",-10,1)};
 transform=IndependentTransformation(randomVariables);
 g=performanceFunctionPlus( loadPerformanceFunctionDisp( model ) );
 
@@ -28,9 +28,12 @@ topOpt = StressIntensityTopologyOptimizationVol( 1.2*l/res, ...
             model.analysis, ... % FEM analysis object
             0.005, ...          % stress intensity treshold for element removal 
             2, ...              % penalty factor
-            0.3, ...           % constraint function object
+            0.4, ...           % constraint function object
             true ...            % is finite elements uniform
  );
+
+model.setupLoad([7 -4]);
+topOpt.solve();
 
 Pdest=[6, -10];
 
@@ -39,21 +42,27 @@ Pdest=[6, -10];
  % [topMin,topMax] = tuner.getBoundsTopologies(0.3,0.6);
  % tuner.fullReliabilityTuning(Pdest,topMin,topMax);
 
+
+
 g.threshold = 0.0055;
+%g.threshold = 0.00;
+
+
+ mpps = tuner.checkModality(0.5)
 
 %tuner.tuneMC();
 % tuner.plotMCs(["Px" "Py"],'u');
 
 %tuner.fullReliabilityTuning([6, -10]);
 
-sora2 = SORA('LShapeDispBeta40_2', model,topOpt, randomVariables, g, transform, 2);
-sora3 = SORA('LShapeDispBeta40_3', model,topOpt, randomVariables, g, transform, 3);
-sora4 = SORA('LShapeDispBeta40_4', model,topOpt, randomVariables, g, transform, 4);
-sora5 = SORA('LShapeDispBeta40_5', model,topOpt, randomVariables, g, transform, 5);
+sora2 = SORA('LShapeDispBeta30_2', model,topOpt, randomVariables, g, transform, 2);
+sora3 = SORA('LShapeDispBeta30_3', model,topOpt, randomVariables, g, transform, 3);
+sora4 = SORA('LShapeDispBeta30_4', model,topOpt, randomVariables, g, transform, 4);
+sora5 = SORA('LShapeDispBeta30_5', model,topOpt, randomVariables, g, transform, 5);
 
- sora2.solveX();
- sora3.solveX();
- sora4.solveX();
- sora5.solveX();
+ % sora2.solveX();
+ % sora3.solveX();
+ % sora4.solveX();
+ % sora5.solveX();
 
 

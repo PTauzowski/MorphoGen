@@ -1,7 +1,7 @@
 classdef Pylon2DModel < ModelLinearLoad
     
     methods
-        function obj = Pylon2DModel(sf,h,h1,b,b1,resb,E,nu,xp,resX)
+        function obj = Pylon2DModel(sf,h,h1,b,b1,resb,E,nu,xp,xres)
             resh=resb*round(h/b);
             resh1=round(resh*h1/h);
             resb1=round(resb*b1/b);
@@ -41,15 +41,16 @@ classdef Pylon2DModel < ModelLinearLoad
             obj.analysis = LinearElasticityWeighted( obj.fe, obj.mesh, false );
             
             obj.xp=xp;
-            % obj.analysis.loadClosestNode(obj.xp,["ux" "uy" "uz"], [1 0 0]);
-            % obj.analysis.createNextRightHandSideVector();
-            % obj.analysis.loadClosestNode(obj.xp,["ux" "uy" "uz"], [0 1 0]);
-            % obj.analysis.createNextRightHandSideVector();
-            % obj.analysis.loadClosestNode(obj.xp,["ux" "uy" "uz"], [0 0 1]);
-            % obj.analysis.createNextRightHandSideVector();
+            xp2=[-xp(1) xp(2)];
+            obj.analysis.loadClosestNode(obj.xp,["ux" "uy"], [1 0]);
+            obj.analysis.loadClosestNode(xp2,["ux" "uy"], [1 0]);
+            obj.analysis.createNextRightHandSideVector();
+            obj.analysis.loadClosestNode(obj.xp,["ux" "uy"], [0 1]);
+            obj.analysis.loadClosestNode(xp2,["ux" "uy"], [0 1]);
+            obj.analysis.createNextRightHandSideVector();
 
-            obj.analysis.loadClosestNode([x1  z2],["ux" "uy" ], [0 -1]);
-            obj.analysis.loadClosestNode([x4  z2],["ux" "uy" ], [0 -1]);
+            % obj.analysis.loadClosestNode([x1  z2],["ux" "uy" ], [0 -1]);
+            % obj.analysis.loadClosestNode([x4  z2],["ux" "uy" ], [0 -1]);
            
           
             obj.analysis.fixClosestNode([bc*x2   0],["ux" "uy"],[0 0]);
@@ -57,7 +58,7 @@ classdef Pylon2DModel < ModelLinearLoad
             
             obj.analysis.printProblemInfo();
 
-            obj.setResultNode(resX);
+            obj.setResultNode(xres);
             obj.result_number=25;
             obj.setX(ones(obj.analysis.getTotalElemsNumber(),1));
         end
@@ -76,6 +77,13 @@ classdef Pylon2DModel < ModelLinearLoad
             obj.analysis.computeElementResults(obj.x);
             pstress=sum(obj.fe.results.nodal.all(:,14).*obj.fe.results.nodal.all(:,obj.result_number))^(1/penalty);
             %pstress=sum(obj.fe.results.nodal.all(:,obj.result_number))^(1/penalty);
+         end
+
+         function setupLoad(obj,P)
+            obj.analysis.clearCurrentLoad();
+            xp2=[-obj.xp(1) obj.xp(2)];
+            obj.analysis.loadClosestNode(obj.xp,["ux" "uy"], P);
+            obj.analysis.loadClosestNode(xp2,["ux" "uy"], P);
         end
        
     end
