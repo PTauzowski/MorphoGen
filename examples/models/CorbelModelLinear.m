@@ -23,7 +23,7 @@ classdef CorbelModelLinear < ModelLinearLoad
             obj.mesh.addRectMesh2D(  0, hb+hc, b, hb, resb, reshb, sf.pattern );
             obj.mesh.addRectMesh2D(  0, hb, b, hc, resb, reshc, sf.pattern );
             obj.mesh.addRectMesh2D(  b, hb, lc, hc, reslc, reshc, sf.pattern );
-            obj.result_node = obj.mesh.findClosestNode([b+lc h/2]);
+            obj.result_node = obj.mesh.findClosestNode([b h-hb]);
 
             fixedEdgeSelector1 = Selector( @(x)( abs(x(:,2)-h) ) < 0.001 );
             fixedEdgeSelector2 = Selector( @(x)( abs(x(:,2)) ) < 0.001 );
