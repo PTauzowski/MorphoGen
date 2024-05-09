@@ -1,7 +1,7 @@
 classdef (Abstract) StressIntensityTopologyOptimization < TopologyOptimization
     
     properties
-        maxstress, ais, elem_list, maxais, penal, xr, xfat, pnormfat, allx;
+        maxstress, ais, elem_list, maxais, penal, xr, xfat, pnormfat, allx, ct1, ct2;
     end
 
     methods
@@ -35,6 +35,9 @@ classdef (Abstract) StressIntensityTopologyOptimization < TopologyOptimization
         end
 
         function removeStressed( obj )
+            v=sum(obj.x)/obj.V0;
+            %obj.maxais = (obj.ct2-obj.ct1)*v/(obj.Vend-1)-(obj.ct2-obj.Vend*obj.ct1)/(obj.Vend-1);
+            obj.maxais = -0.139*v^2+0.2694*v-0.081;
             notErasedID = find( not( obj.erased_elems )  );
             notErasedID = setxor(notErasedID,intersect(notErasedID, obj.const_elems));
 
