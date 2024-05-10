@@ -202,13 +202,13 @@ classdef ReliabilityTaskTuner < handle
                 obj.mcTop.scatterPlots(varNames,['Top' objName])
          end
         
-         function tabPf(obj,min,max,n)
+         function tabPf(obj,x0,min,max,n)
              x=min;
              dx=(max-min)/n;
              for k=1:n
                  obj.g.threshold=x+k*dx;
                  %mc_res = obj.mcDD.solve();
-                 form_res=obj.form.solve();
+                 form_res=obj.form.solve(x0);
                  %fprintf("x=%1.7f, mean=%1.7f, sd=%1.7f, beta=%1.7f\n",x+k*dx, mc_res.mv, mc_res.sd, mc_res.beta);
                  fprintf("x=%1.7f, beta=%1.7f, mpp:",x+k*dx, form_res.beta);
                  for l=1:size(form_res.mpp,2)
