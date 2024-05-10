@@ -16,9 +16,10 @@ model = CorbelModelLinear(ShapeFunctionL4,b,h,lc,fl,hc,resb,E,nu);
 
 model.plotModel();
 
-randomVariables={RandomVariable("Normal",-2.5,0.1) RandomVariable("Normal",3,0.1)};
+randomVariables={RandomVariable("Normal",-2.5,0.25) RandomVariable("Normal",3,0.3)};
 transform=IndependentTransformation(randomVariables);
-g=performanceFunctionPlus( loadPerformanceFunctionDisp( model ) );
+% g=performanceFunctionPlus( loadPerformanceFunctionDisp( model ) );
+g=performanceFunctionMinus( penalizedStressPerformanceFunction(model,6) );
 
 
 topOpt = StressIntensityTopologyOptimizationVol( 1.2*b/resb, ...
@@ -28,38 +29,39 @@ topOpt = StressIntensityTopologyOptimizationVol( 1.2*b/resb, ...
             0.15, ...           % constraint function object
             true ...            % is finite elements uniform
  );
-
-model.setupLoad([-2.5 3]);
-topOpt.solve();
+ % 
+ % model.setupLoad([-2.5 3]);
+ % topOpt.solve();
 
 % Pdest=[-2.5, 3];
 
- tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 100000000, 2);
+ %tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 100000000, 2);
+ tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 2000, 2);
  % tuner.checkTopology(Pdest);
  % [topMin,topMax] = tuner.getBoundsTopologies(0.3,0.6);
  % tuner.fullReliabilityTuning(Pdest,topMin,topMax);
 
 
-
 %g.threshold = 0.002;
-g.threshold = -0.000812;
+g.threshold = 5.55;
 % mpps = tuner.checkModality(0.5)
-% 
+
+
 % tuner.tuneMC();
 % tuner.plotMCs(["Px" "Py"],'u');
 
-%tuner.fullReliabilityTuning([6, -10]);
 
-tuner.tabPf([-2.5 3],-0.0009,-0.0008,10);
+sora2 = SORA('CorbelDispStress20_2', model,topOpt, randomVariables, g, transform, 2);
+sora3 = SORA('CorbelDispStress20_3', model,topOpt, randomVariables, g, transform, 3);
+sora4 = SORA('CorbelDispStress20_4', model,topOpt, randomVariables, g, transform, 4);
+sora5 = SORA('CorbelDispStress20_5', model,topOpt, randomVariables, g, transform, 5);
 
-sora2 = SORA('CorbelDispBeta20_2', model,topOpt, randomVariables, g, transform, 2);
-sora3 = SORA('CorbelDispBeta20_3', model,topOpt, randomVariables, g, transform, 3);
-sora4 = SORA('CorbelDispBeta20_4', model,topOpt, randomVariables, g, transform, 4);
-sora5 = SORA('CorbelDispBeta20_5', model,topOpt, randomVariables, g, transform, 5);
+% tuner.tabPf([-2.5 3],0,0.06,10);
 
-% sora2.solveX();
+sora2.solveX();
+sora5.solveX();
 % sora3.solveX();
 % sora4.solveX();
-% sora5.solveX();
+
 
 

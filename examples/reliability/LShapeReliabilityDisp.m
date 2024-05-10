@@ -2,7 +2,7 @@ clear;
 close all;
 
 l=3;         % long edge length
-res = 40;    % short edge resolution
+res = 20;    % short edge resolution
 
 model = LShapeModelLinear(  ShapeFunctionL4,...
                              l, ...         % long edge length
@@ -28,12 +28,12 @@ topOpt = StressIntensityTopologyOptimizationVol( 1.2*l/res, ...
             model.analysis, ... % FEM analysis object
             0.005, ...          % stress intensity treshold for element removal 
             2, ...              % penalty factor
-            0.2, ...           % constraint function object
+            0.3, ...           % constraint function object
             true ...            % is finite elements uniform
  );
 
-model.setupLoad([7 -4]);
-topOpt.solve();
+% model.setupLoad([7 -4]);
+% topOpt.solve();
 
 Pdest=[6, -10];
 
@@ -55,10 +55,10 @@ g.threshold = 0.0055;
 
 %tuner.fullReliabilityTuning([6, -10]);
 
-sora2 = SORA('LShapeDispBeta40c_2', model,topOpt, randomVariables, g, transform, 2);
-sora3 = SORA('LShapeDispBeta40c_3', model,topOpt, randomVariables, g, transform, 3);
-sora4 = SORA('LShapeDispBeta40c_4', model,topOpt, randomVariables, g, transform, 4);
-sora5 = SORA('LShapeDispBeta40c_5', model,topOpt, randomVariables, g, transform, 5);
+sora2 = SORA('LShapeDispBeta20_2', model,topOpt, randomVariables, g, transform, 2);
+sora3 = SORA('LShapeDispBeta20_3', model,topOpt, randomVariables, g, transform, 3);
+sora4 = SORA('LShapeDispBeta20_4', model,topOpt, randomVariables, g, transform, 4);
+sora5 = SORA('LShapeDispBeta20_5', model,topOpt, randomVariables, g, transform, 5);
 
  sora2.solveX();
  sora3.solveX();

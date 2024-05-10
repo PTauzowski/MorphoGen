@@ -8,7 +8,7 @@ classdef GradientBasedReliabilityAnalysis < ReliabilityAnalysis
         function obj = GradientBasedReliabilityAnalysis(randVars, g, transform)
             obj = obj@ReliabilityAnalysis(randVars,g);
             obj.transform = transform;
-            g.setPerturbation( transform.createXPerturbation(0.00001) );
+            g.setPerturbation( transform.createXPerturbation(0.0001) );
         end
         
         function [g, gradU] = computeGu( obj, u  )
