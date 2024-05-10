@@ -42,6 +42,16 @@ classdef ModelLinearLoad < ModelLinear
             end
         end 
 
+        function sp = computePenalizedStress(obj,penalty,pressure)
+            np=size(pressure,1);
+            sp=zeros(np,1);
+            for k=1:np
+                obj.setDisplacement(pressure(k,:));
+                obj.analysis.computeElementResults(obj.x);
+                sp(k)=sum(obj.fe.results.nodal.all(:,18).*obj.fe.results.nodal.all(:,obj.result_number))^(1/penalty);
+            end
+        end 
+
         function setDisplacement(obj,rvr)
             dim=size(rvr,2);
             obj.analysis.qfem=zeros(obj.analysis.getTaskDim(),1);

@@ -61,7 +61,7 @@ classdef SORA < handle
                 for k=1:size(mpp,2)
                    fprintf("x(%1d)=%3.4f ",k,mpp(k));
                 end   
-                if conv<0.01 || abs(conv-convp)<0.0001
+                if conv<0.01 || abs(conv-convp)<0.0001 || conv2 < 0.01
                     fr = obj.form.solve(obj.x0);
                     results.mpp=mpp;
                     results.xopt=fr_res.x;
