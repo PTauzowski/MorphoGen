@@ -8,7 +8,7 @@ h=2.7;
 lc=0.6;
 fl=0.5;
 hc=0.7;
-resb=30;
+resb=50;
 E=80000;
 nu=0.3;
 
@@ -43,7 +43,7 @@ topOpt = StressIntensityTopologyOptimizationVol( 1.2*b/resb, ...
 
 
 %g.threshold = 0.002;
-g.threshold = 5.55;
+g.threshold = 7.5;
 % mpps = tuner.checkModality(0.5)
 
 
@@ -51,17 +51,17 @@ g.threshold = 5.55;
 % tuner.plotMCs(["Px" "Py"],'u');
 
 
-sora2 = SORA('CorbelDispStress20_2', model,topOpt, randomVariables, g, transform, 2);
-sora3 = SORA('CorbelDispStress20_3', model,topOpt, randomVariables, g, transform, 3);
-sora4 = SORA('CorbelDispStress20_4', model,topOpt, randomVariables, g, transform, 4);
-sora5 = SORA('CorbelDispStress20_5', model,topOpt, randomVariables, g, transform, 5);
+sora2 = SORA('CorbelStress50_2', model,topOpt, randomVariables, g, transform, 2);
+sora3 = SORA('CorbelStress50_3', model,topOpt, randomVariables, g, transform, 3);
+sora4 = SORA('CorbelStress50_4', model,topOpt, randomVariables, g, transform, 4);
+sora5 = SORA('CorbelStress50_5', model,topOpt, randomVariables, g, transform, 5);
 
 % tuner.tabPf([-2.5 3],0,0.06,10);
 
 sora2.solveX();
 sora5.solveX();
-% sora3.solveX();
-% sora4.solveX();
+sora3.solveX();
+sora4.solveX();
 
 
 

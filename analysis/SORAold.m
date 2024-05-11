@@ -1,11 +1,11 @@
-classdef SORA < handle
+classdef SORAold < handle
     
     properties
         model, topOpt, randVars, g, transform, form, hmv, mpps, betat, baseName, allXi, x0;
     end
     
     methods
-        function obj = SORA(baseName, model, topOpt, randVars, g, transform, betat )
+        function obj = SORAold(baseName, model, topOpt, randVars, g, transform, betat )
             obj.baseName=baseName;
             obj.model=model;
             obj.topOpt=topOpt;
