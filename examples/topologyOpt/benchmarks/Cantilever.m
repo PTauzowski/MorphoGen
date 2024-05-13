@@ -38,12 +38,12 @@ tic
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.4, true );
 [objF, xopt]  = topOpt.solve();
 toc
-
-figure;
-tic
-topOpt = SIMP_MMA_TopologyOptimizationElasticCompliance(Rfilter, analysis, penal, 0.4, true);
-[objF, xopt]  = topOpt.solve();
-toc
+% 
+% figure;
+% tic
+% topOpt = SIMP_MMA_TopologyOptimizationElasticCompliance(Rfilter, analysis, penal, 0.4, true);
+% [objF, xopt]  = topOpt.solve();
+% toc
 
 
 
