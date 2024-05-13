@@ -41,11 +41,16 @@ classdef (Abstract) StressIntensityTopologyOptimization < TopologyOptimization
         end
 
         function removeStressed( obj )
-            %obj.maxais = (1 - sum( obj.x )/obj.V0)/(1-obj.Vend) * 0.005 + (sum( obj.x )/obj.V0)/(1-obj.Vend)   * 0.05;
+            v=sum( obj.x )/obj.V0;
+            %obj.maxais = (1 - sum( obj.x )/obj.V0)/(1-obj.Vend) * 0.005 + (sum( obj.x )/obj.V0)/(1-obj.Vend)   * 0.05
+            maxAisUsed = obj.maxais;
+            % if v-obj.Vend < 0.1
+            %     maxAisUsed = obj.maxais*0.1;
+            % end
             notErasedID = find( not( obj.erased_elems )  );
             notErasedID = setxor(notErasedID,intersect(notErasedID, obj.const_elems));
 
-            maxaisprc =(max(obj.ais(notErasedID)) - min(obj.ais(notErasedID)) ) * obj.maxais;
+            maxaisprc =(max(obj.ais(notErasedID)) - min(obj.ais(notErasedID)) ) * maxAisUsed;
             obj.elem_list = obj.ais(notErasedID) < min(obj.ais(notErasedID)) + maxaisprc;
 
             obj.elem_list = notErasedID( obj.elem_list );

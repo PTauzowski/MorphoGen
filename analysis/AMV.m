@@ -37,12 +37,25 @@ classdef AMV < GradientBasedReliabilityAnalysis
                      results.n = n;
                      results.mpp = obj.transform.toX( u );
                      results.beta_pred = obj.betat*(1+g/(g0-g));
+                     results.g0=g0;
+                     results.g = g;
                      results.success=true;
                     return;
                 end
             end
             results.success = false;
             results.err_msg = ['AMV error: not convergent after ' num2str(k-1) ' iterations'];
+        end
+
+        function printResults(obj, tx, amv_results)
+            fprintf("%s AMV results :",tx);
+            if amv_results.success
+                fprintf("G0=%5.7f, G=%5.7f, beta_pred=%5.7f, mpp=",amv_results.g0,amv_results.g,amv_results.beta_pred);
+                obj.printPoint(amv_results.mpp);
+            else
+                fprintf("NOT succeed! %s",amv_results.err_msg);
+            end
+            fprintf("\n");
         end
     end
 end

@@ -43,7 +43,15 @@ classdef MonteCarlo < ReliabilityAnalysis
             end
         end
 
-        function printResults(obj)
+        function printResults(obj, tx, mc_results)
+            mv=mean(obj.r);
+            sd=std(obj.r);
+            fprintf("%s Monte Carlo results: mean=%5.7f, sigma=%5.7f, Pf=%5.7f, beta=%5.7f, mpp=",tx, mv,sd,mc_results.Pf, mc_results.beta);
+            obj.printPoint(mc_results.mpp);
+            fprintf("\n");
+        end
+
+        function printStats(obj)
             mv=mean(obj.r);
             sd=std(obj.r);
             fprintf(" mean=%5.7f, sigma=%5.7f\n",mv,sd);

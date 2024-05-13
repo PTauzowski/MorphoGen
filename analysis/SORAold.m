@@ -24,7 +24,7 @@ classdef SORAold < handle
 
      
         
-        function results = solveX(obj)
+        function results = solveX(obj,destVol)
             mpp=obj.hmv.transform.toX(zeros(1,obj.g.dim));
             mpp2=mpp;
             obj.model.setupLoad(mpp);
@@ -61,20 +61,15 @@ classdef SORAold < handle
                 for k=1:size(mpp,2)
                    fprintf("x(%1d)=%3.4f ",k,mpp(k));
                 end   
-                if conv<0.01 || abs(conv-convp)<0.0001 || conv2 < 0.01
-                    fr = obj.form.solve(obj.x0);
-                    results.mpp=mpp;
-                    results.xopt=fr_res.x;
-%                   results.beta_form=fr.beta;
-                    fr_res=obj.findBetaFrame();
-                    %fr_res=obj.checkLastFrame();
-                    obj.topOpt.setFrame( fr_res.frame );    
+                if conv<0.01 || abs(conv-convp)<0.0001 || conv2 < 0.01 || iter==5
+                    destFrame=obj.findVolFrame(destVol);
+                    obj.topOpt.setFrame(destFrame);
+                    form_res=obj.form.solve(obj.x0);
                     obj.topOpt.plotCurrentFrame();
-                    title([obj.baseName 'safe topology, volfr=' num2str(sum(fr_res.x)/size(fr_res.x,1))]);
+                    title([obj.baseName 'Safe topology, volfr = ' num2str(sum(fr_res.x)/size(fr_res.x,1))]);
                     savefig([obj.baseName '_safe.fig']);
                     %obj.model.setX(obj.topOpt.allx(:,end));
-                    obj.model.setX(obj.topOpt.allx(:,fr_res.frame));
-                    form_res=obj.form.solve(obj.x0);
+                    obj.model.setX(obj.topOpt.allx(:,destFrame));
                     if form_res.success
                         fprintf('\nProbablistic topology beta FORM=%1.5f',form_res.beta );
                     else
@@ -199,6 +194,16 @@ classdef SORAold < handle
              figure;
              plot(plVolFr,plBetaFORM);
              title('FORM beta vs volFr ');
+        end
+
+        function frame = findVolFrame(obj,vf)
+            frame=0;
+             for k=1:size(obj.topOpt.allx,2)
+                 frame=k;
+                 if vf>sum(obj.topOpt.allx(:,k))/obj.topOpt.V0
+                     return;
+                 end
+             end
         end
 
         function limitReliability(obj)

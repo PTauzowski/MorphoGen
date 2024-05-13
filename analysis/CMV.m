@@ -56,6 +56,17 @@ classdef CMV < GradientBasedReliabilityAnalysis
             results.success = false;
             results.err_msg = ['CMV error: not convergent after ' num2str(k-1) ' iterations'];
         end
+
+         function printResults(obj, tx, cmv_results)
+            fprintf("%s CMV results :",tx);
+            if cmv_results.success
+                fprintf("G=%5.7f, beta_pred=%5.7f, mpp=",cmv_results.g,cmv_results.beta_pred);
+                obj.printPoint(cmv_results.mpp);
+            else
+                fprintf("NOT succeed! %s",cmv_results.err_msg);
+            end
+            fprintf("\n");
+        end
     end
 end
 

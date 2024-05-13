@@ -18,6 +18,7 @@ classdef FORM < GradientBasedReliabilityAnalysis
                 
                if  norm(dg)<1.0E-20
                      results.success=false;
+                     results.beta=NaN;
                      results.err_msg='FORM error: gradient norm too small';
                      return;
                end
@@ -28,6 +29,7 @@ classdef FORM < GradientBasedReliabilityAnalysis
 
                 if  size(find( abs(conv) > 500 ),1 ) 
                      results.success=false;
+                     results.beta=NaN;
                      results.err_msg='FORM not converged!\n';
                      return;
                 end
@@ -43,6 +45,17 @@ classdef FORM < GradientBasedReliabilityAnalysis
             end
             results.success=false;
             results.err_msg='FORM not converged!\n';
+        end
+
+        function printResults(obj, tx, form_results)
+            fprintf("%s FORM results :",tx);
+            if form_results.success
+                fprintf("Pf=%5.7f, beta=%5.7f, mpp=",form_results.Pf, form_results.beta);
+                obj.printPoint(form_results.mpp);
+            else
+                fprintf("NOT succeed! %s",form_results.err_msg);
+            end
+            fprintf("\n");
         end
     end
 end

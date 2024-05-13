@@ -156,7 +156,7 @@ classdef ReliabilityTaskTuner < handle
             fprintf("\n* Topology optimization with reliability constraints tuner *\n");
             fprintf("Design Domain Monte Carlo sampling\n");
             obj.mcDD_res = obj.mcDD.solve();
-            obj.mcDD.printResults();
+            obj.mcDD.printStats();
             fprintf("\nTopology optimization iterations\n");
             mpp=obj.hmv.transform.toX(zeros(1,obj.g.dim));
             obj.model.setupLoad(mpp);
@@ -165,7 +165,7 @@ classdef ReliabilityTaskTuner < handle
             obj.model.setX(xopt);
             fprintf("\nTopology Monte Carlo sampling\n");
             obj.mcTop_res = obj.mcTop.solve();
-            obj.mcTop.printResults();
+            obj.mcTop.printStats();
         end
 
          function obj = tuneFORM(obj)
