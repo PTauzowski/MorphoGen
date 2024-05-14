@@ -36,7 +36,7 @@ tic
 %res_mc = mc.solve();
 x0(1:3)=[0.3333    0.8    4  ];
 x0(4:6)=[1    1    1  ];
-xopt = fmincon(fn_g,x0,[],[],[],[],lb,ub)
+xopt = fmincon(fn_g,x0,[],[],[],[],lb,ub);
 %xopt = fmincon(fn_g,x0)
 toc
 

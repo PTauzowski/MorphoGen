@@ -65,10 +65,10 @@ sora5 = SORAold('CorbelDisp50_5', model,topOpt, randomVariables, g, transform, 5
 
 %sora2.tune(2000);
 
-%sora5.solveX(0.38);
-%sora2.solveX(0.25);
+sora5.solveX(0.38);
+sora2.solveX(0.25);
 sora3.solveX(0.34);
-%sora4.solveX(0.36);
+sora4.solveX(0.36);
 
 
 

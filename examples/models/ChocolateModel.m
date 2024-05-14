@@ -133,7 +133,7 @@ classdef ChocolateModel < ModelLinear
             ngan=2;
             
             % FE depth division of the rouned part of the notch
-            nround=2;
+            nround=1;
             
             % FE depth division of the straight part of the notch
             nstr=1;
