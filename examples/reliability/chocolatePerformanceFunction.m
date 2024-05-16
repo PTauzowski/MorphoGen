@@ -44,7 +44,7 @@ classdef  chocolatePerformanceFunction < Function
          function evaluateValue(obj,x)
                 close all;
                 createModel(obj,x(1,:));
-                obj.model.plotModel();
+                obj.model.plotModelMesh();
                 obj.model.setTempVars(x(4:end));
                 obj.model.solveWeighted();  
                 obj.model.analysis.plotMaps(["uy" "ux" "sxx" "sxy" "syy" "sHM"],0.1);
