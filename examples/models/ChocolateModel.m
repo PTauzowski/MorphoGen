@@ -103,7 +103,7 @@ classdef ChocolateModel < ModelLinear
             zGt = ganTh;
             
             % top of interface layer
-            zIt = zGt+obj.intTh;
+            zIt = zGt; +obj.intTh;
             
             % bottom of noth
             zNb = zIt+obj.alGanTh-notchDepth;
@@ -216,7 +216,7 @@ classdef ChocolateModel < ModelLinear
             mesh.addShapedMesh3D( ShapeFn27,rNotch2,  [ncy,nnotch,nround], ShapeFn27.localNodes );
             mesh.duplicateTransformedMeshDeg3D( [x3/2  y3/2 ], 180, [0 0 0] );
             mesh.addShapedMesh3D( ShapeFn8, ganTileGeom, [ncx,ncy,ngan], ShapeFn27.localNodes );
-            mesh.addShapedMesh3D( ShapeFn8, thTileGeom,  [ncx,ncy,1], ShapeFn27.localNodes );
+            %mesh.addShapedMesh3D( ShapeFn8, thTileGeom,  [ncx,ncy,1], ShapeFn27.localNodes );
             mesh.addShapedMesh3D( ShapeFn8, allGanRound, [ncx,ncy,nround], ShapeFn27.localNodes );
             mesh.addShapedMesh3D( ShapeFn8, allGanStright, [ncx,ncy,nstr], ShapeFn27.localNodes );
             
