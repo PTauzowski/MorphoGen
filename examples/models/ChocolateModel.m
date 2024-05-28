@@ -1,17 +1,19 @@
 classdef ChocolateModel < ModelLinear
 
     properties
-        ganTh, alGanTh, intTh, tileXWidth, tileYWidth, notchWidth, nTempVars,xt,xn,zCoords;
-        allganElemsSelector,allganTopElemsSelector,alphaT, dT;
+        ganTh, alGanTh, intTh, tileXWidth, tileYWidth, notchWidth, nTempVars,xt,xn,zCoords,zCornersCoords;
+        allganElemsSelector,allganTopElemsSelector,alphaT, dT, zTol;
     end
     
     methods
         function obj = ChocolateModel( ganTh, alGanTh, notchWidth, relNotchDepth, relRoutndNotchDepth, E, nu, alphaT, dT)
             obj.alphaT=alphaT;
             obj.dT=dT;
+            obj.zTol=1000;
             obj.generateMesh( ganTh, alGanTh, notchWidth, relNotchDepth, relRoutndNotchDepth );
-            obj.zCoords = sort(unique(round(obj.mesh.nodes(:,3)*10000)/10000),'descend');
-            obj.nTempVars=size(find((round((obj.zCoords-ganTh)*10000)/10000)>0),1)-3;
+            obj.zCoords = sort(unique(round(obj.mesh.nodes(:,3)*obj.zTol)/obj.zTol),'descend');
+            obj.computeZNodalCoords();
+            obj.nTempVars=size(find((round((obj.zCoords-ganTh)*obj.zTol)/obj.zTol)>0),1)-3;
             obj.fe = SolidElasticElem( ShapeFunctionL27, obj.mesh.elems );
             obj.analysis = LinearElasticityWeighted( obj.fe, obj.mesh, false );
 
@@ -101,7 +103,7 @@ classdef ChocolateModel < ModelLinear
             zGt = ganTh;
             
             % top of interface layer
-            zIt = zGt+obj.intTh;
+            zIt = zGt; +obj.intTh;
             
             % bottom of noth
             zNb = zIt+obj.alGanTh-notchDepth;
@@ -214,7 +216,7 @@ classdef ChocolateModel < ModelLinear
             mesh.addShapedMesh3D( ShapeFn27,rNotch2,  [ncy,nnotch,nround], ShapeFn27.localNodes );
             mesh.duplicateTransformedMeshDeg3D( [x3/2  y3/2 ], 180, [0 0 0] );
             mesh.addShapedMesh3D( ShapeFn8, ganTileGeom, [ncx,ncy,ngan], ShapeFn27.localNodes );
-            mesh.addShapedMesh3D( ShapeFn8, thTileGeom,  [ncx,ncy,1], ShapeFn27.localNodes );
+            %mesh.addShapedMesh3D( ShapeFn8, thTileGeom,  [ncx,ncy,1], ShapeFn27.localNodes );
             mesh.addShapedMesh3D( ShapeFn8, allGanRound, [ncx,ncy,nround], ShapeFn27.localNodes );
             mesh.addShapedMesh3D( ShapeFn8, allGanStright, [ncx,ncy,nstr], ShapeFn27.localNodes );
             
@@ -228,6 +230,26 @@ classdef ChocolateModel < ModelLinear
 
         function s = getNodalStress(obj,result_node,result_number)
             sHM=obj.fe.results.nodal(result_node,result_number);
+        end
+
+        function computeZNodalCoords(obj)
+            zCornersPoints=[    obj.mesh.nodes(obj.mesh.elems(:,1),:); ...
+                                obj.mesh.nodes(obj.mesh.elems(:,3),:); ...
+                                obj.mesh.nodes(obj.mesh.elems(:,7),:); ...
+                                obj.mesh.nodes(obj.mesh.elems(:,9),:); ...
+                                obj.mesh.nodes(obj.mesh.elems(:,19),:); ...
+                                obj.mesh.nodes(obj.mesh.elems(:,21),:); ...
+                                obj.mesh.nodes(obj.mesh.elems(:,25),:); ...
+                                obj.mesh.nodes(obj.mesh.elems(:,27),:); ];
+              
+            obj.zCornersCoords = sort(unique(round(zCornersPoints(:,3)*obj.zTol)/obj.zTol),'descend');
+        end
+
+        function plotZCoordsPoints(obj)
+            n=size(obj.zCornersCoords,1);
+            x=zeros(n,1);
+            p=plot3(x,x,obj.zCornersCoords,'.');
+            p.Color = "red";
         end
 
         function [stressObj, sx1, sy1, sx2, sy2]=computeStressObjective(obj)
@@ -275,7 +297,7 @@ classdef ChocolateModel < ModelLinear
         
             fprintf(myfile,"\n EDIS\n");
             fprintf(myfile,"  gap 0.0001\n")
-            for k=1:size(obj.zCoords,1)
+            for k=1:size(obj.zCornersCoords,1)
                 if k<=obj.nTempVars
                     fprintf(myfile,"  3  %5.3f  0  0  0  %1.2f\n", obj.zCoords(k), chemistry(k) ); 
                 else

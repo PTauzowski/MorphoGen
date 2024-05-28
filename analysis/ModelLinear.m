@@ -66,6 +66,10 @@ classdef ModelLinear < FEModel
             %pstress=sum(obj.fe.results.nodal.all(:,obj.result_number))^(1/penalty);
         end
     
+        function plotModelMesh( obj )
+            obj.analysis.plotFiniteElements();
+        end
+
         function plotModel( obj )
             obj.analysis.plotFiniteElements();
             % obj.analysis.plotCurrentLoad();
