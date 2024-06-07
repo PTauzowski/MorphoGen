@@ -6,7 +6,7 @@ classdef Mesh < handle
     end
     
     methods
-        function MergedElems = merge( obj, newNodes, newElems )
+        function mergedElems = merge( obj, newNodes, newElems )
             [~,si1,si2] = unique( round(newNodes .* obj.tolerance), 'rows', 'stable' );
             newNodes = newNodes( si1, : );
             newElems = si2(newElems);
@@ -15,7 +15,7 @@ classdef Mesh < handle
             end
            if size( obj.nodes, 1 ) == 0 
                   obj.nodes = newNodes;
-                  MergedElems = newElems;
+                  mergedElems = newElems;
            else
                 [~,i1,i2] = intersect( round(obj.nodes .* obj.tolerance), round(newNodes.*obj.tolerance), 'rows' );
                 nidx  = 1:size(newNodes,1);
@@ -26,8 +26,8 @@ classdef Mesh < handle
                 ninds = zeros( size(newNodes,1), 1);
                 ninds(i2)=i1;
                 ninds(nidx)=noi;
-                MergedElems = newElems;
-                MergedElems(:) = ninds( newElems(:) );
+                mergedElems = newElems;
+                mergedElems(:) = ninds( newElems(:) );
           end
         end
         function newIndices = mergeMesh( obj, newMesh )
