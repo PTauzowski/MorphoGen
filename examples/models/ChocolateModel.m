@@ -57,7 +57,7 @@ classdef ChocolateModel < ModelLinear
           
             
             % interface thickness
-            obj.intTh = 0.025;
+            obj.intTh = 0.0; %.025;
             
             %depth of the notch
             notchDepth=relNotchDepth*alGanTh; 
