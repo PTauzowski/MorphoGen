@@ -1,6 +1,6 @@
 clear;
 close all;
-res = 10;
+res = 6;
 l = 1;
 
 Rfilter = l/res;
@@ -28,16 +28,16 @@ analysis.loadClosestNode([ 2*l, 0.4*l, 0.4*l ], ["ux" "uy" "uz"], [0 0 -1.0] );
 analysis.fixNodes( fixedEdgeSelector, ["ux" "uy" "uz"] );
 
 analysis.printProblemInfo();
-fe.plotSolid(mesh.nodes);
+fe.plot(mesh.nodes);
 analysis.plotCurrentLoad();
 analysis.plotSupport();
  view(45, 45);
  %         view(135, 25);
 
-tic
-topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.2, true );
-[objF, xopt]  = topOpt.solve();
-toc
+% tic
+% topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.2, true );
+% [objF, xopt]  = topOpt.solve();
+% toc
 
 figure;
 tic

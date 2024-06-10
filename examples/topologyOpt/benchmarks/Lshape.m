@@ -1,7 +1,7 @@
 clear;
 close all;
 
-res = 20;
+res = 15;
 l = 1;
 
 Rfilter = 1.2*l/res;
@@ -31,7 +31,7 @@ analysis.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
 
 analysis.printProblemInfo();
 
-fe.plotSolid(mesh.nodes);
+fe.plot(mesh.nodes);
 analysis.plotCurrentLoad();
 analysis.plotSupport();
 

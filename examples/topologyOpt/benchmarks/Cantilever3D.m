@@ -1,6 +1,6 @@
 clear;
 close all;
-res = 32;
+res = 15;
 l = 3;
 
 % Filtering radius
@@ -30,14 +30,14 @@ analysis.fixNodes( symmetrySelector, ["uy"] );
 %problem.fixClosestNode([0 0 0],["ux" "uy" "uz"],[0 0 0])
 
 analysis.printProblemInfo();
-fe.plotSolid(mesh.nodes);
+fe.plot(mesh.nodes);
 analysis.plotCurrentLoad();
 analysis.plotSupport();
 
-tic
-topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.2, true );
-[objF, xopt]  = topOpt.solve();
-toc
+% tic
+% topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.2, true );
+% [objF, xopt]  = topOpt.solve();
+% toc
 
 figure;
 tic

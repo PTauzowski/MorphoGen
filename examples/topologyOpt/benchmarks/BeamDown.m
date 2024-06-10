@@ -1,7 +1,7 @@
 clear;
 close all;
 
-res = 50;
+res = 30;
 l = 1;
 tic
 aspect=3;
@@ -33,7 +33,7 @@ analysis.loadClosestNode([aspect*l/2, 0 ], ["ux" "uy"], [0 -1] );
 analysis.fixClosestNode([0 0], ["ux" "uy"], [0 0]);
 analysis.fixClosestNode([aspect*l 0], ["uy"], [0]) ;
 analysis.printProblemInfo();
-fe.plotSolid(mesh.nodes);
+fe.plot(mesh.nodes);
 analysis.plotCurrentLoad();
 analysis.plotSupport();
 
