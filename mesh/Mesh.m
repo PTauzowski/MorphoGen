@@ -339,6 +339,46 @@ classdef Mesh < handle
             obj.mergeMesh(mesh);
         end
 
+        function addRobotArm(obj,r1,R1,nr,angle,angles,l,lnodes)
+            mesh=Mesh();
+            x0=[0; 0; 0];
+            R=eye(3);
+            Rm=R;
+            nc=round((2*pi*(R1+r1)/2/((R1-r1)/nr)));
+            cdiv=30;
+            a=(0:1/cdiv:1)*2*pi;
+            circle=zeros(3,cdiv+1);
+            circle(1,:)=R1*cos(a);
+            circle(2,:)=R1*sin(a);
+            daspect([1 1 1]);
+            %line(circle(1,:),circle(2,:), circle(3,:));
+            for k=1:size(l,2)
+                nz=round(l(k)/((R1-r1)/nr));
+                meshs=Mesh();
+                meshs.addRectMesh3D( r1, 0, 0, R1-r1, 2*pi, 1, nr, nc, nz, lnodes)
+                meshs.transformToCylindrical3D([0 0 0]);
+                nodes1 = x0'+[meshs.nodes(:,1) meshs.nodes(:,2) meshs.nodes(:,3)*0]*Rm';
+                x1=[0; 0; l(k)];
+                % Create rotation matrices
+                Ry = obj.rotate_y(pi*angle/180);
+                Rz = obj.rotate_z(pi*angles(k)/180);
+                R=R*Ry*Rz;
+                Rm1=Rm*Ry;
+                xn=x0+R*x1;
+                %nodes2 = xn'+[meshs.nodes(:,1) meshs.nodes(:,2) meshs.nodes(:,3)*0]*Rm1;
+                nodes2 = xn'+[meshs.nodes(:,1) meshs.nodes(:,2) meshs.nodes(:,3)*0]*Rm1';
+                meshs.nodes=(1-meshs.nodes(:,3)).*nodes1+(meshs.nodes(:,3)).*nodes2;
+
+                xc=x0+R*(circle+x1);
+                %line([x0(1) xn(1)],[x0(2) xn(2)], [x0(3) xn(3)]);
+                %line(xc(1,:),xc(2,:), xc(3,:));
+                x0=xn;
+                Rm=Rm1;
+                mesh.mergeMesh(meshs);
+            end
+            obj.mergeMesh(mesh);
+        end
+
         function obj = addrectPipe(obj,w,h,l1,th,nth,lnodes)
             nx=round(l1/th)*nth;
             ny=round((w-2*th)/th)*nth;
@@ -468,6 +508,28 @@ classdef Mesh < handle
             save([filenamebase '_mesh.mat'],"nodes","elems");
             dlmwrite([filenamebase '_nodes.txt'],obj.nodes,'delimiter','\t','precision','%7.3f');
             dlmwrite([filenamebase '_elems.txt'],obj.elems,'delimiter','\t','precision',6,'-append');
+        end
+        function Rx = rotate_x(obj,theta_x)
+                    Rx = [
+                1, 0, 0;
+                0, cos(theta_x), -sin(theta_x);
+                0, sin(theta_x), cos(theta_x)
+            ];
+        end
+        function Ry = rotate_y(obj,theta_y)
+            Ry = [
+                cos(theta_y), 0, sin(theta_y);
+                0, 1, 0;
+                -sin(theta_y), 0, cos(theta_y)
+            ];
+        end
+
+        function Rz = rotate_z(obj,theta_z)
+            Rz = [
+                cos(theta_z), -sin(theta_z), 0;
+                sin(theta_z), cos(theta_z), 0;
+                0, 0, 1
+            ];
         end
     end
 end
