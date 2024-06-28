@@ -4,7 +4,7 @@ w=0.5;
 l=8*w;
 h=4*w;
 c=0.4;
-res = 6;
+res = 10;
 E=210000;
 nu=0.3;
 
@@ -61,11 +61,11 @@ topOpt.is_silent=true;
 % topOpt.solve();
 % sora2.tabReliability();
 
- sora2.checkTuning();
- sora3.checkTuning();
+ % sora2.checkTuning();
+ % sora3.checkTuning();
 
-% sora_results2 = sora2.solveX();
-% sora_results3 = sora3.solveX();
+ sora_results2 = sora2.solveX();
+ sora_results3 = sora3.solveX();
 
 % form_res = form.solve()
 
