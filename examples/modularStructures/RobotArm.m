@@ -3,7 +3,7 @@ close all;
 R=1;
 r=0.8;
 l=[2 2 2 2];
-angles=[30 30 30 -30];
+angles=[30 30 30 45];
 angle=20;
 res=3;
 
