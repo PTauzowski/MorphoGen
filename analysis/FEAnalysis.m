@@ -28,12 +28,12 @@ classdef (Abstract) FEAnalysis < handle
         end
         function ne = getTotalElemsNumber(obj)
             ne=0;
-            for k=1:size(obj.felems,1)
+            for k=1:size(obj.felems,2)
                 ne = ne + size( obj.felems{k}.elems, 1);
             end
         end
         function ei = getElemIndices(obj)
-             ne=size(obj.felems,1);
+             ne=size(obj.felems,2);
              ei=cell(ne,1);
              offset=1;
              for k=1:ne  
@@ -42,7 +42,7 @@ classdef (Abstract) FEAnalysis < handle
              end
         end
         function selems = selectElems(obj,selector)
-             ne=size(obj.felems,1);
+             ne=size(obj.felems,2);
              tne=obj.getTotalElemsNumber();
              selems=[];
              for k=1:ne  
@@ -106,7 +106,7 @@ classdef (Abstract) FEAnalysis < handle
             J=[];
             V=[];
             Ksize = 0;
-            for k=1:max(size(obj.felems))
+            for k=1:max(size(obj.felems,2))
                 [Ie,Je,Ve,Kesize] = obj.felems{k}.sparseMatrixAllocDataUniform( obj.ndofs );
                 I = [ I; reshape(Ie',[],1) ];
                 J = [ J; reshape(Je',[],1) ];
@@ -295,7 +295,7 @@ classdef (Abstract) FEAnalysis < handle
 
               xp = xps - obj.supports * dg * 0.02;
               
-              for k=1:size(irots)
+              for k=1:length(irots(:))
                   alpha = obj.rotations(irots(k));
                   xp(irots(k),1) = xps(irots(k),1) - cos(alpha*pi/180) * dg * 0.02; 
                   xp(irots(k),2) = xps(irots(k),2) - sin(alpha*pi/180) * dg * 0.02; 

@@ -65,11 +65,17 @@ classdef CorbelModelMultiMat < FEModel
             obj.analysis.plotFiniteElements();
         end
 
-         function plotModel( obj )
+         function obj = plotModel( obj )
             obj.analysis.plotFiniteElements();
             obj.analysis.plotCurrentLoad();
             obj.analysis.plotSupport();
             % plot(obj.mesh.nodes(obj.result_node,1),obj.mesh.nodes(obj.result_node,2),"Marker","o");
+         end
+
+          function solveWeighted(obj)
+            obj.analysis.qfem=obj.analysis.solveWeighted(obj.x);
+            obj.analysis.initializeResults();
+            obj.analysis.computeElementResults();
         end
        
     end

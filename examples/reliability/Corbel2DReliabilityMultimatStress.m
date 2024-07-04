@@ -31,8 +31,14 @@ topOpt = StressIntensityTopologyOptimizationVol( 1.2*b/resb, ...
             0.2, ...           % constraint function object
             true ...            % is finite elements uniform
  );
-
  model.setupLoad([-2.5 3]);
+model.solveWeighted();
+
+model.plotModel();
+model.analysis.plotMaps(["uy" "ux" "sxx" "sxy" "syy" "sHM"],0.1);
+model.fe.plotWired(model.mesh.nodes,model.analysis.qnodal,0.1);
+
+
  topOpt.solve();
  title("Starting topology");
  figure;
