@@ -8,11 +8,13 @@ h=2.7;
 lc=0.6;
 fl=0.5;
 hc=0.7;
-resb=60;
-E=80000;
+resb=20;
+E1=100000;
+E2=80000;
+E3=60000;
 nu=0.3;
 
-model = CorbelModelLinear(ShapeFunctionL4,b,h,lc,fl,hc,resb,E,nu);
+model = CorbelModelMultiMat(ShapeFunctionL4,b,h,lc,fl,hc,resb,E1,E2,E3,nu);
 
 model.plotModel();
 

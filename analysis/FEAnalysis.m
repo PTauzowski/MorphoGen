@@ -108,9 +108,9 @@ classdef (Abstract) FEAnalysis < handle
             Ksize = 0;
             for k=1:max(size(obj.felems))
                 [Ie,Je,Ve,Kesize] = obj.felems{k}.sparseMatrixAllocDataUniform( obj.ndofs );
-                I = [ I reshape(Ie',[],1) ];
-                J = [ J reshape(Je',[],1) ];
-                V = [ V reshape(Ve',[],1) ];
+                I = [ I; reshape(Ie',[],1) ];
+                J = [ J; reshape(Je',[],1) ];
+                V = [ V; reshape(Ve',[],1) ];
                 Ksize = Ksize + Kesize;
             end
         end

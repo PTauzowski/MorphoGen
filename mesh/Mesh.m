@@ -87,7 +87,8 @@ classdef Mesh < handle
               found = ismember(obj.elems, fnodes);
               felems = find(sum(found,2)==size(obj.elems,2));
         end
-        function obj = addRectMesh2D( obj, x1, y1, dx, dy, nx, ny, pattern )
+
+        function retelem = addRectMesh2D( obj, x1, y1, dx, dy, nx, ny, pattern )
             dim = max(max( pattern ));
             nn = ( dim *  nx + 1 ) * ( dim *  ny + 1 );
             ne = size( pattern, 1 ); 
@@ -105,8 +106,9 @@ classdef Mesh < handle
                 newElems(k,i) = grid( ix + pattern(i,1),  iy + pattern(i,2) ) ;
               end
             end
-            obj.merge( newNodes, newElems );
+            retelem = obj.merge( newNodes, newElems );
         end
+
         function obj = addDelaunayMesh2D( obj, P, C, nnodes )
             xv = unifrnd(min(P(:,1)),max(P(:,1)),1,nnodes);
             yv = unifrnd(min(P(:,2)),max(P(:,2)),1,nnodes);
