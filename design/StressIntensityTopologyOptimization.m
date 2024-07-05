@@ -75,7 +75,7 @@ classdef (Abstract) StressIntensityTopologyOptimization < TopologyOptimization
             obj.qnodal = obj.FEAnalysis.solveWeighted((obj.x).^obj.penal);
             obj.FEAnalysis.computeElementResults(obj.x.^obj.penal);
             ais = zeros(obj.FEAnalysis.getTotalElemsNumber(),1);
-            for i=1:size(obj.FEAnalysis.felems,1)
+            for i=1:size(obj.FEAnalysis.felems,2)
                hmIndex=find(obj.FEAnalysis.felems{i}.results.names == "sHM");
                for j=1:size(obj.FEAnalysis.felems{i}.elems,1)
                     %ais(obj.elem_inds{i}(j)) = mean( obj.linearElasticProblem.felems{i}.results.GPvalues(hmIndex,j,:) );

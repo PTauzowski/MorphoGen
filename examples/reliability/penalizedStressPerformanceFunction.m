@@ -1,12 +1,12 @@
 classdef  penalizedStressPerformanceFunction < Function
 
     properties
-        model,penalty;
+        model, penalty;
     end
 
     methods
-        function obj = penalizedStressPerformanceFunction(model,penalty)
-            obj=obj@Function(2,0.01)
+        function obj = penalizedStressPerformanceFunction(model,dim,penalty)
+            obj=obj@Function(dim,0.01)
             obj.model=model;   
             obj.penalty=penalty;
         end

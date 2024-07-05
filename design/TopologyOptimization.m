@@ -128,7 +128,7 @@ classdef TopologyOptimization < handle
             centroids = zeros( tne, size( problem.mesh.nodes, 2 ) );
             obj.neighbours = cell( tne, 1 );
             k=1;
-            for i=1:size( problem.felems, 1)
+            for i=1:size( problem.felems, 2)
                 for j=1:size( problem.felems{i}.elems, 1)
                     centroids(k, :) = mean( problem.mesh.nodes( problem.felems{i}.elems(j, :), :));
                     k=k+1;
@@ -172,7 +172,7 @@ classdef TopologyOptimization < handle
                 %view(135, 25);
                 %plotMeshTopology( nodes, multiObjectList( faces, elemClass.paths ), nres(:,elemClass.iHM), [ elemClass.rnames{elemClass.iHM} ',  volume '  num2str(V/V0*100,3) '%'], 1  );
                 
-                for i=1:size( obj.FEAnalysis.felems, 1)
+                for i=1:size( obj.FEAnalysis.felems, 2)
                     ip = ismember(elem_inds{i},obj.const_elems);
                     active_el = elem_inds{i};
                     active_el(ip) = [];
@@ -181,9 +181,9 @@ classdef TopologyOptimization < handle
                     obj.FEAnalysis.felems{i}.plotSolidSelected(obj.FEAnalysis.mesh.nodes,obj.const_elems,[0.6,0.6,0.6]);
                 end
             else
-                for i=1:size( obj.FEAnalysis.felems, 1)
+                for i=1:size( obj.FEAnalysis.felems, 2)
                     %faces = x(elem_inds{i})>0.5;
-                    faces = elem_inds{i};
+                    faces = 1:length(elem_inds{i});
                     %patch('Vertices', problem.nodes, 'Faces', problem.felems{i}.elems(faces,problem.felems{i}.sf.contour),'FaceColor','none','EdgeColor','k');
                     %patch('Vertices', problem.nodes, 'Faces', problem.felems{i}.elems(faces,problem.felems{i}.sf.contour),'FaceColor',[0.8 0.8 0.8],'EdgeColor','none');
                     C = 1-obj.FEAnalysis.felems{i}.results.nodal.all(:,18);

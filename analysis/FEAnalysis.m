@@ -208,14 +208,19 @@ classdef (Abstract) FEAnalysis < handle
         function computeElementResults(obj,varargin)
             resnumber=0;
             nnodes=size(obj.mesh.nodes, 1);
+            ei = obj.getElemIndices();
+            
             if ( nargin == 2 )
-                cellfun(@(x) x.computeResults( obj.mesh.nodes, obj.qnodal, varargin{1}), obj.felems);
+                x=varargin{1};
+                for k=1:size(obj.felems,2)
+                    obj.felems{k}.computeResults( obj.mesh.nodes, obj.qnodal,x(ei{k}));
+                end
             else
                 cellfun(@(x) x.computeResults( obj.mesh.nodes,obj.qnodal ),obj.felems);
             end
             resnumber = max(cellfun( @(x) size(x.results.gp.all,1), obj.felems),1);
-            nres = zeros( nnodes, resnumber );
-            ires = zeros( nnodes, resnumber );
+            nres = zeros( nnodes, resnumber(1) );
+            ires = zeros( nnodes, resnumber(1) );
             for l=1:max(size(obj.felems))
                 el = obj.felems{l}.elems;
                 sfv=obj.felems{l}.sf.getRecoveryMatrix();

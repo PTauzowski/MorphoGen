@@ -49,8 +49,8 @@ topOpt.is_silent=true;
 
 %tuner.tuneFORM();
 
- sora2 = SORA('CantileverSolidDispBeta_2', model,topOpt, randomVariables, g, transform, 2);
- sora3 = SORA('CantileverSolidDispBeta_3', model,topOpt, randomVariables, g, transform, 3);
+ sora2 = SORAold('CantileverSolidDispBeta_2', model,topOpt, randomVariables, g, transform, 2);
+ sora3 = SORAold('CantileverSolidDispBeta_3', model,topOpt, randomVariables, g, transform, 3);
  %sora.checkTuning();
 
  
