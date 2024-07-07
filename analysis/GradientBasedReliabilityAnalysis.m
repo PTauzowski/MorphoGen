@@ -12,7 +12,10 @@ classdef GradientBasedReliabilityAnalysis < ReliabilityAnalysis
         end
         
         function [g, gradU] = computeGu( obj, u  )
+            pert=0.0001;
             x = obj.transform.toX ( u );
+            x1 = obj.transform.toX ( u+pert );
+            dgU=(x1-x)/pert;
             [g, dgX]  = obj.g.compute( x );
             gradU = obj.transform.gradientToU(x,u,dgX);
         end

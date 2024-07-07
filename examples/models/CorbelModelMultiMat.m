@@ -55,7 +55,11 @@ classdef CorbelModelMultiMat < FEModel
   %          obj.P0fem=obj.analysis.Pfem;
         end
 
-        function obj = setX(obj,xopt)
+        function x = getX(obj)
+            x = obj.x;
+        end
+
+         function x = setX(obj,xopt)
             obj.x=xopt;
         end
 
@@ -98,11 +102,36 @@ classdef CorbelModelMultiMat < FEModel
 
                 obj.analysis.loadClosestNode([obj.b+obj.fl obj.hb+obj.hc],["ux" "uy"], [0 P1]);
                 obj.analysis.loadClosestNode([obj.b+obj.lc obj.h/2],["ux" "uy"], [P2 0]);
-                
+                obj.analysis.solveWeighted(obj.x);
                 obj.analysis.computeElementResults(obj.x);
                 sp(k)=sum(obj.fe{1}.results.nodal.all(:,18).*obj.fe{1}.results.nodal.all(:,obj.result_number))^(1/penalty);
             end
-        end   
+           end  
+
+           function sp = computeLinearDisplacement(obj,points)
+                np=size(points,1);
+                sp=zeros(np,1);
+                
+                for k=1:np
+                    E1=points(k,1);
+                    E2=points(k,2);
+                    E3=points(k,3);
+                    P1=points(k,4);
+                    P2=points(k,5);
+                
+                    obj.mat1.setElasticIzo(E1, obj.nu);
+                    obj.mat2.setElasticIzo(E2, obj.nu);
+                    obj.mat3.setElasticIzo(E3, obj.nu);
+
+                    obj.analysis.loadClosestNode([obj.b+obj.fl obj.hb+obj.hc],["ux" "uy"], [0 P1]);
+                    obj.analysis.loadClosestNode([obj.b+obj.lc obj.h/2],["ux" "uy"], [P2 0]);
+
+                    u_fem = obj.analysis.solveWeighted(obj.x);
+                    unodal=obj.analysis.fromFEMVector(u_fem);
+                    sp(k)=unodal(obj.result_node,2);
+                end
+            end
+   
        
     end
 end

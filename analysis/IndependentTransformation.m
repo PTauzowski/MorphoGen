@@ -35,7 +35,7 @@ classdef IndependentTransformation < StandardSpaceTransformation
             dim = size(obj.randVars, 2);
             epsX=zeros(1,dim);
             for k=1:size(obj.randVars,2)
-                        epsX(k)=epsU*obj.randVars{k}.pd.sigma;
+                        epsX(k)=epsU*obj.randVars{k}.sd;
             end
         end
 

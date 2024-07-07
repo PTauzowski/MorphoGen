@@ -21,20 +21,21 @@ classdef RandomVariable < handle
             obj.mean=m;
         end
 
-        
-        function x = fromU(obj,u)
-               %x = norminv( cdf(obj.pd, u), obj.pd.mean, obj.pd.sigma );
-               if u < 0 
-                    x = norminv( normcdf( max(-38, u) ), obj.pd.mean, obj.pd.sigma );
-               else
-                    x = abs(norminv( normcdf( max(-38, -u) ))) * obj.pd.sigma + obj.pd.mean;
-                end
-        end
-        
         function u = toU(obj,x)
             u = norminv( cdf( obj.pd, x ) );
         end
-        
+
+        function x = fromU(obj,u)
+               %x = norminv( cdf(obj.pd, u), obj.pd.mean, obj.pd.sigma );
+               % if u < 0 
+               %      x = norminv( normcdf( max(-38, u) ), obj.mean, obj.sd );
+               % else
+               %      x = abs(norminv( normcdf( max(-38, -u) ))) * obj.sd + obj.mean;
+               % end
+               x=icdf(obj.pd, normcdf(u));
+               
+        end
+             
     end
 end
 

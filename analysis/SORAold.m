@@ -99,7 +99,7 @@ classdef SORAold < handle
         end
 
         function [g0, gmpp, mpp, mpp0_pred, beta_pred] = computePerformance(obj, iter)
-             x=obj.model.getX();
+             x=obj.topOpt.x;
              if iter== size(obj.topOpt.allx,2)
                 obj.model.setX(obj.topOpt.allx(:,iter));
              else

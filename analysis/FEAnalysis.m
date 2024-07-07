@@ -158,8 +158,10 @@ classdef (Abstract) FEAnalysis < handle
         end
 
         function loadClosestNode(obj, x, dofnames, values )
-           obj.Pnodal( obj.mesh.findClosestNode(x), obj.findDOFsIndices( dofnames ) ) = obj.Pnodal( obj.mesh.findClosestNode(x), obj.findDOFsIndices( dofnames ) ) + values;
+           %obj.Pnodal( obj.mesh.findClosestNode(x), obj.findDOFsIndices( dofnames ) ) = obj.Pnodal( obj.mesh.findClosestNode(x), obj.findDOFsIndices( dofnames ) ) + values;
+           obj.Pnodal( obj.mesh.findClosestNode(x), obj.findDOFsIndices( dofnames ) ) =  values;
         end
+
         function loadNodes(obj, nodesel, dofnames, values )
            snodes = find( nodesel.select( obj.nodes) );
            obj.Pnodal( snodes, obj.findDOFsIndices( dofnames ) ) =  obj.Pnodal( snodes, obj.findDOFsIndices( dofnames ) ) + repmat(values, size(snodes,1),1 );
@@ -322,7 +324,7 @@ classdef (Abstract) FEAnalysis < handle
                 figure, hold on, axis off;
                 daspect([1 1 1]);
                 dg     = norm( max(obj.mesh.nodes) - min(obj.mesh.nodes) );
-                maxs = max( abs(min(min(obj.qfem))), abs(max(max(obj.qfem)) ) )
+                maxs = max( abs(min(min(obj.qfem))), abs(max(max(obj.qfem)) ) );
                 for k=1:max(size(obj.felems))
                    valueIndex = find(obj.felems{k}.results.names == mapName);
                    if size(valueIndex,2)==0

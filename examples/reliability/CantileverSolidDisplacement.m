@@ -31,7 +31,7 @@ model.plotModel();
 
 randomVariables={RandomVariable("Normal",P(1),0.2) RandomVariable("Normal",P(2),0.1) RandomVariable("Normal",P(3),0.5)};
 transform=IndependentTransformation(randomVariables);
-g=loadCantileverSolidPerformanceFunctionDisp(model);
+g=performanceFunctionPlus( loadCantileverSolidPerformanceFunctionDisp(model) );
 
 %g.tabNCycles(0.1,500,10)
 
@@ -43,9 +43,11 @@ volFr=0.1;
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTreshold, penal, volFr, true );
 topOpt.is_silent=true;
 
-% tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 1000000, 2);
-% tuner.tuneMC();
-% tuner.plotMCs(["Px" "Py" "Pz"],'Ux');
+g.threshold = 0;
+
+tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 1000000, 2);
+tuner.tuneMC();
+tuner.plotMCs(["Px" "Py" "Pz"],'Ux');
 
 %tuner.tuneFORM();
 
@@ -64,8 +66,8 @@ topOpt.is_silent=true;
  % sora2.checkTuning();
  % sora3.checkTuning();
 
- sora_results2 = sora2.solveX();
- sora_results3 = sora3.solveX();
+ % sora_results2 = sora2.solveX();
+ % sora_results3 = sora3.solveX();
 
 % form_res = form.solve()
 
