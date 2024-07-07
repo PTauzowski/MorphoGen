@@ -1,7 +1,7 @@
 classdef SORAold < handle
     
     properties
-        model, topOpt, randVars, g, transform, form, hmv, mpps, betat, baseName, allXi, x0;
+        model, topOpt, randVars, g, transform, form, hmv, mc, mc_res, mpps, betat, baseName, allXi, x0, xtop;
     end
     
     methods
@@ -12,6 +12,7 @@ classdef SORAold < handle
             obj.randVars=randVars;
             obj.form = FORM(randVars,g,transform);
             obj.hmv = HMV(randVars,g,transform,betat);  
+            obj.mc = MonteCarlo(randVars, g, 1000000000);
             obj.g=g;
             obj.transform=transform;
             obj.topOpt.is_silent=true;
@@ -64,7 +65,9 @@ classdef SORAold < handle
                 if conv<0.01 || abs(conv-convp)<0.0001 || conv2 < 0.01 || iter==5
                     destFrame=obj.findVolFrame(destVol);
                     obj.topOpt.setFrame(destFrame);
+                    obj.xtop=obj.topOpt.allx(:,destFrame);
                     form_res=obj.form.solve(obj.x0);
+                    obj.mc_res=obj.mc.solve();
                     obj.topOpt.plotCurrentFrame();
                     title([obj.baseName 'Safe topology, volfr = ' num2str(sum(fr_res.x)/size(fr_res.x,1))]);
                     savefig([obj.baseName '_safe.fig']);
@@ -75,7 +78,9 @@ classdef SORAold < handle
                     else
                         fprintf('\nProbablistic topology beta FORM=not succeed');
                     end
+                    
                     fprintf("\n\n");
+                    obj.allXi=obj.topOpt.allx;
                     return;
                 end
                 mpp2=mpp;

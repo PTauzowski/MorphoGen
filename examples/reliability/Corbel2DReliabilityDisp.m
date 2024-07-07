@@ -8,7 +8,7 @@ h=2.7;
 lc=0.6;
 fl=0.5;
 hc=0.7;
-resb=60;
+resb=50;
 E=80000;
 nu=0.3;
 
@@ -31,9 +31,9 @@ topOpt = StressIntensityTopologyOptimizationVol( 1.2*b/resb, ...
  );
 
  model.setupLoad([-2.5 3]);
- topOpt.solve();
- title("Starting topology");
- figure;
+ % topOpt.solve();
+ % title("Starting topology");
+ % figure;
 
 % Pdest=[-2.5, 3];
 
@@ -70,5 +70,6 @@ sora2.solveX(0.25);
 sora3.solveX(0.34);
 sora4.solveX(0.36);
 
+save("CorbelDispSolution.mat");
 
 
