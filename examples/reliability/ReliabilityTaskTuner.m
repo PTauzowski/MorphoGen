@@ -198,10 +198,15 @@ classdef ReliabilityTaskTuner < handle
          end
 
          function obj = plotMCs(obj,varNames,objName)
-                obj.mcDD.scatterPlots(varNames,['DD' objName])
-                obj.mcTop.scatterPlots(varNames,['Top' objName])
+                obj.mcDD.scatterPlots(varNames,['DD' objName]);
+                obj.mcTop.scatterPlots(varNames,['Top' objName]);
          end
         
+         function obj = plotMC3D(obj,v1,v2,varNames,objName)
+                obj.mcDD.scatterPlot3D(v1,v2,varNames,['DD' objName]);
+                obj.mcTop.scatterPlot3D(v1,v2,varNames,['Top' objName]);
+         end
+
          function tabPf(obj,x0,min,max,n)
              x=min;
              dx=(max-min)/n;

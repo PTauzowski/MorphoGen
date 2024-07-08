@@ -43,6 +43,13 @@ classdef MonteCarlo < ReliabilityAnalysis
             end
         end
 
+        function scatterPlot3D(obj,v1,v2,varNames,objName)
+                figure, hold on;
+                scatter3(obj.x(obj.r>0,v1),obj.x(obj.r>0,v2),obj.r(obj.r>0),'MarkerEdgeColor',[0 .6 .0],'Marker','.');
+                scatter3(obj.x(obj.r<=0,v1),obj.x(obj.r<=0,v2),obj.r(obj.r<=0),'filled','MarkerEdgeColor',[0.5 0 .5],'Marker','o');
+                title(strjoin([varNames(v1) " x " varNames(v2) " x " objName]));
+        end
+
         function printResults(obj, tx, mc_results)
             mv=mean(obj.r);
             sd=std(obj.r);

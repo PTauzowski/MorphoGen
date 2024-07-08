@@ -22,7 +22,7 @@ classdef HMV < GradientBasedReliabilityAnalysis
                      return;
             end
             g0=g;
-            for k=1:100
+            for k=1:1000
                 g1 = g;
                 n2 = n1; 
                 n1 = n;  

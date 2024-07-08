@@ -43,7 +43,8 @@ classdef SORAold < handle
                 obj.topOpt.setFrame( fr_res.frame );    
                 obj.topOpt.plotCurrentFrame();
                 if iter==1
-                     obj.model.setX(obj.topOpt.allx(:,end));
+                    %obj.model.setX(obj.topOpt.allx(:,end
+                    obj.model.setX(fr_res.x);
                     form_res=obj.form.solve(obj.x0);
                     if form_res.success
                         title([obj.baseName 'initial topology, volfr=' num2str(sum(fr_res.x)/size(fr_res.x,1)) 'beta FORM = ' num2str(form_res.beta)]);
@@ -57,7 +58,9 @@ classdef SORAold < handle
                 end
                 conv=norm(obj.transform.toU(fr_res.mpp)-obj.transform.toU(mpp));
                 conv2=norm(obj.transform.toU(fr_res.mpp)-obj.transform.toU(mpp2));
-                fprintf("\nconv=%1.5f, conv2=%1.5f, frame=%3d/%3d, beta_form=%5.7f, g=%5.7f, beta_pred=%5.7f, vol=%5.7f, ",conv,conv2,fr_res.frame,fr_res.lastframe,fr_res.beta_pred,fr_res.g,fr_res.beta_pred,obj.topOpt.computeVolumeFraction());
+                obj.model.setX(fr_res.x);
+                obj.mc_res=obj.mc.solve();
+                fprintf("\nconv=%1.5f, conv2=%1.5f, frame=%3d/%3d, beta_mc=%5.7f, g=%5.7f, beta_pred=%5.7f, vol=%5.7f, ",conv,conv2,fr_res.frame,fr_res.lastframe,fr_res.beta_pred,fr_res.g,obj.mc_res.beta,obj.topOpt.computeVolumeFraction());
                 fprintf("mpp: ");
                 for k=1:size(mpp,2)
                    fprintf("x(%1d)=%3.4f ",k,mpp(k));
