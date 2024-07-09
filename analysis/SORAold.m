@@ -65,10 +65,10 @@ classdef SORAold < handle
                 for k=1:size(mpp,2)
                    fprintf("x(%1d)=%3.4f ",k,mpp(k));
                 end   
-                if conv<0.01 || abs(conv-convp)<0.0001 || conv2 < 0.01 || iter==5
+                if conv<0.01 || abs(conv-convp)<0.0001 || conv2 < 0.01 || iter==10
                     destFrame=obj.findVolFrame(destVol);
                     obj.topOpt.setFrame(destFrame);
-                    obj.xtop=obj.topOpt.allx(:,destFrame);
+                    obj.xtop=fr_res.x;
                     form_res=obj.form.solve(obj.x0);
                     obj.mc_res=obj.mc.solve();
                     obj.topOpt.plotCurrentFrame();
@@ -87,7 +87,18 @@ classdef SORAold < handle
                     return;
                 end
                 mpp2=mpp;
-                mpp=fr_res.mpp;
+                if fr_res.frame==fr_res.lastframe-1
+                     %umpp=obj.hmv.transform.toU(mpp)*1.1;
+                     %mpp=obj.hmv.transform.toX(umpp);
+                     %mpp=mpp*1.1;
+                     mpp=fr_res.mpp;
+                     fprintf(' increasing mpp distance ');
+                     for k=1:size(mpp,2)
+                        fprintf("x(%1d)=%3.4f ",k,mpp(k));
+                     end  
+                else
+                    mpp=fr_res.mpp;
+                end
                 obj.model.setupLoad(fr_res.mpp);
                 iter=iter+1;
                 convp=conv;

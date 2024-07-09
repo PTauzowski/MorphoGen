@@ -8,7 +8,7 @@ h=2.7;
 lc=0.6;
 fl=0.5;
 hc=0.7;
-resb=20;
+resb=50;
 E=80000;
 nu=0.3;
 
@@ -26,7 +26,7 @@ topOpt = StressIntensityTopologyOptimizationVol( 1.2*b/resb, ...
             model.analysis, ... % FEM analysis object
             0.005, ...          % stress intensity treshold for element removal 
             2, ...              % penalty factor
-            0.2, ...           % constraint function object
+            0.1, ...           % constraint function object
             true ...            % is finite elements uniform
  );
 
@@ -58,18 +58,18 @@ g.threshold = 0.008;
 % sora4 = SORAold('CorbelStress20_4', model,topOpt, randomVariables, g, transform, 4);
 % sora5 = SORAold('CorbelStress20_5', model,topOpt, randomVariables, g, transform, 5);
 
-sora2 = SORAold('CorbelDisp20_2', model,topOpt, randomVariables, g, transform, 2);
-sora3 = SORAold('CorbelDisp20_3', model,topOpt, randomVariables, g, transform, 3);
-sora4 = SORAold('CorbelDisp20_4', model,topOpt, randomVariables, g, transform, 4);
-sora5 = SORAold('CorbelDisp20_5', model,topOpt, randomVariables, g, transform, 5);
+sora2 = SORAold('CorbelDisp50_2', model,topOpt, randomVariables, g, transform, 2);
+sora3 = SORAold('CorbelDisp50_3', model,topOpt, randomVariables, g, transform, 3);
+sora4 = SORAold('CorbelDisp50_4', model,topOpt, randomVariables, g, transform, 4);
+sora5 = SORAold('CorbelDisp50_5', model,topOpt, randomVariables, g, transform, 5);
 
 %sora2.tune(2000);
 
-%sora5.solveX(0.38);
-sora2.solveX(0.25);
+%veX(0.38);
+%sora2.solveX(0.25);
 sora3.solveX(0.34);
 sora4.solveX(0.36);
 
-save("CorbelDispSolution20_MC.mat");
+save("CorbelDispSolution50_MC.mat");
 
 
