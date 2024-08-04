@@ -1,6 +1,6 @@
 clear;
 close all;
-res = 20;
+res = 30;
 l = 3;
 
 % Filtering radius
