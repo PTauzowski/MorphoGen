@@ -13,10 +13,11 @@ classdef ColumnModel < ModelLinearLoad
             material.setElasticIzo(E, nu);
             obj.fe.setMaterial( material );            
             obj.analysis = LinearStability( obj.fe, obj.mesh );           
-            %obj.analysis.loadClosestNode(xp, ["ux" "uy"], P );
-            obj.analysis.elementLoadLineIntegral( "global", loadedEdgeSelector,  ["ux" "uy"], @(x)( x*0 + (x(:,1)-l/2).*P ));
-            obj.analysis.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
-            %obj.analysis.fixClosestNode( [0 0], ["ux" "uy"], [0 0] );
+            obj.analysis.loadClosestNode(xp, ["ux" "uy"], P );
+            %obj.analysis.elementLoadLineIntegral( "global", loadedEdgeSelector,  ["ux" "uy"], @(x)( x*0 + P ));
+            %obj.analysis.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
+            obj.analysis.fixClosestNode( [0 0], ["ux" "uy"], [0 0] );
+            obj.analysis.fixClosestNode( [l 0], ["uy"], [0] );
             obj.analysis.printProblemInfo();
             obj.plotModel();
         end
