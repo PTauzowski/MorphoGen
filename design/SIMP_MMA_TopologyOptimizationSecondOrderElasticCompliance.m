@@ -1,0 +1,69 @@
+classdef SIMP_MMA_TopologyOptimizationSecondOrderElasticCompliance < SIMP_MMA_TopologyOptimization
+    
+    properties
+        VolConstr;
+    end
+    
+    methods
+
+        function obj = SIMP_MMA_TopologyOptimizationSecondOrderElasticCompliance(Rmin,problem,penal,VolConstr,is_const)
+            obj = obj@SIMP_MMA_TopologyOptimization(1,Rmin,problem,penal,is_const);
+            tne=obj.FEAnalysis.getTotalElemsNumber();
+            obj.gradConstrValues = zeros(1,1);
+            obj.V0=tne*VolConstr;
+            obj.VolConstr=VolConstr;
+            obj.x(1:obj.totalFENumber,1)=0.5;
+            obj.is_const=is_const;
+        end
+
+        function resetAnalysis(obj)
+        end
+       
+
+        function computeObjectiveFunctonWithGradient( obj, x )
+            tne=obj.FEAnalysis.getTotalElemsNumber();
+            c=0;
+            dc = zeros(tne,1);
+            x_ones = ones(tne,1);
+            ind=1;
+            for i=1:size(obj.FEAnalysis.felems,1)
+               if obj.is_const
+                   fsName='computeStifnessMatrixConst';
+               else
+                   fsName='computeStifnessMatrix';
+               end
+               nelems = size(obj.FEAnalysis.felems{i}.elems,1);
+               nnodes = size(obj.FEAnalysis.felems{i}.elems,2);
+               ndofs = size( obj.FEAnalysis.felems{i}.ndofs,2);
+               dim = nnodes*ndofs;
+               K = reshape(obj.FEAnalysis.felems{i}.(fsName)(obj.FEAnalysis.mesh.nodes,x_ones),dim,dim,nelems);
+               obj.qnodal = obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.solveWeighted((obj.x).^obj.penal));
+               obj.FEAnalysis.computeElementResults((obj.x).^obj.penal);
+               Kc = K+reshape(obj.FEAnalysis.felems{i}.('computeGeometricStifnessMatrix')(obj.FEAnalysis.mesh.nodes,x_ones),dim,dim,nelems);
+               qelems = obj.FEAnalysis.felems{i}.createElemSolutionVectors(obj.qnodal);
+               for j=1:nelems
+                    c = c + obj.x(ind)^obj.penal*qelems(:,j)'*Kc(:,:,j)*qelems(:,j);
+                    dc(ind) = -obj.penal*obj.x(ind)^(obj.penal-1)*qelems(:,j)'*Kc(:,:,j)*qelems(:,j);
+                    ind=ind+1;
+               end
+            end
+            obj.FobjValue = c;
+            obj.gradFobjValue = dc;
+        end
+
+        function computeConstraintsAndGradient( obj, x)
+            obj.constrValues = sum(x(:))/obj.V0-1;
+            obj.gradConstrValues(1:obj.totalFENumber,1) = 1.0/obj.V0;
+        end
+
+        function printIterationInfo(obj) 
+            fprintf('%5i ',obj.iteration );
+            fprintf('Vrel=%5.2f ',round(obj.VolConstr*sum( obj.x )/obj.V0*1000)/10);
+            fprintf('constr=%6.4f ',obj.constrValues);
+            fprintf('change=%6.4f ',obj.change);
+            fprintf('\n');
+        end
+        
+    end
+end
+

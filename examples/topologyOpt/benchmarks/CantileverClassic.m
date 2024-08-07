@@ -22,7 +22,7 @@ cutTreshold = 0.005;
 penal = 3;
 
 % Type of shape function to be used (here: four node Langrange)
-sfL4 = ShapeFunctionL4;
+sfL4 = ShapeFunctionL9;
 
 % Creating FE mesh object
 mesh = Mesh();
@@ -41,7 +41,8 @@ material.setElasticIzo(1, 0.3);
 fe.setMaterial( material );
 
 % Creating linear elastic finite element analysis object with weighted matrix feature, weighted by element density.
-analysis = LinearElasticityWeighted( fe, mesh, true );
+%analysis = LinearElasticityWeighted( fe, mesh, true );
+analysis = SecondOrderElasticityWeighted(fe, mesh, true);
 
 % Creating node selector object to select fixed edge (left)
 fixedEdgeSelector = Selector( @(x)( abs(x(:,1)) < 0.001 ) );
@@ -59,7 +60,7 @@ toc
 
 % figure;
 % tic
-% topOpt = SIMP_MMA_TopologyOptimizationElasticCompliance(Rfilter, analysis, penal, 0.4, true);
+% topOpt = SIMP_MMA_TopologyOptimizationSecondOrderElasticCompliance(Rfilter, analysis, penal, 0.4, true);
 % [objF, xopt]  = topOpt.solve();
 % toc
 
