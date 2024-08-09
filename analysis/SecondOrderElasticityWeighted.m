@@ -38,7 +38,7 @@ classdef SecondOrderElasticityWeighted < FEAnalysis
            obj.qnodal = obj.fromFEMVector( obj.qfem );
            obj.computeElementResults(x);
            Kg = obj.globalMatrixAggregationWeighted('computeGeometricStifnessMatrix',x);
-           obj.qfem = solver.solve(K, obj.Pfem);
+           obj.qfem = solver.solve(K+Kg, obj.Pfem);
            obj.qnodal=obj.fromFEMVector(obj.qfem(:,1));
            qfem=obj.qfem;
        end

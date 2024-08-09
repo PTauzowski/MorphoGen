@@ -15,8 +15,8 @@ classdef ColumnModel < ModelLinear
             obj.fe.setMaterial( material );            
             %obj.analysis = LinearElasticityWeighted( obj.fe, obj.mesh, true ); 
             obj.analysis = SecondOrderElasticityWeighted( obj.fe, obj.mesh, false );
-            %obj.analysis.loadClosestNode(xp, ["ux" "uy"], P );
-            obj.analysis.elementLoadLineIntegral( "global", loadedEdgeSelector,  ["ux" "uy"], @(x)( x*0 + P ));
+            obj.analysis.loadClosestNode(xp, ["ux" "uy"], P );
+            %obj.analysis.elementLoadLineIntegral( "global", loadedEdgeSelector,  ["ux" "uy"], @(x)( x*0 + P ));
             obj.analysis.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
             %obj.analysis.fixClosestNode( [0 0], ["ux" "uy"], [0 0] );
             %obj.analysis.fixClosestNode( [l 0], ["uy"], [0] );

@@ -1,7 +1,7 @@
 classdef LinearStability < FEAnalysis
 
     properties
-        lambdas, qforms, freedofs;
+        lambdas, qforms, freedofs, fixeddofs;
     end
 
    methods
@@ -32,6 +32,7 @@ classdef LinearStability < FEAnalysis
                R=0;
            end
            obj.freedofs=solver.freedofs;
+           obj.fixeddofs=solver.supdofs;
            K = obj.globalMatrixAggregation('computeStifnessMatrix');
            obj.qfem = solver.solve(K, obj.Pfem );
            obj.qnodal = obj.fromFEMVector( obj.qfem );
