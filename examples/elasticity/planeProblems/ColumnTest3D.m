@@ -1,21 +1,23 @@
 clear;
 close all;
-sf=ShapeFunctionL4;
-l=1;
-h=5;
-nl=200;
+sf=ShapeFunctionL8;
+l=10;
+b=1;
+h=1;
+lw=2*l;
+nl=100;
 E=1;
 nu=0.3;
-xp=[l/2 h];
-Pb=pi^2*E*l/12/(2*h)^2
-P=[0 -0.8*Pb/l];
+xp=[b/2 h/2 l];
+Pcr=pi^2*E*b*h^3/12/lw^2
+P=[0 0 -0.8*Pcr/h/b];
 %P=[0 1];
 
-model = ColumnModel(sf,l,h,nl,E,nu,P,xp);
+model = ColumnModel3D(sf,b,l,nl,E,nu,P,xp);
 model.solveWeighted();
 
 model.plotModel();
-model.analysis.plotMaps(["uy" "ux" "sxx" "sxy" "syy" "sHM"],0.1);
+model.analysis.plotMaps(["uy" "ux" "sxx" "sxy" "szz" "sHM"],0.1);
 model.fe.plotWired(model.mesh.nodes,model.analysis.qnodal,0.1);
 figure;
 stability=LinearStability(model.analysis.felems, model.mesh);
@@ -33,7 +35,7 @@ analysis.Pfem=model.analysis.Pfem;
 analysis.supports=model.analysis.supports;
 
 % Filtering radius
-Rfilter = 2*h/nl;
+Rfilter = 2*l/nl;
 
 %Removal intensity threshold
 cutTreshold = 0.005;
@@ -49,10 +51,10 @@ penal = 3;
 % toc
 
 
-% tic
-% topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.42, true );
-% [objF, xopt]  = topOpt.solve();
-% toc
+tic
+topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.42, true );
+[objF, xopt]  = topOpt.solve();
+toc
 % 
 % figure;
 % stability.solveWeighted(topOpt.x,5);

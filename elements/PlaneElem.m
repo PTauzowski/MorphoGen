@@ -97,6 +97,7 @@ classdef PlaneElem < FiniteElement
                     S(1,1)=obj.results.gp.stress(1,k,i);
                     S(2,2)=obj.results.gp.stress(2,k,i);
                     S(3,3)=obj.results.gp.stress(3,k,i);
+                    
                     s(1,1)=obj.results.gp.stress(1,k,i);
                     s(2,2)=obj.results.gp.stress(2,k,i);
                     s(2,1)=obj.results.gp.stress(3,k,i);
@@ -110,8 +111,8 @@ classdef PlaneElem < FiniteElement
                       B(3, 2*j-1) = dNx(2,j);
                       B(3, 2*j)   = dNx(1,j);
                     end
-                    Ke = Ke + abs(detJ) * weights(i) * h * B'*S*B;
-                    %Ke = Ke + abs(detJ) * weights(i) * h * G'*s*G;
+                    %Ke = Ke + abs(detJ) * weights(i) * h * B'*S*B;
+                    Ke = Ke + abs(detJ) * weights(i) * h * G'*s*G;
                 end
                 K(:,:,k) = x(k)*Ke;
             end
