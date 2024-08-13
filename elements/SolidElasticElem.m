@@ -179,7 +179,7 @@ classdef SolidElasticElem < FiniteElement
 
                     end                   
                     Ke = Ke + abs(detJ) * integrator.weights(i) * B'*S*B;
-                    %Ke = Ke + abs(detJ) * weights(i) * h * G'*s*G;
+                    %Ke = Ke + abs(detJ) * integrator.weights(i) * G'*s*G;
                 end
                 K(:,:,k) = x(k)*Ke;
             end
