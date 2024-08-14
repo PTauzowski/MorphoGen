@@ -1,17 +1,17 @@
 clear;
 close all;
-sf=ShapeFunctionL8;
-l=10;
-b=1;
-h=1;
-lw=2*l;
-nl=120;
-E=1;
+sf=ShapeFunctionL27;
+l=1;
+b=0.1;
+h=0.1;
+lw=l;
+nl=80;
+E=205E9;
 nu=0.3;
-xp=[b h l];
-Pcr=pi^2*E*b*h^3/12/lw^2
-P=[0 0 -0.8*Pcr/h/b];
-nEigenForms=5;
+xp=[b/2 h/2 l];
+Pcr=pi^2*E*b*h^3/12/lw^2;
+P=[0 0 -1];
+nEigenForms=20;
 %P=[0 1];
 
 model = ColumnModel3D(sf,b,h,l,nl,E,nu,P,xp);
@@ -21,13 +21,15 @@ model.plotModel();
 model.analysis.plotMaps(["uy" "ux" "sxx" "sxy" "szz" "sHM"],0.1);
 model.fe.plotWired(model.mesh.nodes,model.analysis.qnodal,0.1);
 stability=LinearStability(model.analysis.felems, model.mesh);
+stability.Pnodal=model.analysis.Pnodal;
 stability.Pfem=model.analysis.Pfem;
 stability.supports=model.analysis.supports;
 stability.solve(nEigenForms);
-lambdas1=stability.lambdas
+lambdas1=stability.lambdas;
+lambdas1(1,1)
+Pcr
 
-for k=1:nEigenForms
-
+for k=1:min(5,nEigenForms)
     figure;
     stability.setForm(k);
     model.fe.plotWired(model.mesh.nodes,stability.qnodal,0.2);

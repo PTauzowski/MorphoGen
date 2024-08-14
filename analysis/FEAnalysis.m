@@ -227,7 +227,7 @@ classdef (Abstract) FEAnalysis < handle
                 el = obj.felems{l}.elems;
                 sfv=obj.felems{l}.sf.getRecoveryMatrix();
                 for k=1:size(el,1)
-                  neres=tensorprod(sfv, obj.felems{l}.results.gp.all(:,k,:),2,3);
+                  neres=tensorprod(sfv, obj.felems{l}.results.gp.all(:,k,:),1,3);
                   nres( el( k, : ), : ) = nres( el( k, : ), : ) + neres;
                   ires( el( k, : ), : ) = ires( el( k, : ), : ) + 1;
                 end

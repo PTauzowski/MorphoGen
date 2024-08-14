@@ -38,7 +38,7 @@ classdef LinearStability < FEAnalysis
            obj.qnodal = obj.fromFEMVector( obj.qfem );
            obj.computeElementResults();
            Kg = obj.globalMatrixAggregation('computeGeometricStifnessMatrix');
-           [obj.qforms,obj.lambdas]=solver.solveEigenproblem(K,Kg,num_eigenvalues);
+           [obj.qforms, obj.lambdas]=solver.solveEigenproblem(K,Kg,num_eigenvalues);
        end
 
        function solveWeighted(obj, x, num_eigenvalues)

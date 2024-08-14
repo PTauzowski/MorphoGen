@@ -152,12 +152,12 @@ classdef SolidElasticElem < FiniteElement
                     s(1,1)=obj.results.gp.stress(k,i,1);
                     s(2,2)=obj.results.gp.stress(k,i,2);
                     s(3,3)=obj.results.gp.stress(k,i,3);
-                    s(2,3)=obj.results.gp.stress(k,i,4);
+                    s(2,3)=obj.results.gp.stress(k,i,6);
                     s(1,3)=obj.results.gp.stress(k,i,5);
-                    s(1,2)=obj.results.gp.stress(k,i,6);
-                    s(3,2)=obj.results.gp.stress(k,i,4);
+                    s(1,2)=obj.results.gp.stress(k,i,4);
+                    s(3,2)=obj.results.gp.stress(k,i,6);
                     s(3,1)=obj.results.gp.stress(k,i,5);
-                    s(2,1)=obj.results.gp.stress(k,i,6);
+                    s(2,1)=obj.results.gp.stress(k,i,4);
                                       
                     for j = 1:nnd
                             G(1, 3*j-2) = dNx(1,j);
@@ -178,8 +178,8 @@ classdef SolidElasticElem < FiniteElement
                           B(6, 3*j-1) = dNx(1,j);
 
                     end                   
-                    Ke = Ke + abs(detJ) * integrator.weights(i) * B'*S*B;
-                    %Ke = Ke + abs(detJ) * integrator.weights(i) * G'*s*G;
+                    %Ke = Ke + abs(detJ) * integrator.weights(i) * B'*S*B;
+                    Ke = Ke + abs(detJ) * integrator.weights(i) * G'*s*G;
                 end
                 K(:,:,k) = x(k)*Ke;
             end
