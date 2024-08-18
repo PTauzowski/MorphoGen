@@ -1,7 +1,7 @@
 classdef SolidMaterial < Material
    
     properties
-        E, nu, D, dD, M, at;
+        E, nu, D, dD, M, at, rho;
     end
     
     methods

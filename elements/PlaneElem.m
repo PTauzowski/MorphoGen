@@ -118,6 +118,40 @@ classdef PlaneElem < FiniteElement
             end
             K=K(:);
         end
+        function M = computeMassMatrix(obj, nodes, varargin)
+            nelems = size(obj.elems,1);
+            nnodes = size(obj.elems,2);
+            ndofs = size( obj.ndofs,2);
+            dim = nnodes * ndofs;
+            integrator = obj.sf.createIntegrator();
+            nip = size(integrator.points,1);
+            N = obj.shapeMatrix( integrator.points );
+            dN = obj.sf.computeGradient( integrator.points );
+            dNtr = permute(dN,[2,1,3]);
+            dNtrc = cell(size(dNtr,3),1);
+            if ( nargin == 3 )
+                x=varargin{1};
+            else
+                x=ones(nelems,1);
+            end
+            for i=1:nip
+                dNtrc{i}=dNtr(:,:,i);
+            end
+            M = zeros( dim , dim, nelems );
+            weights = integrator.weights;
+            rho=obj.mat.rho;
+            for k=1:nelems
+                elemX = nodes(obj.elems(k,:),:);
+                Me = zeros( dim , dim );
+                for i=1:nip
+                    J = dNtrc{i}*elemX;
+                    detJ = J(1,1) * J(2,2) - J(1,2) * J(2,1);
+                    Me = Me + abs(detJ) * weights(i)  * N(:,:,i)' * N(:,:,i);
+                end
+                M(:,:,k) = x(k) * h * rho * Me;
+            end
+            M=M(:);
+        end
         function dK = computeStifnessMatrixGradMat(obj, nodes, q, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);

@@ -184,6 +184,41 @@ classdef SolidElasticElem < FiniteElement
             end
             K=K(:);
         end
+        function M = computeMassMatrix(obj, nodes, varargin)
+            nelems = size(obj.elems,1);
+            nnodes = size(obj.elems,2);
+            ndofs = size( obj.ndofs,2);
+            dim = nnodes * ndofs;
+            integrator = obj.sf.createIntegrator();
+            nip = size(integrator.points,1);
+            dN = obj.sf.computeGradient( integrator.points );
+            N = obj.shapeMatrix( integrator.points );
+            nnd = size(dN,1); 
+            dNtr = permute(dN,[2,1,3]);
+            dNtrc = cell(size(dNtr,3),1);
+            if ( nargin == 3 )
+                x=varargin{1};
+            else
+                x=ones(nelems,1);
+            end
+            for i=1:nip
+                dNtrc{i}=dNtr(:,:,i);
+            end
+            %dNx = zeros(size(dN,2),size(dN,1), nip );
+            M = zeros( dim , dim, nelems );
+            rho = obj.mat.rho;
+            for k=1:nelems
+                elemX = nodes(obj.elems(k,:),:);
+                Me = zeros( dim , dim );
+                for i=1:nip
+                    J = dNtrc{i}*elemX;
+                    detJ = J(1,1)*J(2,2)*J(3,3)-J(1,2)*J(2,1)*J(3,3)-J(1,1)*J(2,3)*J(3,2)+J(1,3)*J(2,1)*J(3,2)+J(1,2)*J(2,3)*J(3,1)-J(1,3)*J(2,2)*J(3,1);                
+                    Me = Me + abs(detJ) * integrator.weights(i) * N(:,:,i)' * N(:,:,i);
+                end
+                M(:,:,k) = x(k)*rho*Me;
+            end
+            M=M(:);
+        end
         function Pnodal = thermalLoad(obj, nodes, Telems, Pnodal, alpha, varargin)
             nelems = size(Telems,1);
             nnodes = size(obj.elems,2);
