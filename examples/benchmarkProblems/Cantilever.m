@@ -1,5 +1,5 @@
 clear;
-close all;
+%close all;
 res = 100;
 l = 1;
 
@@ -8,7 +8,7 @@ aspect=2;
 Rfilter = 3*l/res;
 
 %Removal intensity threshold
-cutTreshold = 0.005;
+cutThreshold = [0.05 0.005]; %0.005;
 
 %penalty factor
 penal = 3;
@@ -34,16 +34,17 @@ fe.plotSolid(mesh.nodes);
 analysis.plotCurrentLoad();
 analysis.plotSupport();
 
+figure
 tic
-topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.4, true );
+topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutThreshold, penal, 0.4, true );
 [objF, xopt]  = topOpt.solve();
 toc
 
-figure;
-tic
-topOpt = SIMP_MMA_TopologyOptimizationElasticCompliance(Rfilter, analysis, penal, 0.4, true);
-[objF, xopt]  = topOpt.solve();
-toc
+% figure;
+% tic
+% topOpt = SIMP_MMA_TopologyOptimizationElasticCompliance(Rfilter, analysis, penal, 0.4, true);
+% [objF, xopt]  = topOpt.solve();
+% toc
 
 
 
