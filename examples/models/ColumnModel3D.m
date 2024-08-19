@@ -16,15 +16,13 @@ classdef ColumnModel3D < ModelLinear
             obj.fe.setMaterial( material );            
             %obj.analysis = LinearElasticityWeighted( obj.fe, obj.mesh, true ); 
             obj.analysis = SecondOrderElasticityWeighted( obj.fe, obj.mesh, false );
-            %obj.analysis.loadClosestNode(xp, ["ux" "uy" "uz"], P );
+            obj.analysis.loadClosestNode(xp, ["ux" "uy" "uz"], P );
             obj.analysis.elementLoadSurfaceIntegral( "global", loadedEdgeSelector,  ["ux" "uy" "uz"], @(x)( x*0 + P ));
             obj.analysis.fixNodes( fixedEdgeSelector, ["ux" "uy" "uz"] );
             % obj.analysis.fixClosestNode( [0 0 0], ["ux" "uy" "uz"], [0 0 0] );
-            % obj.analysis.fixClosestNode( [b/2 h/2 0], ["ux" "uy" "uz"], [0 0 0] );
-            % obj.analysis.fixClosestNode( [0 0 l], ["ux" "uy" ], [0 0] );
-            % obj.analysis.fixClosestNode( [b 0 l], ["ux" "uy" ], [0 0] );
-            % obj.analysis.fixClosestNode( [0 h l], ["ux" "uy" ], [0 0] );
-            % obj.analysis.fixClosestNode( [b h l], ["ux" "uy"], [0 0] );
+            % obj.analysis.fixNodes( loadedEdgeSelector, ["ux" "uy"] );
+            % obj.analysis.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
+            %obj.analysis.fixClosestNode( [b/2 h/2 0], ["ux" "uy" "uz"], [0 0 0] );
             obj.analysis.printProblemInfo();
             obj.plotModel();
         end
