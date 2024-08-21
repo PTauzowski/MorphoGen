@@ -26,7 +26,7 @@ classdef ColumnModel3D < ModelLinear
             % obj.analysis.fixClosestNode( [0 h l], ["ux" "uy" ], [0 0] );
             % obj.analysis.fixClosestNode( [b h l], ["ux" "uy"], [0 0] );
             obj.analysis.printProblemInfo();
-            obj.plotModel();
+            %obj.plotModel();
         end
     end
 end
