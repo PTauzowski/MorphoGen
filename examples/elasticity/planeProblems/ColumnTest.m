@@ -2,16 +2,20 @@ clear;
 close all;
 sf=ShapeFunctionL4;
 l=1;
-h=5;
-nl=200;
-E=1;
+lw=1.4*l;
+h=0.1;
+b=0.1;
+J=b*h^3/12;
+nl=60;
+E=205E9;
 nu=0.3;
-xp=[l/2 h];
-Pb=pi^2*E*l/12/(2*h)^2
-P=[0 -0.8*Pb/l];
+xp=[b/2 l];
+Pcr=pi^2*E*J/lw^2
+P=[0 -1];
+nEigenForms=6;
 %P=[0 1];
 
-model = ColumnModel(sf,l,h,nl,E,nu,P,xp);
+model = ColumnModel(sf,b,h,l,nl,E,nu,P,xp);
 model.solveWeighted();
 
 model.plotModel();
@@ -21,10 +25,17 @@ figure;
 stability=LinearStability(model.analysis.felems, model.mesh);
 stability.Pfem=model.analysis.Pfem;
 stability.supports=model.analysis.supports;
-stability.solve(5);
-lambdas1=stability.lambdas
-stability.setForm(1);
-model.fe.plotWired(model.mesh.nodes,stability.qnodal,0.2);
+stability.solve(nEigenForms);
+lambdas1=stability.lambdas;
+lambdas1(1,1)
+Pcr
+
+for k=1:min(6,nEigenForms)
+    figure;
+    stability.setForm(k);
+    model.fe.plotWired(model.mesh.nodes,stability.qnodal,0.2);
+    title(['Eigen form:' num2str(k)]);
+end
 
 analysis = SecondOrderElasticityWeighted( model.fe, model.mesh, false );
 %analysis = LinearElasticityWeighted( model.fe, model.mesh, false );

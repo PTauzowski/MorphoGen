@@ -17,7 +17,7 @@ classdef (Abstract) ShapeFunctions < Function
         end
 
         function isCorrect = selfTest( obj )
-            isCorrect = isdiag( computeValue( obj.localNodes ) );
+            isCorrect = isdiag( obj.computeValue( obj.localNodes ) );
         end
         function N = getRecoveryMatrix(obj)
             integrator = obj.createIntegrator();

@@ -124,14 +124,12 @@ classdef SolidElasticElem < FiniteElement
             for i=1:nip
                 dNtrc{i}=dNtr(:,:,i);
             end
-            G = zeros(3,dim);
-            S = zeros(6,6);
+
             Sg = zeros(3,nnodes);
             s = zeros(3,3);
             %dNx = zeros(size(dN,2),size(dN,1), nip );
             K = zeros( dim , dim, nelems );
-            B = zeros(3,dim);
-            D = obj.mat.D;
+
             for k=1:nelems
                 elemX = nodes(obj.elems(k,:),:);
                 Ke = zeros( dim , dim );
@@ -144,13 +142,6 @@ classdef SolidElasticElem < FiniteElement
               		           (J(2,1)*J(3,2)-J(2,2)*J(3,1))	-(J(1,1)*J(3,2)-J(1,2)*J(3,1))  (J(1,1)*J(2,2)-J(1,2)*J(2,1) ) ]/detJ;
                     dNx = invJ * dNtr(:,:,i);
 
-                    S(1,1)=obj.results.gp.stress(k,i,1);
-                    S(2,2)=obj.results.gp.stress(k,i,2);
-                    S(3,3)=obj.results.gp.stress(k,i,3);
-                    S(4,4)=obj.results.gp.stress(k,i,4);
-                    S(5,5)=obj.results.gp.stress(k,i,5);
-                    S(6,6)=obj.results.gp.stress(k,i,6);
-
                     s(1,1)=obj.results.gp.stress(k,i,1);
                     s(2,2)=obj.results.gp.stress(k,i,2);
                     s(3,3)=obj.results.gp.stress(k,i,3);
@@ -161,33 +152,13 @@ classdef SolidElasticElem < FiniteElement
                     s(3,1)=obj.results.gp.stress(k,i,5);
                     s(2,1)=obj.results.gp.stress(k,i,6);
                                       
-                    for j = 1:nnd
-                          G(1, 3*j-2) = dNx(1,j);
-                          G(2, 3*j-1) = dNx(2,j);
-                          G(3, 3*j)   = dNx(3,j);
-
+                    for j = 1:nnd                         
                           Sg(1, j) = dNx(1,j);
                           Sg(2, j) = dNx(2,j);
-                          Sg(3, j) = dNx(3,j);
-
-                          B(1, 3*j-2) = dNx(1,j);
-                          B(2, 3*j-1) = dNx(2,j);
-                          B(3, 3*j)   = dNx(3,j);
-
-                          B(4, 3*j-1) = dNx(3,j);
-                          B(4, 3*j)   = dNx(2,j);
-                          
-                          B(5, 3*j-2) = dNx(3,j);
-                          B(5, 3*j)   = dNx(1,j);
-                          
-                          B(6, 3*j-2) = dNx(2,j);
-                          B(6, 3*j-1) = dNx(1,j);
+                          Sg(3, j) = dNx(3,j);       
                     end                   
-                    %Ke = Ke + abs(detJ) * integrator.weights(i) * B'*S*B;
-                    %Ke = Ke + abs(detJ) * integrator.weights(i) * G'*s*G;
                     So = So + abs(detJ) * integrator.weights(i) * Sg'*s*Sg;
                 end
-                %K(:,:,k) = x(k)*Ke;
                 K(1:nnodes,1:nnodes,k) = x(k)*So;
                 K(nnodes+1:2*nnodes,nnodes+1:2*nnodes,k) = x(k)*So;
                 K(2*nnodes+1:3*nnodes,2*nnodes+1:3*nnodes,k) = x(k)*So;
@@ -576,6 +547,30 @@ classdef SolidElasticElem < FiniteElement
             [~,ifaces,~]=setxor( sort(A,2), sort(delfaces,2), 'rows' );
             plotfaces=A(ifaces,:);
             patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col,'EdgeColor','k');
+            %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col);
+            %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col,"FaceAlpha",0.3);
+        end
+        function plotSolidDeformed(obj,nodes,qnodal,scale,varargin)
+            hold on, axis off;
+            daspect([1 1 1]);
+            col=[0.8 0.8 0.8];
+            % if nargin == 2
+            %     col=[0.8 0.8 0.8];
+            % else
+            %     col=varargin{1};
+            % end
+            dg  = norm( max(nodes) - min(nodes) );
+            maxs = max( abs(min(min(qnodal))), abs(max(max(qnodal)) ) );
+            defnodes = (nodes + qnodal ./ maxs * dg * scale);
+            allfaces = reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))';
+            %allfaces = obj.elems(obj.sf.fcontours,:);
+            [~,ifaces] = unique( sort(allfaces,2), 'rows' );
+            A=allfaces(ifaces,:);
+            delfaces=allfaces;
+            delfaces(ifaces,:)=[];
+            [~,ifaces,~]=setxor( sort(A,2), sort(delfaces,2), 'rows' );
+            plotfaces=A(ifaces,:);
+            patch('Vertices', defnodes, 'Faces', plotfaces,'FaceColor',col,'EdgeColor','k');
             %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col);
             %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col,"FaceAlpha",0.3);
         end

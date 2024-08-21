@@ -81,40 +81,30 @@ classdef PlaneElem < FiniteElement
                 dNtrc{i}=dNtr(:,:,i);
             end
             K = zeros( dim , dim, nelems );
-            G = zeros(2,dim);
-            B = zeros(3,dim);
+            Sg = zeros(2,nnodes);
             weights = integrator.weights;
-            S = zeros(3,3);
             s = zeros(2,2);
             h = obj.props.h;
             for k=1:nelems
                 elemX = nodes(obj.elems(k,:),:);
-                Ke = zeros( dim , dim );
+                So=zeros(nnodes,nnodes);
                 for i=1:nip
                     J = dNtrc{i}*elemX;
                     detJ = J(1,1) * J(2,2) - J(1,2) * J(2,1);
                     dNx = (1 / detJ * [ J(2,2) -J(1,2); -J(2,1)  J(1,1) ]) * dNtrc{i};
-                    S(1,1)=obj.results.gp.stress(1,k,i);
-                    S(2,2)=obj.results.gp.stress(2,k,i);
-                    S(3,3)=obj.results.gp.stress(3,k,i);
                     
                     s(1,1)=obj.results.gp.stress(1,k,i);
                     s(2,2)=obj.results.gp.stress(2,k,i);
                     s(2,1)=obj.results.gp.stress(3,k,i);
                     s(1,2)=obj.results.gp.stress(3,k,i);
                     for j = 1:nnd
-                      G(1, 2*j-1) = dNx(1,j);
-                      G(2, 2*j)   = dNx(2,j);
-
-                      B(1, 2*j-1) = dNx(1,j);
-                      B(2, 2*j)   = dNx(2,j);
-                      B(3, 2*j-1) = dNx(2,j);
-                      B(3, 2*j)   = dNx(1,j);
+                       Sg(1, j) = dNx(1,j);
+                       Sg(2, j) = dNx(2,j);  
                     end
-                    Ke = Ke + abs(detJ) * weights(i) * h * B'*S*B;
-                    %Ke = Ke + abs(detJ) * weights(i) * h * G'*s*G;
+                    So = So + abs(detJ) * integrator.weights(i) * Sg'*s*Sg;
                 end
-                K(:,:,k) = x(k)*Ke;
+                K(1:nnodes,1:nnodes,k) = x(k)*h*So;
+                K(nnodes+1:2*nnodes,nnodes+1:2*nnodes,k) = x(k)*h*So;
             end
             K=K(:);
         end

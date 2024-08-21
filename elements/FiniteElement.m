@@ -15,7 +15,7 @@ classdef (Abstract) FiniteElement < handle
       initializeResults(obj);
       computeResults(obj,nodes,q,varargin);
       plotWired(nodes,varargin);
-      plot(nodes);
+      plot(nodes,varargin);
       plotMap(nodes,q,mapName,scd);
     end
     
