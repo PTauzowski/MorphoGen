@@ -3,21 +3,21 @@ close all;
 
 %%% Initialization %%%
 sf=ShapeFunctionL8;
-l=1; b=0.1; h=0.1; lw=2*l; nl=5;
+l=1; b=0.1; h=0.1; lw=2*l; nl=80;
 
 E=205E9; nu=0.3; rho=7850; 
 
 xp = [b/2 h/2 l];
 Pcr = pi^2*E*(b*h^3/12)/lw^2;
-P = [0 0 -100];
+P = [0 0 1];
 
-nEigenForms = 10;
+nEigenForms = 20;
 
 model = ColumnModel3D( sf,b,h,l,nl,E,nu,rho,P,xp);
-model.solveWeighted();
+%model.solveWeighted();
 
 % model.plotModel();
-model.analysis.plotMaps(["uy" "ux" "sxx" "sxy" "szz" "sHM"], 0.1);
+%model.analysis.plotMaps(["uy" "ux" "sxx" "sxy" "szz" "sHM"], 0.1);
 % model.fe.plotWired( model.mesh.nodes, model.analysis.qnodal, 0.1);
 
 %%% Buckling analysis %%%
@@ -26,17 +26,21 @@ stability.Pnodal = model.analysis.Pnodal;
 stability.Pfem = model.analysis.Pfem;
 stability.supports = model.analysis.supports;
 stability.solve( nEigenForms);
-lambdas = diag(stability.lambdas);
+lambdas = diag(stability.lambdas)
 disp(['Eigenvalue = ', num2str(lambdas(1))]),
 disp(['P_critical = ', num2str(Pcr)])
 
-for k=1:min( 6, nEigenForms)
-    figure;
+P_critical_str = sprintf('%.4g', Pcr);
+sgtitle(['P_{cr} = ', P_critical_str]);
+for k=1:min(10,nEigenForms)
+    subplot(5, 2, k);
     stability.setForm(k);
-    model.fe.plotSolidDeformed( model.mesh.nodes, stability.qnodal, 0.2);
+    model.fe.plotSolidDeformed(model.mesh.nodes,stability.qnodal,0.2);
     axis on, xlabel('x-axis'), ylabel('y-axis'), view(3)
-    title(['Eigenvector: ' num2str(k)]);
+    lambda_str = sprintf('%.4g', lambdas(k));
+    title(['Form:' num2str(k), ' \lambda=' lambda_str]);
 end
+
 
 %%% Modal analysis %%%
 % vibrations = LinearNaturalVibration(model.analysis.felems, model.mesh);

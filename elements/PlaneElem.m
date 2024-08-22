@@ -69,7 +69,6 @@ classdef PlaneElem < FiniteElement
             integrator = obj.sf.createIntegrator();
             nip = size(integrator.points,1);
             dN = obj.sf.computeGradient( integrator.points );
-            nnd = size(dN,1); 
             dNtr = permute(dN,[2,1,3]);
             dNtrc = cell(size(dNtr,3),1);
             if ( nargin == 3 )
@@ -88,6 +87,7 @@ classdef PlaneElem < FiniteElement
             for k=1:nelems
                 elemX = nodes(obj.elems(k,:),:);
                 So=zeros(nnodes,nnodes);
+                %Kg = zeros( dim , dim );
                 for i=1:nip
                     J = dNtrc{i}*elemX;
                     detJ = J(1,1) * J(2,2) - J(1,2) * J(2,1);
@@ -97,14 +97,18 @@ classdef PlaneElem < FiniteElement
                     s(2,2)=obj.results.gp.stress(2,k,i);
                     s(2,1)=obj.results.gp.stress(3,k,i);
                     s(1,2)=obj.results.gp.stress(3,k,i);
-                    for j = 1:nnd
-                       Sg(1, j) = dNx(1,j);
-                       Sg(2, j) = dNx(2,j);  
+                    for j = 1:nnodes
+                       Sg(1,j) = dNx(1,j);
+                       Sg(2,j) = dNx(2,j);  
                     end
                     So = So + abs(detJ) * integrator.weights(i) * Sg'*s*Sg;
+                    %Kg=Kg+abs(detJ) * integrator.weights(i) * Sg'*s*Sg;
                 end
-                K(1:nnodes,1:nnodes,k) = x(k)*h*So;
-                K(nnodes+1:2*nnodes,nnodes+1:2*nnodes,k) = x(k)*h*So;
+                %K(1:nnodes,1:nnodes,k) = x(k)*h*So;
+                %K(nnodes+1:2*nnodes,nnodes+1:2*nnodes,k) = x(k)*h*So;
+                %K(:,:,k) = x(k)*h*Kg;
+                K(1:2:dim,1:2:dim,k) = x(k)*So;
+                K(2:2:dim,2:2:dim,k) = x(k)*So;
             end
             K=K(:);
         end

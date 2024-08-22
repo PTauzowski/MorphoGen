@@ -113,7 +113,6 @@ classdef SolidElasticElem < FiniteElement
             integrator = obj.sf.createIntegrator();
             nip = size(integrator.points,1);
             dN = obj.sf.computeGradient( integrator.points );
-            nnd = size(dN,1); 
             dNtr = permute(dN,[2,1,3]);
             dNtrc = cell(size(dNtr,3),1);
             if ( nargin == 3 )
@@ -132,7 +131,6 @@ classdef SolidElasticElem < FiniteElement
 
             for k=1:nelems
                 elemX = nodes(obj.elems(k,:),:);
-                Ke = zeros( dim , dim );
                 So=zeros(nnodes,nnodes);
                 for i=1:nip
                     J = dNtrc{i}*elemX;
@@ -152,16 +150,19 @@ classdef SolidElasticElem < FiniteElement
                     s(3,1)=obj.results.gp.stress(k,i,5);
                     s(2,1)=obj.results.gp.stress(k,i,6);
                                       
-                    for j = 1:nnd                         
-                          Sg(1, j) = dNx(1,j);
-                          Sg(2, j) = dNx(2,j);
-                          Sg(3, j) = dNx(3,j);       
+                    for j = 1:nnodes                         
+                          Sg(1,j) = dNx(1,j);
+                          Sg(2,j) = dNx(2,j);
+                          Sg(3,j) = dNx(3,j);       
                     end                   
                     So = So + abs(detJ) * integrator.weights(i) * Sg'*s*Sg;
                 end
-                K(1:nnodes,1:nnodes,k) = x(k)*So;
-                K(nnodes+1:2*nnodes,nnodes+1:2*nnodes,k) = x(k)*So;
-                K(2*nnodes+1:3*nnodes,2*nnodes+1:3*nnodes,k) = x(k)*So;
+                % K(1:nnodes,1:nnodes,k) = x(k)*So;
+                % K(nnodes+1:2*nnodes,nnodes+1:2*nnodes,k) = x(k)*So;
+                % K(2*nnodes+1:3*nnodes,2*nnodes+1:3*nnodes,k) = x(k)*So;
+                K(1:3:dim,1:3:dim,k) = x(k)*So;
+                K(2:3:dim,2:3:dim,k) = x(k)*So;
+                K(3:3:dim,3:3:dim,k) = x(k)*So;
             end
             K=K(:);
         end

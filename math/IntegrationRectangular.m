@@ -69,8 +69,8 @@ classdef IntegrationRectangular < Integration
                     
                 case 3
                     [ix,iy,iz] = meshgrid(1:g+1,1:g+1,1:g+1);
-                    obj.points = [ points1D(ix(:)); points1D(iy(:)); points1D(iz(:)) ]';
-                    obj.weights = weights1D( ix(:) ) .* weights1D( iy(:) ) .* weights1D( iz(:) );
+                    obj.points = [ points1D(iy(:)); points1D(ix(:)); points1D(iz(:)) ]';
+                    obj.weights = weights1D( iy(:) ) .* weights1D( ix(:) ) .* weights1D( iz(:) );
                 otherwise
                     warning('Unsupported space dimension: ' + num2str( d ) );
             end

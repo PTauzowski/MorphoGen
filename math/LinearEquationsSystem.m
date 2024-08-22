@@ -42,9 +42,11 @@ classdef LinearEquationsSystem < handle
         end
         function [qforms, lambdas] = solveEigenproblem(obj,K,Kg,num_eigenvalues)             
              dimfree  = size( obj.freedofs, 1 );
-             [qforms, lambdas] = eigs( sparse(obj.newdofs(obj.I(obj.iK11)),obj.newdofs(obj.J(obj.iK11)),K( obj.iK11),dimfree,dimfree),...
-                                       sparse(obj.newdofs(obj.I(obj.iK11)),obj.newdofs(obj.J(obj.iK11)),Kg(obj.iK11),dimfree,dimfree),...
-                                       num_eigenvalues, 'smallestabs');
+             [q, l] = eigs( sparse(obj.newdofs(obj.I(obj.iK11)),obj.newdofs(obj.J(obj.iK11)),K( obj.iK11),dimfree,dimfree),...
+                            sparse(obj.newdofs(obj.I(obj.iK11)),obj.newdofs(obj.J(obj.iK11)),Kg(obj.iK11),dimfree,dimfree),...
+                                     num_eigenvalues, 'smallestabs');
+             qforms=real(q);
+             lambdas=real(l);
         end
         function [q, R, error] = solveR(obj,K,P)
             q=P;
