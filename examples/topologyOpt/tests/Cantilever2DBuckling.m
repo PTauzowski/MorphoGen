@@ -22,7 +22,7 @@ cutTreshold = 0.005;
 penal = 3;
 
 % Type of shape function to be used (here: four node Langrange)
-sfL4 = ShapeFunctionL9;
+sfL4 = ShapeFunctionL4;
 
 % Creating FE mesh object
 mesh = Mesh();
@@ -45,13 +45,13 @@ fe.setMaterial( material );
 analysis = SecondOrderElasticityWeighted(fe, mesh, 0, true);
 
 % Creating node selector object to select fixed edge (left)
-fixedEdgeSelector = Selector( @(x)( abs(x(:,1)) < 0.001 ) );
+fixedEdgeSelector = Selector( @(x)( abs(x(:,1)) < 0.0005 ) );
 
 % Fixing structure according to above defined node selector object
 analysis.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
 
 % Creating load vector with one node loaded at the middle of right edge
-analysis.loadClosestNode([aspect*h, h/2 ], ["ux" "uy"], [0 -1] );
+analysis.loadClosestNode([aspect*h, h/2 ], ["ux" "uy"], [0 -0.0025] );
 
 nEigenForms=10;
 stability = LinearStability( analysis.felems, mesh);
@@ -70,14 +70,14 @@ for k=1:min(10,nEigenForms)
 end
 
 %analysis = SecondOrderElasticityWeighted( fe, mesh, lambdas(nEigenForms), false );
-analysis = SecondOrderElasticityWeighted( fe, mesh, 0.9*lambdas(1), false );
+analysis = SecondOrderElasticityWeighted( fe, mesh, 0.0, false );
 analysis.Pnodal=stability.Pnodal;
 analysis.Pfem=stability.Pfem;
 analysis.supports=stability.supports;
 
 figure;
 tic
-topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.2, true );
+topOpt = StressIntensityTopologyOptimizationBuckling( Rfilter, analysis, cutTreshold, penal, 0.4, true );
 [objF, xopt]  = topOpt.solve();
 toc
 

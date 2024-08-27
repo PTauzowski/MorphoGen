@@ -60,15 +60,16 @@ classdef (Abstract) StressIntensityTopologyOptimization < TopologyOptimization
 
             %obj.maxais = y4;
 
+            max_elem_removal_factor = 0.02;
 
             notErasedID = find( not( obj.erased_elems )  );
             notErasedID = setxor(notErasedID,intersect(notErasedID, obj.const_elems));
             maxaisprc =(max(obj.ais(notErasedID)) - min(obj.ais(notErasedID)) ) * obj.maxais;
             obj.elem_list = obj.ais(notErasedID) < min(obj.ais(notErasedID)) + maxaisprc;
-            if size(find(obj.elem_list),1)>size(obj.ais,1)*0.01
+            if size(find(obj.elem_list),1)>size(obj.ais,1)*max_elem_removal_factor
                     [~, ai]=sort(obj.ais(notErasedID));
                     obj.elem_list=false(size(obj.ais(notErasedID),1),1);
-                    obj.elem_list(ai(1:round(size(obj.ais,1)*0.01)))=true;
+                    obj.elem_list(ai(1:round(size(obj.ais,1)*max_elem_removal_factor)))=true;
             end
 
             obj.elem_list = notErasedID( obj.elem_list );

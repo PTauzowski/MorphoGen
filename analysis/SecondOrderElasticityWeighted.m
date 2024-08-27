@@ -1,13 +1,13 @@
 classdef SecondOrderElasticityWeighted < FEAnalysis
    
    properties
-        isConst,lambda;
+        isConst,lambda,lambdac;
    end
    
    methods       
-       function obj = SecondOrderElasticityWeighted(felems, mesh, lambda, isConst)
+       function obj = SecondOrderElasticityWeighted(felems, mesh, lambdac, isConst)
             obj= obj@FEAnalysis( felems, mesh );
-            obj.lambda = lambda;
+            obj.lambdac = lambdac;
             obj.isConst=isConst;
             obj.rotations=[];
        end
@@ -41,8 +41,7 @@ classdef SecondOrderElasticityWeighted < FEAnalysis
            Kg = obj.globalMatrixAggregationWeighted('computeGeometricStifnessMatrix',x);
            [~, lambdas] = solver.solveEigenproblem(K,Kg,10);
            obj.lambda=lambdas(1);
-           obj.lambda
-           obj.qfem = solver.solve(K-0.7*lambdas(1)*Kg, obj.Pfem);
+           obj.qfem = solver.solve(K-obj.lambdac*lambdas(1)*Kg, obj.Pfem);
            obj.qnodal=obj.fromFEMVector(obj.qfem(:,1));
            qfem=obj.qfem;
        end
