@@ -4,7 +4,7 @@ close all;
 % Cantilever topology optimization elastic task.
 
 % Resolution of shortest (vertical) edge
-res = 80;
+res = 150;
 
 % height of the cantilever
 h = 1;
@@ -52,7 +52,9 @@ analysisLinear.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
 analysisSecondOrder.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
 
 % Creating load vector with one node loaded at the middle of right edge
-P=-2.2E8;
+%P=-2.0E8; %100;
+P=-1.5E8; %150;
+
 hp=0;
 analysisLinear.loadClosestNode([aspect*h, hp ], ["ux" "uy"], [0 P] );
 analysisSecondOrder.loadClosestNode([aspect*h, hp ], ["ux" "uy"], [0 P] );
@@ -110,5 +112,5 @@ set(gca, 'XDir', 'reverse');
 % [objF, xopt]  = topOpt.solve();
 % toc
 
-save('Cantilever2DBucklingDown80.mat');
+save('Cantilever2DBucklingDown150.mat');
 
