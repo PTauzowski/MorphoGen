@@ -1,7 +1,7 @@
 classdef StressIntensityTopologyOptimizationBuckling < StressIntensityTopologyOptimization
     
     properties
-         Vend,plLambda;
+         Vend,plLambda,plVol,lastStableFrame;
     end
     
     methods
@@ -9,6 +9,7 @@ classdef StressIntensityTopologyOptimizationBuckling < StressIntensityTopologyOp
             obj=obj@StressIntensityTopologyOptimization(1,Rmin,linearElasticProblem,maxais,penal,is_const)
             obj.Vend=Vend;
             obj.plLambda=[];
+            obj.plVol=[];
         end
                            
         function of = computeObjectiveFunction(obj)
@@ -29,6 +30,10 @@ classdef StressIntensityTopologyOptimizationBuckling < StressIntensityTopologyOp
             fprintf('lambda=%5.3g ', obj.FEAnalysis.lambda);
             fprintf('\n');
             obj.plLambda = [ obj.plLambda abs(obj.FEAnalysis.lambda) ];
+            obj.plVol = [ obj.plVol round(sum( obj.x )/obj.V0*1000)/10 ];
+            if abs(obj.FEAnalysis.lambda)>=1
+                obj.lastStableFrame=obj.iteration;
+            end
         end
         
     end

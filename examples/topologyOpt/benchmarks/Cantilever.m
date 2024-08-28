@@ -1,11 +1,11 @@
 clear;
 close all;
-res = 40;
+res = 80;
 l = 1;
 
 aspect=2;
 
-Rfilter = 3*l/res;
+Rfilter = 4*l/res;
 
 %Removal intensity threshold
 cutTreshold = 0.005;

@@ -13,7 +13,7 @@ h = 1;
 aspect=2;
 
 % Filtering radius
-Rfilter = 2*h/res;
+Rfilter = 4*h/res;
 
 %Removal intensity threshold
 cutTreshold = 0.005;
@@ -35,29 +35,33 @@ fe=PlaneStressElem( sfL4, mesh.elems );
 
 % Create isotropic material object
 material = PlaneStressMaterial('mat1');
-material.setElasticIzo(1, 0.3);
+material.setElasticIzo(205E9, 0.3);
 
 % Assigning material to finite element
 fe.setMaterial( material );
 
 % Creating linear elastic finite element analysis object with weighted matrix feature, weighted by element density.
-%analysis = LinearElasticityWeighted( fe, mesh, true );
-analysis = SecondOrderElasticityWeighted(fe, mesh, 0, true);
+analysisLinear      = LinearElasticityWeighted( fe, mesh, false );
+analysisSecondOrder = SecondOrderElasticityWeighted(fe, mesh, 0, false);
 
 % Creating node selector object to select fixed edge (left)
 fixedEdgeSelector = Selector( @(x)( abs(x(:,1)) < 0.0005 ) );
 
 % Fixing structure according to above defined node selector object
-analysis.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
+analysisLinear.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
+analysisSecondOrder.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
 
 % Creating load vector with one node loaded at the middle of right edge
-analysis.loadClosestNode([aspect*h, h/2 ], ["ux" "uy"], [0 -0.0025] );
+P=-2.2E8;
+hp=0;
+analysisLinear.loadClosestNode([aspect*h, hp ], ["ux" "uy"], [0 P] );
+analysisSecondOrder.loadClosestNode([aspect*h, hp ], ["ux" "uy"], [0 P] );
 
 nEigenForms=10;
-stability = LinearStability( analysis.felems, mesh);
-stability.Pnodal = analysis.Pnodal;
-stability.Pfem = analysis.Pfem;
-stability.supports = analysis.supports;
+stability = LinearStability( analysisLinear.felems, mesh);
+stability.Pnodal = analysisLinear.Pnodal;
+stability.Pfem = analysisLinear.Pfem;
+stability.supports = analysisLinear.supports;
 stability.solve( nEigenForms);
 lambdas = diag(stability.lambdas)
 for k=1:min(10,nEigenForms)
@@ -69,20 +73,42 @@ for k=1:min(10,nEigenForms)
     title(['Form:' num2str(k), ' \lambda=' lambda_str]);
 end
 
-%analysis = SecondOrderElasticityWeighted( fe, mesh, lambdas(nEigenForms), false );
-analysis = SecondOrderElasticityWeighted( fe, mesh, 0.0, false );
-analysis.Pnodal=stability.Pnodal;
-analysis.Pfem=stability.Pfem;
-analysis.supports=stability.supports;
+
+analysisWithBuckling = SecondOrderElasticityWeighted( fe, mesh, 0.90, false );
+analysisWithBuckling.Pnodal=stability.Pnodal;
+analysisWithBuckling.Pfem=stability.Pfem;
+analysisWithBuckling.supports=stability.supports;
+
+% figure;
+% tic
+% topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.4, true );
+% [objF, xopt]  = topOptLinear.solve();
+% toc
 
 figure;
 tic
-topOpt = StressIntensityTopologyOptimizationBuckling( Rfilter, analysis, cutTreshold, penal, 0.4, true );
-[objF, xopt]  = topOpt.solve();
+topOptSecondOrder = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.38, true );
+[objF, xopt]  = topOptSecondOrder.solve();
 toc
+
+figure;
+tic
+topOptBuckling = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisWithBuckling, cutTreshold, penal, 0.38, true );
+[objF, xopt]  = topOptBuckling.solve();
+toc
+
+%load('Cantilever2DBucklingDown80.mat');
+
+figure, hold on
+plot(topOptSecondOrder.plVol,topOptSecondOrder.plLambda);
+plot(topOptBuckling.plVol,topOptBuckling.plLambda);
+set(gca, 'XDir', 'reverse');
 
 % figure;
 % tic
 % topOpt = SIMP_MMA_TopologyOptimizationElasticCompliance(Rfilter, analysis, penal, 0.2, true);
 % [objF, xopt]  = topOpt.solve();
 % toc
+
+save('Cantilever2DBucklingDown80.mat');
+
