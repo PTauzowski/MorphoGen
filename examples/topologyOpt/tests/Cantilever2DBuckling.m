@@ -4,7 +4,7 @@ close all;
 % Cantilever topology optimization elastic task.
 
 % Resolution of shortest (vertical) edge
-res = 150;
+res = 80;
 
 % height of the cantilever
 h = 1;
@@ -52,8 +52,8 @@ analysisLinear.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
 analysisSecondOrder.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
 
 % Creating load vector with one node loaded at the middle of right edge
-%P=-2.0E8; %100;
-P=-1.5E8; %150;
+P=-2.0E8; %100;
+%P=-1.5E8; %150;
 
 hp=0;
 analysisLinear.loadClosestNode([aspect*h, hp ], ["ux" "uy"], [0 P] );
@@ -87,24 +87,48 @@ analysisWithBuckling.supports=stability.supports;
 % [objF, xopt]  = topOptLinear.solve();
 % toc
 
-figure;
-tic
-topOptSecondOrder = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.38, true );
-[objF, xopt]  = topOptSecondOrder.solve();
-toc
+% figure;
+% tic
+% topOptSecondOrder = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.38, true );
+% [objF, xopt]  = topOptSecondOrder.solve();
+% toc
+% 
+% figure;
+% tic
+% topOptBuckling = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisWithBuckling, cutTreshold, penal, 0.38, true );
+% [objF, xopt]  = topOptBuckling.solve();
+% toc
 
-figure;
-tic
-topOptBuckling = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisWithBuckling, cutTreshold, penal, 0.38, true );
-[objF, xopt]  = topOptBuckling.solve();
-toc
-
-%load('Cantilever2DBucklingDown80.mat');
+load('Cantilever2DBucklingDown80.mat');
 
 figure, hold on
-plot(topOptSecondOrder.plVol,topOptSecondOrder.plLambda);
-plot(topOptBuckling.plVol,topOptBuckling.plLambda);
+p1=plot(topOptSecondOrder.plVol,topOptSecondOrder.plLambda,'b','LineWidth', 3);
 set(gca, 'XDir', 'reverse');
+title('Critical force coefficient evolution without buckling');
+xlabel('Volume fracion [%]');
+ylabel('Critical force coefficient [%]');
+xlim([37 57]);
+set(gca, 'FontSize', 24)
+
+figure, hold on
+p2=plot(topOptBuckling.plVol,topOptBuckling.plLambda,'r','LineWidth', 3);
+set(gca, 'XDir', 'reverse');
+title('Critical force coefficient evolution with buckling');
+xlabel('Volume fracion [%]');
+ylabel('Critical force coefficient [%]');
+xlim([37 57]);
+set(gca, 'FontSize', 24)
+
+figure, hold on
+p1=plot(topOptSecondOrder.plVol,topOptSecondOrder.plLambda,'b','LineWidth', 3);
+p2=plot(topOptBuckling.plVol,topOptBuckling.plLambda,'r','LineWidth', 3);
+legend([p1, p2], {'Without buckling', 'With buckling'});
+set(gca, 'XDir', 'reverse');
+title('Comparison of critical force evolution coefficient');
+xlabel('Volume fracion [%]');
+ylabel('Critical force coefficient [%]');
+xlim([37 57]);
+set(gca, 'FontSize', 24)
 
 % figure;
 % tic
@@ -112,5 +136,5 @@ set(gca, 'XDir', 'reverse');
 % [objF, xopt]  = topOpt.solve();
 % toc
 
-save('Cantilever2DBucklingDown150.mat');
+%save('Cantilever2DBucklingDown80.mat');
 
