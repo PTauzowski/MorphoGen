@@ -33,8 +33,12 @@ fixedEdgeSelector = Selector( @(x)( abs(x(:,3)) < 0.001 ) );
 loadedFaceSelector = Selector( @(x)( abs(x(:,3)- Length) < 0.001 ) );
 constElemsSelector =  Selector( @(x)( (x(:,3) < 0.05 * Length ) ) & (x(:,3) > 0.96 * Length ) );
 
+N=-0.0E8;
+Tx=-1.0E8;
+Tz=-0.0E8;
+
 %analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [-x(:,2)./sqrt(x(:,1).^2+x(:,2).^2) x(:,1)./sqrt(x(:,1).^2+x(:,2).^2) -x(:,2)./x(:,2)] )); 
-analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [0 0 -1.0E9] ));
+analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [Tx Tz N] ));
 analysis.fixNodes( fixedEdgeSelector, ["ux" "uy" "uz"] );
 %analysis.fixClosestNode( [0 0 0], ["ux" "uy" "uz"], [0 0 0]);
 const_elems = analysis.selectElems( constElemsSelector );
@@ -46,7 +50,7 @@ fe.plot(mesh.nodes);
 analysis.plotCurrentLoad();
 analysis.plotSupport();
 
-view(45, 45);
+view(3);
 
 analysis.printProblemInfo();
 
@@ -72,7 +76,7 @@ analysisWithBuckling.Pnodal=stability.Pnodal;
 analysisWithBuckling.Pfem=stability.Pfem;
 analysisWithBuckling.supports=stability.supports;
 
-analysisWithBuckling = SecondOrderElasticityWeighted( fe, mesh, 0.90, false );
+analysisWithBuckling = SecondOrderElasticityWeighted( fe, mesh, 0.95, false );
 analysisWithBuckling.Pnodal=stability.Pnodal;
 analysisWithBuckling.Pfem=stability.Pfem;
 analysisWithBuckling.supports=stability.supports;
@@ -85,13 +89,13 @@ toc
 
 % figure;
 % tic
-% topOptSecondOrder = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.38, true );
+% topOptSecondOrder = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.2, true );
 % [objF, xopt]  = topOptSecondOrder.solve();
 % toc
 % 
 % figure;
 % tic
-% topOptBuckling = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisWithBuckling, cutTreshold, penal, 0.38, true );
+% topOptBuckling = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisWithBuckling, cutTreshold, penal, 0.2, true );
 % [objF, xopt]  = topOptBuckling.solve();
 % toc
 
