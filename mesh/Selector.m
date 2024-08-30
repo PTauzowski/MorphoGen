@@ -15,7 +15,13 @@ classdef Selector
         end
         
         function s = select( obj, points )
-            s = abs(obj.fn(points)) > obj.tolerance;
+            objtype = class(obj.fn);
+            switch objtype
+                case 'function_handle' 
+                    s = abs(obj.fn(points)) > obj.tolerance;
+                otherwise
+                    s = obj.fn;
+            end
         end
         
     end

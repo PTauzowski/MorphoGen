@@ -534,9 +534,8 @@ classdef SolidElasticElem < FiniteElement
         function plot(obj,nodes,varargin)
             hold on, axis off;
             daspect([1 1 1]);
-            if nargin == 2
-                col=[0.8 0.8 0.8];
-            else
+            col=[0.8 0.8 0.8];
+            if nargin > 2
                 col=varargin{1};
             end
             allfaces = reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))';

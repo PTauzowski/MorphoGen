@@ -3,6 +3,7 @@ classdef Mesh < handle
     properties
         nodes, elems;
         tolerance = 10000;
+        convex_hull_nodes;
     end
     
     methods
@@ -341,6 +342,27 @@ classdef Mesh < handle
             obj.mergeMesh(mesh);
         end
 
+        function addManipulatorHalfSegment3D(obj,r,R,h,alpha,nr,nc,nz,lnodes)
+            mesh=Mesh();
+            mesh.addRectMesh3D( r, 0, 0, R-r, 2*pi, h, nr, nc, nz, lnodes);
+            mesh.transformToCylindrical3D([R 0]);
+           [mesh.convex_hull_nodes, ~] = convhull(mesh.nodes(:,1), mesh.nodes(:,2), mesh.nodes(:,3));
+
+            xp=mesh.nodes;
+            xp(:,3)=h;
+            c=cos(alpha);
+            s=sin(alpha);
+            t=tan(alpha);
+            Ry=[c 0 s; 0 1 0; -s 0 c];
+            nnodes=[0 0 h]+(Ry*(xp-[0 0 h])')';
+            %x=(mesh.nodes(:,3)/h).*nnodes(:,1)+(1-mesh.nodes(:,3)/h).*mesh.nodes(:,1);
+            x=nnodes(:,1);
+            z=(mesh.nodes(:,3)/h).*(h-mesh.nodes(:,1)*t);
+            mesh.nodes=[x mesh.nodes(:,2) z];
+            obj.mergeMesh(mesh);
+            obj.convex_hull_nodes=mesh.convex_hull_nodes;
+        end
+
         function obj = addrectPipe(obj,w,h,l1,th,nth,lnodes)
             nx=round(l1/th)*nth;
             ny=round((w-2*th)/th)*nth;
@@ -470,6 +492,86 @@ classdef Mesh < handle
             save([filenamebase '_mesh.mat'],"nodes","elems");
             dlmwrite([filenamebase '_nodes.txt'],obj.nodes,'delimiter','\t','precision','%7.3f');
             dlmwrite([filenamebase '_elems.txt'],obj.elems,'delimiter','\t','precision',6,'-append');
+        end
+        function upward_facing_nodes = findUpwardFacingNodes(obj)
+            % Preallocate for storing upward-facing node indices
+            upward_facing_nodes = [];
+            
+            % Define a threshold for the Z-component of the normal
+            z_threshold = 0.1;  % Adjust this value as needed (e.g., 0.1 means the normal must be at least 10% upward)
+
+            % Compute the convex hull
+            k=obj.convex_hull_nodes;
+    
+            % Loop over each facet to calculate the normals and check if they are upward-facing
+            for i = 1:size(k,1)
+                % Get the indices of the vertices for the i-th facet
+                idx = k(i,:);
+                
+                % Get the vertices of the triangle
+                v1 = obj.nodes(idx(1),:);
+                v2 = obj.nodes(idx(2),:);
+                v3 = obj.nodes(idx(3),:);
+                
+                % Compute edge vectors
+                edge1 = v2 - v1;
+                edge2 = v3 - v1;
+                
+                % Compute the normal using the cross product
+                normal = cross(edge1, edge2);
+                
+                % Normalize the normal vector
+                normal = normal / norm(normal);
+                
+                % Check if the normal vector is pointing upwards (Z-component above threshold)
+                if normal(3) > z_threshold
+                    % Add the vertices of this facet to the upward-facing nodes list
+                    upward_facing_nodes = [upward_facing_nodes; idx'];
+                end
+            end
+            
+            % Remove duplicate nodes (since a node can belong to multiple upward-facing facets)
+            upward_facing_nodes = unique(upward_facing_nodes);
+        end
+        function downward_facing_nodes = findDownwardFacingNodes(obj)
+            % Preallocate for storing upward-facing node indices
+            downward_facing_nodes = [];
+            
+            % Define a threshold for the Z-component of the normal
+            z_threshold = 0.1;  % Adjust this value as needed (e.g., 0.1 means the normal must be at least 10% upward)
+
+            % Compute the convex hull
+            k=obj.convex_hull_nodes;
+    
+            % Loop over each facet to calculate the normals and check if they are upward-facing
+            for i = 1:size(k,1)
+                % Get the indices of the vertices for the i-th facet
+                idx = k(i,:);
+                
+                % Get the vertices of the triangle
+                v1 = obj.nodes(idx(1),:);
+                v2 = obj.nodes(idx(2),:);
+                v3 = obj.nodes(idx(3),:);
+                
+                % Compute edge vectors
+                edge1 = v2 - v1;
+                edge2 = v3 - v1;
+                
+                % Compute the normal using the cross product
+                normal = cross(edge1, edge2);
+                
+                % Normalize the normal vector
+                normal = normal / norm(normal);
+                
+                % Check if the normal vector is pointing upwards (Z-component above threshold)
+                if normal(3) < -z_threshold
+                    % Add the vertices of this facet to the upward-facing nodes list
+                    downward_facing_nodes = [downward_facing_nodes; idx'];
+                end
+            end
+            
+            % Remove duplicate nodes (since a node can belong to multiple upward-facing facets)
+            downward_facing_nodes = unique(downward_facing_nodes);
         end
     end
 end
