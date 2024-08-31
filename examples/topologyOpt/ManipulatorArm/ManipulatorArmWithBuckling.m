@@ -7,6 +7,13 @@ r=R-th;
 h=0.2;
 alpha=30;
 
+Tx=0.0E7;
+Ty=0.0E7;
+N=-0.0E8;
+Mx=0.0E7;
+My=0.0E7;
+Ms=1.0E7;
+
 % resCirc=100;
 % resTh=max(1,round(th/2/pi/R*resCirc));
 % resHeight=max(1,round(h/4/pi/R*resCirc));
@@ -27,6 +34,7 @@ fe = SolidElasticElem( ShapeFn, mesh.elems );
 fe.plot(mesh.nodes);
 upward_facing_nodes=mesh.findUpwardFacingNodes();
 downward_facing_nodes=mesh.findDownwardFacingNodes();
+xs=(min(mesh.nodes)+max(mesh.nodes))/2;
 % scatter3(mesh.nodes(upward_facing_nodes,1), mesh.nodes(upward_facing_nodes,2), mesh.nodes(upward_facing_nodes,3), ...
 %          100, 'r', 'filled');
 
@@ -42,6 +50,7 @@ analysis = LinearElasticityWeighted( fe, mesh, false );
 % loadedFaceSelector = Selector( @(x)( abs(x(:,3)- Length) < 0.001 ) );
 constElemsSelector =  Selector( @(x)( (x(:,3) < 0.05 * h ) ) & (x(:,3) > 0.96 * h ) );
 
+
 un=false(size(mesh.nodes,1),1);
 dn=false(size(mesh.nodes,1),1);
 un( upward_facing_nodes ) = true;
@@ -53,8 +62,13 @@ downElems = mesh.findElems( fixedEdgeSelector, false );
 
 
 
-%analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [-x(:,2)./sqrt(x(:,1).^2+x(:,2).^2) x(:,1)./sqrt(x(:,1).^2+x(:,2).^2) -x(:,2)./x(:,2)] )); 
-analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [0 0 -2.0E8] ));
+analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [Tx 0 0] ));
+analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [0 Ty 0] ));
+analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [0 0 N] ));
+analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [x(:,1)*0 x(:,1)*0 (x(:,1)-xs(1))*My] ));
+analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [x(:,1)*0 x(:,1)*0 (x(:,2)/R)*Mx] ));
+analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + Ms*[-x(:,2)./sqrt((x(:,1)-xs(1)).^2+x(:,2).^2) (x(:,1)-xs(1))./sqrt((x(:,1)-xs(1)).^2+x(:,2).^2) x(:,3)*0] )); 
+
 analysis.fixNodes( fixedEdgeSelector, ["ux" "uy" "uz"] );
 %analysis.fixClosestNode( [0 0 0], ["ux" "uy" "uz"], [0 0 0]);
 const_elems = [upElems downElems];
