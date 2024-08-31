@@ -42,19 +42,22 @@ analysis = LinearElasticityWeighted( fe, mesh, false );
 % loadedFaceSelector = Selector( @(x)( abs(x(:,3)- Length) < 0.001 ) );
 constElemsSelector =  Selector( @(x)( (x(:,3) < 0.05 * h ) ) & (x(:,3) > 0.96 * h ) );
 
-un=false(size(mesh.nodes,1));
-dn=false(size(mesh.nodes,1));
+un=false(size(mesh.nodes,1),1);
+dn=false(size(mesh.nodes,1),1);
 un( upward_facing_nodes ) = true;
 dn(downward_facing_nodes ) = true;
 loadedFaceSelector = Selector( un );
 fixedEdgeSelector = Selector( dn );
+upElems = mesh.findElems( loadedFaceSelector, false );
+downElems = mesh.findElems( fixedEdgeSelector, false );
+
 
 
 %analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [-x(:,2)./sqrt(x(:,1).^2+x(:,2).^2) x(:,1)./sqrt(x(:,1).^2+x(:,2).^2) -x(:,2)./x(:,2)] )); 
 analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [0 0 -2.0E8] ));
 analysis.fixNodes( fixedEdgeSelector, ["ux" "uy" "uz"] );
 %analysis.fixClosestNode( [0 0 0], ["ux" "uy" "uz"], [0 0 0]);
-const_elems = analysis.selectElems( constElemsSelector );
+const_elems = [upElems downElems];
 
 %mesh.transformNodesXY( @(x)( [ x(:,1) x(:,2) x(:,3)-0.3*x(:,1).*x(:,3)/Length ] )  );
 
@@ -103,12 +106,14 @@ analysisWithBuckling.supports=stability.supports;
 figure;
 tic
 topOptSecondOrder = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.4, true );
+topOptSecondOrder.setConstElems(const_elems);
 [objF, xopt]  = topOptSecondOrder.solve();
 toc
 
 figure;
 tic
 topOptBuckling = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisWithBuckling, cutTreshold, penal, 0.4, true );
+topOptBuckling.setConstElems(const_elems);
 [objF, xopt]  = topOptBuckling.solve();
 toc
 

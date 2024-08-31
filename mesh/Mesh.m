@@ -83,10 +83,14 @@ classdef Mesh < handle
         function fnodes = findNodes(obj, selector)
             fnodes=find(selector.select(obj.nodes));
         end
-        function felems = findElems( obj, selector )
+        function felems = findElems( obj, selector, allElemNodes )
               fnodes = obj.findNodes( selector)';
               found = ismember(obj.elems, fnodes);
-              felems = find(sum(found,2)==size(obj.elems,2));
+              if allElemNodes
+                felems = find(sum(found,2)==size(obj.elems,2));
+              else
+                felems = find(sum(found,2)>0);
+              end
         end
 
         function retelem = addRectMesh2D( obj, x1, y1, dx, dy, nx, ny, pattern )
