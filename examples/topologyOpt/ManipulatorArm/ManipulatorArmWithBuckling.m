@@ -2,14 +2,18 @@ clear;
 close all;
 
 R=0.1;
-th=0.02;
+th=0.005;
 r=R-th;
 h=0.2;
 alpha=30;
 
-resCirc=100;
-resTh=max(1,round(th/2/pi/R*resCirc));
-resHeight=max(1,round(h/4/pi/R*resCirc));
+% resCirc=100;
+% resTh=max(1,round(th/2/pi/R*resCirc));
+% resHeight=max(1,round(h/4/pi/R*resCirc));
+
+resTh=1;
+resCirc=round(2*pi*R/th*resTh);
+resHeight=round(h/th*resTh);
 
 % Filtering radius
 Rfilter = R*3*pi/resCirc;
@@ -47,7 +51,7 @@ fixedEdgeSelector = Selector( dn );
 
 
 %analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [-x(:,2)./sqrt(x(:,1).^2+x(:,2).^2) x(:,1)./sqrt(x(:,1).^2+x(:,2).^2) -x(:,2)./x(:,2)] )); 
-analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [0 0 -1.0E9] ));
+analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [0 0 -2.0E8] ));
 analysis.fixNodes( fixedEdgeSelector, ["ux" "uy" "uz"] );
 %analysis.fixClosestNode( [0 0 0], ["ux" "uy" "uz"], [0 0 0]);
 const_elems = analysis.selectElems( constElemsSelector );
@@ -80,12 +84,12 @@ for k=1:min(10,nEigenForms)
     title(['Form:' num2str(k), ' \lambda=' lambda_str]);
 end
 
-analysisWithBuckling = SecondOrderElasticityWeighted( fe, mesh, 0.90, false );
-analysisWithBuckling.Pnodal=stability.Pnodal;
-analysisWithBuckling.Pfem=stability.Pfem;
-analysisWithBuckling.supports=stability.supports;
+analysisSecondOrder = SecondOrderElasticityWeighted( fe, mesh, 0.0, false );
+analysisSecondOrder.Pnodal=stability.Pnodal;
+analysisSecondOrder.Pfem=stability.Pfem;
+analysisSecondOrder.supports=stability.supports;
 
-analysisWithBuckling = SecondOrderElasticityWeighted( fe, mesh, 0.90, false );
+analysisWithBuckling = SecondOrderElasticityWeighted( fe, mesh, 0.95, false );
 analysisWithBuckling.Pnodal=stability.Pnodal;
 analysisWithBuckling.Pfem=stability.Pfem;
 analysisWithBuckling.supports=stability.supports;
@@ -96,15 +100,15 @@ analysisWithBuckling.supports=stability.supports;
 % [objF, xopt]  = topOptLinear.solve();
 % toc
 
-% figure;
-% tic
-% topOptSecondOrder = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.38, true );
-% [objF, xopt]  = topOptSecondOrder.solve();
-% toc
-% 
 figure;
 tic
-topOptBuckling = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisWithBuckling, cutTreshold, penal, 0.38, true );
+topOptSecondOrder = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.4, true );
+[objF, xopt]  = topOptSecondOrder.solve();
+toc
+
+figure;
+tic
+topOptBuckling = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisWithBuckling, cutTreshold, penal, 0.4, true );
 [objF, xopt]  = topOptBuckling.solve();
 toc
 
