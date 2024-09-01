@@ -41,7 +41,7 @@ classdef LinearStability < FEAnalysis
            [obj.qforms, obj.lambdas]=solver.solveEigenproblem(K,Kg,num_eigenvalues);
        end
 
-       function solveWeighted(obj, x, num_eigenvalues)
+       function solveWeighted (obj, x, num_eigenvalues )
            [I,J,~,~] = obj.globalMatrixIndices();
            obj.prepareRHSVectors();
            if size(obj.rotations,1)== 0 
