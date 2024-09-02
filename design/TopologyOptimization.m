@@ -161,9 +161,9 @@ classdef TopologyOptimization < handle
                 title(['Iteration :',num2str(obj.iteration), 'vol =' num2str(obj.computeVolumeFraction)]);
         end
         function plotMeshTopology( obj, x, elem_inds )
-            clf;
+            %clf;
             hold on;
-            colorbar();
+            %colorbar();
             daspect([1 1 1]);
             colormap(gray);
             %colormap("jet");
