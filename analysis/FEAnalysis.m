@@ -278,7 +278,7 @@ classdef (Abstract) FEAnalysis < handle
               dim    = size(obj.mesh.nodes,2);
               dg     = norm( max(obj.mesh.nodes) - min(obj.mesh.nodes) );
               maxs = max( abs(min(min(obj.Pnodal))), abs(max(max(obj.Pnodal)) ) );
-              xp = obj.mesh.nodes - obj.Pnodal ./ maxs * dg * 0.02;
+              xp = obj.mesh.nodes - obj.Pnodal ./ maxs * dg * 0.05;
 
               if dim == 2
                 X = [xp(:,1) obj.mesh.nodes(:,1)]';

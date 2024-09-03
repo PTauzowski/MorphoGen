@@ -81,13 +81,13 @@ function  ArmTopOptBucklingFn(name,Tx,Ty,N,Mx,My,Ms)
     stability.supports = analysis.supports;
     stability.solve( nEigenForms);
     lambdas = diag(stability.lambdas)
-    for k=1:min(10,nEigenForms)
-        %figure;
-        subplot(5, 2, k);
+    for k=1:min(2,nEigenForms)
+        figure;
+        %subplot(5, 2, k);
         stability.setForm(k);
         fe.plotSolidDeformed(mesh.nodes,stability.qnodal,0.2);
-        axis on, xlabel('x-axis'), ylabel('y-axis'), view(3)
-        lambda_str = sprintf('%.4g', lambdas(k));
+        %axis on, xlabel('x-axis'), ylabel('y-axis'), view(3)
+        %lambda_str = sprintf('%.4g', lambdas(k));
         title(['Form:' num2str(k), ' \lambda=' lambda_str]);
     end
     
@@ -184,6 +184,6 @@ function  ArmTopOptBucklingFn(name,Tx,Ty,N,Mx,My,Ms)
     % end
 
      fprintf('Topology: a=%s, Pcr=%5.4g, Lambda1=%5.4g, lambda2=%5.4g\n', name,topOptBuckling.plLambda(end),lambda1,lambda2);
-     save(['ArmTopopt_' name '.mat']);
+     %save(['ArmTopopt_' name '.mat']);
 end
 
