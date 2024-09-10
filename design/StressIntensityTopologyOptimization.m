@@ -60,7 +60,7 @@ classdef (Abstract) StressIntensityTopologyOptimization < TopologyOptimization
 
             %obj.maxais = y4;
 
-            max_elem_removal_factor = 0.02;
+            max_elem_removal_factor = 0.025;
 
             notErasedID = find( not( obj.erased_elems )  );
             notErasedID = setxor(notErasedID,intersect(notErasedID, obj.const_elems));
