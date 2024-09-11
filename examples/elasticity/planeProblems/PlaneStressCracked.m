@@ -6,12 +6,11 @@ conn=l/res*10;
 tic
 sf = ShapeFunctionL16;
 mesh = Mesh();
-mesh.addRectMesh2D(0, 0, 2*l, l, 2*res, res, sf.pattern);
+elems1=mesh.addRectMesh2D(0, 0, 2*l, l, 2*res, res, sf.pattern);
 mesh2 = Mesh();
-mesh2.addRectMesh2D(0, l, 2*l, l, 2*res, res, sf.pattern);
-elems1 = mesh.elems;
+elems2=mesh2.addRectMesh2D(0, l, 2*l, l, 2*res, res, sf.pattern);
 connectionSelector = Selector( @(x)( ( abs( x(:,2) - l ) < 1.0E-04) & (( x(:,1) <= conn ) | ( 2*l - x(:,1) <= conn )  )  ) );
-elems2 = mesh.connect( connectionSelector, mesh2.nodes, mesh2.elems );
+elems2 = mesh.connect( connectionSelector, mesh2.nodes, elems2 );
 
 fe1=PlaneStressElem( sf, elems1 );
 fe1.plot(mesh.nodes);

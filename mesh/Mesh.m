@@ -87,10 +87,85 @@ classdef Mesh < handle
             ic = incenter(DT);
             in = inpolygon(ic(:,1),ic(:,2),P(:,1),P(:,2));
             %new_elems=delaunay(DT.ConnectivityList);
-            %IO = isInterior(DT);
-            elems = obj.merge( DT.Points, DT.ConnectivityList(in,:) );
+            IO = isInterior(DT);
+            newNodes = obj.laplacianSmoothing(DT.Points, DT.ConnectivityList(in,:), 20);
+            elems = obj.merge( newNodes, DT.ConnectivityList(in,:) );
             %obj.append( new_nodes, new_elems );
         end
+        function smoothedNodes = laplacianSmoothing(obj, nodes, connectivityArray, numIterations)
+            % nodes: N x 2 or N x 3 array of node coordinates
+            % connectivityArray: M x 3 array of triangle vertex indices
+            % numIterations: Number of smoothing iterations
+            % smoothedNodes: the smoothed node coordinates
+        
+            % Number of nodes
+            numNodes = size(nodes, 1);
+            
+            % Determine boundary nodes
+            boundaryNodes = obj.detectBoundaryNodes(connectivityArray, numNodes);
+            
+            % Initialize smoothedNodes with the original nodes
+            smoothedNodes = nodes;
+        
+            % Perform smoothing for the specified number of iterations
+            for iter = 1:numIterations
+                % Create arrays to accumulate neighbor sums for each dimension (x, y, z)
+                neighborSumX = zeros(numNodes, 1);
+                neighborSumY = zeros(numNodes, 1);
+                
+                % If 3D mesh, also create a z-component accumulator
+                if size(nodes, 2) == 3
+                    neighborSumZ = zeros(numNodes, 1);
+                end
+                
+                neighborCount = zeros(numNodes, 1);
+        
+                % Get all edges from the connectivityArray
+                edges = [connectivityArray(:, [1, 2]); connectivityArray(:, [2, 3]); connectivityArray(:, [3, 1])];
+        
+                % Accumulate neighbor sums and counts for X and Y (and Z if 3D)
+                neighborSumX = accumarray([edges(:,1); edges(:,2)], [nodes(edges(:,2),1); nodes(edges(:,1),1)], [numNodes, 1]);
+                neighborSumY = accumarray([edges(:,1); edges(:,2)], [nodes(edges(:,2),2); nodes(edges(:,1),2)], [numNodes, 1]);
+                if size(nodes, 2) == 3
+                    neighborSumZ = accumarray([edges(:,1); edges(:,2)], [nodes(edges(:,2),3); nodes(edges(:,1),3)], [numNodes, 1]);
+                end
+                
+                neighborCount = accumarray([edges(:,1); edges(:,2)], 1, [numNodes, 1]);
+        
+                % Smooth only the interior nodes (boundary nodes stay fixed)
+                for k = 1:numNodes
+                    if ~boundaryNodes(k) && neighborCount(k) > 0
+                        smoothedNodes(k, 1) = neighborSumX(k) / neighborCount(k);
+                        smoothedNodes(k, 2) = neighborSumY(k) / neighborCount(k);
+                        if size(nodes, 2) == 3
+                            smoothedNodes(k, 3) = neighborSumZ(k) / neighborCount(k);
+                        end
+                    end
+                end
+            end
+        end
+       function boundaryNodes = detectBoundaryNodes(obj, connectivityArray, numNodes)
+            % Initialize boundaryNodes as false
+            boundaryNodes = false(numNodes, 1);
+        
+            % Get all edges from the connectivityArray
+            edges = [connectivityArray(:, [1, 2]); connectivityArray(:, [2, 3]); connectivityArray(:, [3, 1])];
+        
+            % Sort each edge's vertex indices to ensure consistent ordering
+            sortedEdges = sort(edges, 2);
+            
+            % Get unique edges and counts of how often each appears
+            [uniqueEdges, ~, ic] = unique(sortedEdges, 'rows');
+            edgeCounts = accumarray(ic, 1);
+            
+            % Boundary edges appear only once, get their indices
+            boundaryEdgeIdx = find(edgeCounts == 1);
+            
+            % Mark nodes on boundary edges as boundary nodes
+            boundaryEdges = uniqueEdges(boundaryEdgeIdx, :);
+            boundaryNodes(unique(boundaryEdges(:))) = true;
+       end
+
         function elems = addRectMeshTriangular2D( obj, mode, x1, y1, dx, dy, nx, ny )
             ddx = dx/nx;
             ddy = dy/ny;
@@ -221,16 +296,18 @@ classdef Mesh < handle
             elems = mesh.addRectMesh2D( -1, -1, 2, 2, div, div, pattern );
             mesh.nodes = [ 0.5*( 1-mesh.nodes(:,1)).*(x0-a)+0.5*(mesh.nodes(:,1)+1).*(x0-r*cos( pi/8 .* mesh.nodes(:,2) + pi/8)) ...
                            0.5*( 1-mesh.nodes(:,1)).*(a/2.*mesh.nodes(:,2)+y0+a/2)+0.5*(mesh.nodes(:,1)+1).*(y0+r.*sin( pi/8.*mesh.nodes(:,2)+pi/8)) ];
+            elems=obj.merge( mesh.nodes, elems );
+
             mesh2 = Mesh();
             elems2 = mesh2.addRectMesh2D( -1, -1, 2, 2, div, div, pattern );
             mesh2.nodes  = [ 0.5*( mesh2.nodes(:,1)+1).*(x0+a)+0.5*(1-mesh2.nodes(:,1)).*(x0+r*cos( pi/8 .* mesh2.nodes(:,2) + pi/8)) ...
                          0.5*( mesh2.nodes(:,1)+1).*(a/2.*mesh2.nodes(:,2)+y0+a/2)+0.5*(1-mesh2.nodes(:,1)).*(y0+r.*sin( pi/8.*mesh2.nodes(:,2)+pi/8)) ];
-
-            elems = [ elems; mesh.merge( mesh2.nodes, elems2 ); ...                             
-                        mesh.duplicateTransformedMeshDeg2D( [x0 y0], 90, [0 0] ); ...
-                        mesh.duplicateTransformedMeshDeg2D( [x0 y0], 180, [0 0] ) ];
+            elems=obj.merge( mesh2.nodes, elems2 );
+            elems4=obj.duplicateTransformedMeshDeg2D( [x0 y0], 90, [0 0],  elems );
+            elems5=obj.duplicateTransformedMeshDeg2D( [x0 y0], 180, [0 0], elems );
+            elems = [ elems; elems2; elems4; elems5 ];
             
-            elems = obj.merge(mesh.nodes, elems);
+            %elems = obj.merge(mesh.nodes, elems);
         end
         function elems = addRing2D( obj, x0, y0 , r1, r2, nr, nfi, pattern )
              mesh = Mesh();
@@ -379,8 +456,8 @@ classdef Mesh < handle
         function elems = transformToPolar2D( obj, x0, y0, oldelems )
              newNodes = [ x0+obj.nodes(:,1).*cos( obj.nodes(:,2) ) y0+obj.nodes(:,1).*sin( obj.nodes(:,2) ) ];
              [~,si1,si2] = unique( round(newNodes .* obj.tolerance), 'rows', 'stable' );
-            obj.nodes = newNodes( si1, : );
-            elems = si2(oldelems);
+             obj.nodes = newNodes( si1, : );
+             elems = si2(oldelems);
         end
         function elems = transformToCylindrical3D( obj, x0, oldelems )
              newNodes = [ x0(1)+obj.nodes(:,1).*cos( obj.nodes(:,2) ) x0(2)+obj.nodes(:,1).*sin( obj.nodes(:,2) ) obj.nodes(:,3) ];
@@ -426,9 +503,6 @@ classdef Mesh < handle
         end
         function transformNodesXY( obj, transformFn )
             obj.nodes = transformFn( obj.nodes );
-        end
-        function laplacianSmoothing(n)
-            
         end
         function elems = importFEMesh( obj, mesh )
             obj.nodes=mesh.Nodes';

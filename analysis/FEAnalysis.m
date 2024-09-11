@@ -295,7 +295,7 @@ classdef (Abstract) FEAnalysis < handle
 
               xp = xps - obj.supports * dg * 0.02;
               
-              for k=1:size(irots)
+              for k=1:max(size(irots))
                   alpha = obj.rotations(irots(k));
                   xp(irots(k),1) = xps(irots(k),1) - cos(alpha*pi/180) * dg * 0.02; 
                   xp(irots(k),2) = xps(irots(k),2) - sin(alpha*pi/180) * dg * 0.02; 
@@ -317,7 +317,7 @@ classdef (Abstract) FEAnalysis < handle
                 figure, hold on, axis off;
                 daspect([1 1 1]);
                 dg     = norm( max(obj.mesh.nodes) - min(obj.mesh.nodes) );
-                maxs = max( abs(min(min(obj.qfem))), abs(max(max(obj.qfem)) ) )
+                maxs = max( abs(min(min(obj.qfem))), abs(max(max(obj.qfem)) ) );
                 for k=1:max(size(obj.felems))
                    valueIndex = find(obj.felems{k}.results.names == mapName);
                    if size(valueIndex,2)==0

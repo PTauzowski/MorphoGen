@@ -8,7 +8,7 @@ nu=0.3;
 xp=[l l/4];
 P=[0 -1];
 
-model = CantileverModelLinear(sf,l,nl,E,nu,xp,P);
+model = CantileverModelLinear(sf,l,nl,E,nu,xp);
 model.solveWeighted();
 
 model.plotModel();

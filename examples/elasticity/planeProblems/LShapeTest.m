@@ -23,7 +23,7 @@ xp=[l 0.4*l];
 P=[0 -1];
 
 % LShape model object instantiation
-model = LShapeModelLinear(sf,l,nl,E,nu,xp,P);
+model = LShapeModelLinear(sf,l,nl,E,nu,xp);
 
 % solving linear elastic problem
 model.solveWeighted();

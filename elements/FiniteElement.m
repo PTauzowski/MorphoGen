@@ -11,7 +11,7 @@ classdef (Abstract) FiniteElement < handle
     
     methods(Abstract)
       N = shapeMatrix( obj, points );
-      P = loadLineIntegral(obj, mode, nodes, fedges,dofnames,valueFn);
+      P = loadLineIntegral(obj, mode, nodes, fedges, dofnames,valueFn);
       initializeResults(obj);
       computeResults(obj,nodes,q,varargin);
       plotWired(nodes,varargin);

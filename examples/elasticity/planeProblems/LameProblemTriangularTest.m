@@ -10,10 +10,11 @@ P=[0 -1];
 
 
 model = LameProblemModelTriangular(sf,r1,r2,div,E,nu,P);
+model.plotModel();
 
 model.solveWeighted();
 
-model.plotModel();
+
 model.analysis.plotMaps(["uy" "ux" "sxx" "sxy" "syy" "sHM"],0.0);
 %model.fe.plotWired(model.mesh.nodes,model.analysis.qnodal,0.1);
 

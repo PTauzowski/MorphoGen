@@ -11,10 +11,11 @@ nu=0.3;
 pressure=100;
 
 model = PressurizedSquareWithHoleModel(sf,x0,a,hf,res,E,nu,pressure);
+model.plotModel();
 
 model.solveWeighted();
 
-model.plotModel();
+
 model.analysis.plotMaps(["uy" "ux" "sxx" "sxy" "syy" "sHM"],0.0);
 %model.fe.plotWired(model.mesh.nodes,model.analysis.qnodal,0.1);
 

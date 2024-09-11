@@ -5,8 +5,8 @@ l = 3;
 tic
 sfL4 = ShapeFunctionL4;
 mesh = Mesh();
-mesh.addRectMesh2D(0, 0, 2*l, l, 2*res, res, sfL4.pattern);
-fe=PlaneStressElem( sfL4, mesh.elems );
+elems=mesh.addRectMesh2D(0, 0, 2*l, l, 2*res, res, sfL4.pattern);
+fe=PlaneStressElem( sfL4, elems );
 mX = max(mesh.nodes(:,1));
 fe.props.h=1;
 
@@ -14,7 +14,7 @@ material = PlaneStressMaterial('mat1');
 material.setElasticIzo(210000, 0.3);
 fe.setMaterial( material );
 
-analysis = LinearElasticity( fe, mesh);
+analysis = LinearElasticity( fe, mesh );
 
 fixedEdgeSelector = Selector( @(x)( abs(x(:,1))<0.001 ) );
 loadedEdgeSelector = Selector( @(x)( abs(x(:,1) - 2*l)<0.001 ) );
@@ -23,7 +23,7 @@ analysis.elementLoadLineIntegral( "global", loadedEdgeSelector, ["ux" "uy"], @(x
 analysis.printProblemInfo();
 
 mesh.transformMeshDeg2D( [0 0], 45, [0 0] );
-fe.plotSolid(mesh.nodes);
+fe.plot(mesh.nodes);
 analysis.plotCurrentLoad();
 analysis.plotSupport();
 

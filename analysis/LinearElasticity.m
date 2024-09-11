@@ -18,7 +18,7 @@ classdef LinearElasticity < FEAnalysis
            K = obj.globalMatrixAggregation('computeStifnessMatrix');
            obj.qfem = solver.solve(K, obj.Pfem );
            obj.qnodal = obj.fromFEMVector( obj.qfem );
-           obj.computeElementResults(obj.qnodal);
+           obj.computeElementResults();
            qn=obj.qnodal;
        end
    end
