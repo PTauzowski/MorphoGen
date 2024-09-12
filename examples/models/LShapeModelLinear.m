@@ -5,11 +5,11 @@ classdef LShapeModelLinear < ModelLinearLoad
             c=0.4;
             obj.xp=xp;
             obj.mesh = Mesh();      
-            elems=obj.mesh.addLshape(l,c*l,res,sf.pattern);
+            obj.mesh.addLshape(l,c*l,res,sf.pattern);
             obj.result_node = obj.mesh.findClosestNode(xp);
             fixedEdgeSelector = Selector( @(x)( abs(x(:,2)-l) ) < 0.001 );
 
-            obj.fe=PlaneStressElem( sf, elems );
+            obj.fe=PlaneStressElem( sf, obj.mesh.elems );
             material = PlaneStressMaterial('mat1');
             material.setElasticIzo(E, nu);
             obj.fe.setMaterial( material );            
@@ -18,7 +18,7 @@ classdef LShapeModelLinear < ModelLinearLoad
             obj.analysis.createNextRightHandSideVector();
             obj.analysis.loadClosestNode(xp,["ux" "uy"], [0 1]);
             obj.analysis.createNextRightHandSideVector();
-            obj.analysis.fixNodes( fixedEdgeSelector, [ "uy"] );  
+            obj.analysis.fixNodes( fixedEdgeSelector, ["uy"] );  
             obj.analysis.fixClosestNode([0,l],["ux" "uy"],[0 0]);
             obj.analysis.printProblemInfo();
             obj.analysis.initializeResults();

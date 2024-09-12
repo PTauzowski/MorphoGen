@@ -8,10 +8,10 @@ classdef LameProblemModelTriangular < ModelLinear
             x0 = 0;
             y0 = 0;
             obj.mesh = Mesh();
-            elems=obj.mesh.addRectMeshTriangular2D( 'dual', r1, 0, r2-r1, 2*pi, div, round(3*pi*div) );
-            elems=obj.mesh.transformToPolar2D( x0, y0, elems );
+            obj.mesh.addRectMeshTriangular2D( 'dual', r1, 0, r2-r1, 2*pi, div, round(3*pi*div) );
+            obj.mesh.transformToPolar2D( x0, y0 );
             %mesh.transformMeshDeg2D( [137 0], -90, [-137 0] );
-            obj.fe=PlaneStressElem( sf, elems );
+            obj.fe=PlaneStressElem( sf, obj.mesh.elems );
             material = PlaneStressMaterial('mat1');
             material.setElasticIzo(E, nu);
             obj.fe.setMaterial( material );

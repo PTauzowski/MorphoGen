@@ -293,21 +293,17 @@ classdef Mesh < handle
         function elems = addRectWithHoleMesh2D( obj, a, x0, y0, holefactor, div, pattern )
             r=a*holefactor;
             mesh = Mesh();
-            elems = mesh.addRectMesh2D( -1, -1, 2, 2, div, div, pattern );
+            elems=mesh.addRectMesh2D( -1, -1, 2, 2, div, div, pattern );
             mesh.nodes = [ 0.5*( 1-mesh.nodes(:,1)).*(x0-a)+0.5*(mesh.nodes(:,1)+1).*(x0-r*cos( pi/8 .* mesh.nodes(:,2) + pi/8)) ...
                            0.5*( 1-mesh.nodes(:,1)).*(a/2.*mesh.nodes(:,2)+y0+a/2)+0.5*(mesh.nodes(:,1)+1).*(y0+r.*sin( pi/8.*mesh.nodes(:,2)+pi/8)) ];
-            elems=obj.merge( mesh.nodes, elems );
-
             mesh2 = Mesh();
-            elems2 = mesh2.addRectMesh2D( -1, -1, 2, 2, div, div, pattern );
+            elems2=mesh2.addRectMesh2D( -1, -1, 2, 2, div, div, pattern );
             mesh2.nodes  = [ 0.5*( mesh2.nodes(:,1)+1).*(x0+a)+0.5*(1-mesh2.nodes(:,1)).*(x0+r*cos( pi/8 .* mesh2.nodes(:,2) + pi/8)) ...
                          0.5*( mesh2.nodes(:,1)+1).*(a/2.*mesh2.nodes(:,2)+y0+a/2)+0.5*(1-mesh2.nodes(:,1)).*(y0+r.*sin( pi/8.*mesh2.nodes(:,2)+pi/8)) ];
-            elems=obj.merge( mesh2.nodes, elems2 );
-            elems4=obj.duplicateTransformedMeshDeg2D( [x0 y0], 90, [0 0],  elems );
-            elems5=obj.duplicateTransformedMeshDeg2D( [x0 y0], 180, [0 0], elems );
-            elems = [ elems; elems2; elems4; elems5 ];
-            
-            %elems = obj.merge(mesh.nodes, elems);
+            elems=[ elems;  mesh.merge( mesh2.nodes, elems2 ) ];                              
+            elems=[ elems; mesh.duplicateTransformedMeshDeg2D( [x0 y0], 90, [0 0], elems ) ];
+            elems=[ elems; mesh.duplicateTransformedMeshDeg2D( [x0 y0], 180, [0 0],elems ) ];            
+            obj.merge( mesh.nodes, elems );
         end
         function elems = addRing2D( obj, x0, y0 , r1, r2, nr, nfi, pattern )
              mesh = Mesh();
@@ -429,23 +425,23 @@ classdef Mesh < handle
                          obj.nodes(:,3)] + xm, oldelems );
                   
         end
-        function obj = array( obj, coord, n )
+        function elems = array( obj, coord, n, oelems )
                 m = max(obj.nodes)-min(obj.nodes);
                 mv=zeros(1,size(obj.nodes,2));
-                belems=obj.elems;
+                belems=oelems;
                 bnodes=obj.nodes;
+                elems=oelems;
                 for k=1:n
                     mv(coord)=k*m(coord);
                     newnodes=bnodes+mv;
-                    obj.merge( newnodes, belems );
+                    elems=[ elems; obj.merge( newnodes, belems ) ];
                 end
-
         end
         function obj = transformMeshDeg2D( obj, x0, angleDeg, xm )
             angleRad = angleDeg*pi/180;
             obj.nodes = [ x0(1)+(obj.nodes(:,1)-x0(1)).*cos(angleRad)-(obj.nodes(:,2)-x0(2)).*sin(angleRad)...
                           x0(2)+(obj.nodes(:,1)-x0(1)).*sin(angleRad)+(obj.nodes(:,2)-x0(2)).*cos(angleRad)] + xm;
-                  
+                  ;
         end
         function obj = transformMesh3DDegXY( obj, x0, angleDeg, xm )
             angleRad = angleDeg*pi/180;

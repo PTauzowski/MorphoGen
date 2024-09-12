@@ -15,7 +15,7 @@ pressure=100;
 
 model = ChocolateModel( ganTh, alGanTh, notchWidth, relNotchDepth, relRoutndNotchDepth, E, nu, alphaT, dT);
 
-%model.plotModel();
+model.plotModel();
 model.solveWeighted();
 model.analysis.plotMaps(["uy" "ux" "sxx" "sxy" "syy" "sHM"],0.1);
 %model.fe.plotWired(model.mesh.nodes,model.analysis.qnodal,0.1);

@@ -10,9 +10,9 @@ classdef InclinedSupportPlanestress < ModelLinear
             segmentLength=2*l;
             segmentShortening=segmentHeigh/2*tan(endAngle*pi/180);
             obj.mesh = Mesh();
-            elems = obj.mesh.addRectMesh2D(0, -segmentHeigh/2, segmentLength, segmentHeigh, 2*res, res, sf.pattern);
+            obj.mesh.addRectMesh2D(0, -segmentHeigh/2, segmentLength, segmentHeigh, 2*res, res, sf.pattern);
             obj.mesh.transformNodesXY( @(x)([ x(:,1)+2*segmentShortening.*x(:,2)./segmentHeigh.*(x(:,1))./segmentLength  x(:,2) ]) )
-            obj.fe=PlaneStressElem( sf, elems );
+            obj.fe=PlaneStressElem( sf, obj.mesh.elems );
             material = PlaneStressMaterial('mat1');
             material.setElasticIzo(E, nu);
             material.setElasticIzoGrad();
@@ -27,7 +27,7 @@ classdef InclinedSupportPlanestress < ModelLinear
             obj.analysis.fixNodes( inclinedSupportEdgeSelector, ["uy"] );
             obj.analysis.setNodalSupportRotations( inclinedSupportEdgeSelector, 90-endAngle);
             obj.analysis.printProblemInfo();
-            obj.x=ones(obj.analysis.getTotalElemsNumber(),1);
+            obj.x=ones(1,obj.analysis.getTotalElemsNumber());
             obj.result_number=17;
         end
         

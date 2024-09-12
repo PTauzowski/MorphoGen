@@ -5,10 +5,10 @@ classdef CantileverModelLinear < ModelLinearLoad
             c=2;
             obj.xp=xp;
             obj.mesh = Mesh();      
-            elems = obj.mesh.addRectMesh2D( 0, 0, l, l/c, round(c*nh), nh, sf.pattern );
+            obj.mesh.addRectMesh2D( 0, 0, l, l/c, round(c*nh), nh, sf.pattern );
             fixedEdgeSelector = Selector( @(x)( abs(x(:,1)) < 0.001 ) );
 
-            obj.fe=PlaneStressElem( sf, elems );
+            obj.fe=PlaneStressElem( sf, obj.mesh.elems );
             material = PlaneStressMaterial('mat1');
             material.setElasticIzo(E, nu);
             obj.fe.setMaterial( material );            
@@ -19,7 +19,7 @@ classdef CantileverModelLinear < ModelLinearLoad
             obj.analysis.createNextRightHandSideVector();
             obj.analysis.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
             obj.analysis.printProblemInfo();
-            obj.x=ones(obj.analysis.getTotalElemsNumber(),1);
+            obj.x=ones(1,obj.analysis.getTotalElemsNumber());
             obj.result_number=17;
             obj.result_node=obj.mesh.findClosestNode([l 0]);
             obj.setOneX();

@@ -41,11 +41,36 @@ classdef (Abstract) StressIntensityTopologyOptimization < TopologyOptimization
         end
 
         function removeStressed( obj )
+            a=20;
+            b=0;
+            tc1=0.05;
+            tc2=0.005;
+            y5 = (1 - sum( obj.x )/obj.V0)/(1-obj.Vend) * 0.05 + (sum( obj.x )/obj.V0)/(1-obj.Vend) * 0.005;
+            y6 = (1 - sum( obj.x )/obj.V0)/(1-obj.Vend) * 0.005 + (sum( obj.x )/obj.V0)/(1-obj.Vend) * 0.05;
+
+            x = 1-sum( obj.x )/obj.V0;
+
+            y1=abs(tc2-tc1)*(2./(1+exp(-(a*(x-b))))-1)+min(tc1,tc2);
+            y2=abs(tc2-tc1)*(1-(2./(1+exp(-(a*(x-b))))-1))+min(tc1,tc2);
+
+            a=20;
+            b=0.2;
+            y3=abs(tc2-tc1)*(1./(1+exp(-(a*(x-b)))))+min(tc1,tc2);
+            y4=abs(tc2-tc1)*(1-(1./(1+exp(-(a*(x-b))))))+min(tc1,tc2);
+
+            %obj.maxais = y4;
+
+            max_elem_removal_factor = 0.025;
+
             notErasedID = find( not( obj.erased_elems )  );
             notErasedID = setxor(notErasedID,intersect(notErasedID, obj.const_elems));
-
             maxaisprc =(max(obj.ais(notErasedID)) - min(obj.ais(notErasedID)) ) * obj.maxais;
             obj.elem_list = obj.ais(notErasedID) < min(obj.ais(notErasedID)) + maxaisprc;
+            if size(find(obj.elem_list),1)>size(obj.ais,1)*max_elem_removal_factor
+                    [~, ai]=sort(obj.ais(notErasedID));
+                    obj.elem_list=false(size(obj.ais(notErasedID),1),1);
+                    obj.elem_list(ai(1:round(size(obj.ais,1)*max_elem_removal_factor)))=true;
+            end
 
             obj.elem_list = notErasedID( obj.elem_list );
             obj.erased_elems( obj.elem_list ) = true;
@@ -55,7 +80,7 @@ classdef (Abstract) StressIntensityTopologyOptimization < TopologyOptimization
             obj.qnodal = obj.FEAnalysis.solveWeighted((obj.x).^obj.penal);
             obj.FEAnalysis.computeElementResults(obj.x.^obj.penal);
             ais = zeros(obj.FEAnalysis.getTotalElemsNumber(),1);
-            for i=1:size(obj.FEAnalysis.felems,1)
+            for i=1:size(obj.FEAnalysis.felems,2)
                hmIndex=find(obj.FEAnalysis.felems{i}.results.names == "sHM");
                for j=1:size(obj.FEAnalysis.felems{i}.elems,1)
                     %ais(obj.elem_inds{i}(j)) = mean( obj.linearElasticProblem.felems{i}.results.GPvalues(hmIndex,j,:) );

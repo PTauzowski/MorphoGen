@@ -105,6 +105,102 @@ classdef SolidElasticElem < FiniteElement
             end
             K=K(:);
         end
+        function K = computeGeometricStifnessMatrix(obj, nodes, varargin)
+            nelems = size(obj.elems,1);
+            nnodes = size(obj.elems,2);
+            ndofs = size( obj.ndofs,2);
+            dim = nnodes * ndofs;
+            integrator = obj.sf.createIntegrator();
+            nip = size(integrator.points,1);
+            dN = obj.sf.computeGradient( integrator.points );
+            dNtr = permute(dN,[2,1,3]);
+            dNtrc = cell(size(dNtr,3),1);
+            if ( nargin == 3 )
+                x=varargin{1};
+            else
+                x=ones(nelems,1);
+            end
+            for i=1:nip
+                dNtrc{i}=dNtr(:,:,i);
+            end
+
+            Sg = zeros(3,nnodes);
+            s = zeros(3,3);
+            %dNx = zeros(size(dN,2),size(dN,1), nip );
+            K = zeros( dim , dim, nelems );
+
+            for k=1:nelems
+                elemX = nodes(obj.elems(k,:),:);
+                So=zeros(nnodes,nnodes);
+                for i=1:nip
+                    J = dNtrc{i}*elemX;
+                    detJ = J(1,1)*J(2,2)*J(3,3)-J(1,2)*J(2,1)*J(3,3)-J(1,1)*J(2,3)*J(3,2)+J(1,3)*J(2,1)*J(3,2)+J(1,2)*J(2,3)*J(3,1)-J(1,3)*J(2,2)*J(3,1);
+                    invJ   = [ (J(2,2)*J(3,3)-J(2,3)*J(3,2))	-(J(1,2)*J(3,3)-J(1,3)*J(3,2))  (J(1,2)*J(2,3)-J(1,3)*J(2,2) ); ...
+              		          -(J(2,1)*J(3,3)-J(2,3)*J(3,1))	 (J(1,1)*J(3,3)-J(1,3)*J(3,1)) -(J(1,1)*J(2,3)-J(1,3)*J(2,1) ); ...
+              		           (J(2,1)*J(3,2)-J(2,2)*J(3,1))	-(J(1,1)*J(3,2)-J(1,2)*J(3,1))  (J(1,1)*J(2,2)-J(1,2)*J(2,1) ) ]/detJ;
+                    dNx = invJ * dNtr(:,:,i);
+
+                    s(1,1)=obj.results.gp.stress(k,i,1);
+                    s(2,2)=obj.results.gp.stress(k,i,2);
+                    s(3,3)=obj.results.gp.stress(k,i,3);
+                    s(2,3)=obj.results.gp.stress(k,i,4);
+                    s(1,3)=obj.results.gp.stress(k,i,5);
+                    s(1,2)=obj.results.gp.stress(k,i,6);
+                    s(3,2)=obj.results.gp.stress(k,i,4);
+                    s(3,1)=obj.results.gp.stress(k,i,5);
+                    s(2,1)=obj.results.gp.stress(k,i,6);
+                                      
+                    for j = 1:nnodes                         
+                          Sg(1,j) = dNx(1,j);
+                          Sg(2,j) = dNx(2,j);
+                          Sg(3,j) = dNx(3,j);       
+                    end                   
+                    So = So + abs(detJ) * integrator.weights(i) * Sg'*s*Sg;
+                end
+                % K(1:nnodes,1:nnodes,k) = x(k)*So;
+                % K(nnodes+1:2*nnodes,nnodes+1:2*nnodes,k) = x(k)*So;
+                % K(2*nnodes+1:3*nnodes,2*nnodes+1:3*nnodes,k) = x(k)*So;
+                K(1:3:dim,1:3:dim,k) = x(k)*So;
+                K(2:3:dim,2:3:dim,k) = x(k)*So;
+                K(3:3:dim,3:3:dim,k) = x(k)*So;
+            end
+            K=K(:);
+        end
+        function M = computeMassMatrix(obj, nodes, varargin)
+            nelems = size(obj.elems,1);
+            nnodes = size(obj.elems,2);
+            ndofs = size( obj.ndofs,2);
+            dim = nnodes * ndofs;
+            integrator = obj.sf.createIntegrator();
+            nip = size(integrator.points,1);
+            dN = obj.sf.computeGradient( integrator.points );
+            N = obj.shapeMatrix( integrator.points );
+            nnd = size(dN,1); 
+            dNtr = permute(dN,[2,1,3]);
+            dNtrc = cell(size(dNtr,3),1);
+            if ( nargin == 3 )
+                x=varargin{1};
+            else
+                x=ones(nelems,1);
+            end
+            for i=1:nip
+                dNtrc{i}=dNtr(:,:,i);
+            end
+            %dNx = zeros(size(dN,2),size(dN,1), nip );
+            M = zeros( dim , dim, nelems );
+            rho = obj.mat.rho;
+            for k=1:nelems
+                elemX = nodes(obj.elems(k,:),:);
+                Me = zeros( dim , dim );
+                for i=1:nip
+                    J = dNtrc{i}*elemX;
+                    detJ = J(1,1)*J(2,2)*J(3,3)-J(1,2)*J(2,1)*J(3,3)-J(1,1)*J(2,3)*J(3,2)+J(1,3)*J(2,1)*J(3,2)+J(1,2)*J(2,3)*J(3,1)-J(1,3)*J(2,2)*J(3,1);                
+                    Me = Me + abs(detJ) * integrator.weights(i) * N(:,:,i)' * N(:,:,i);
+                end
+                M(:,:,k) = x(k)*rho*Me;
+            end
+            M=M(:);
+        end
         function Pnodal = thermalLoad(obj, nodes, Telems, Pnodal, alpha, varargin)
             nelems = size(Telems,1);
             nnodes = size(obj.elems,2);
@@ -452,6 +548,30 @@ classdef SolidElasticElem < FiniteElement
             [~,ifaces,~]=setxor( sort(A,2), sort(delfaces,2), 'rows' );
             plotfaces=A(ifaces,:);
             patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col,'EdgeColor','k');
+            %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col);
+            %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col,"FaceAlpha",0.3);
+        end
+        function plotSolidDeformed(obj,nodes,qnodal,scale,varargin)
+            hold on, axis off;
+            daspect([1 1 1]);
+            col=[0.8 0.8 0.8];
+            % if nargin == 2
+            %     col=[0.8 0.8 0.8];
+            % else
+            %     col=varargin{1};
+            % end
+            dg  = norm( max(nodes) - min(nodes) );
+            maxs = max( abs(min(min(qnodal))), abs(max(max(qnodal)) ) );
+            defnodes = (nodes + qnodal ./ maxs * dg * scale);
+            allfaces = reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))';
+            %allfaces = obj.elems(obj.sf.fcontours,:);
+            [~,ifaces] = unique( sort(allfaces,2), 'rows' );
+            A=allfaces(ifaces,:);
+            delfaces=allfaces;
+            delfaces(ifaces,:)=[];
+            [~,ifaces,~]=setxor( sort(A,2), sort(delfaces,2), 'rows' );
+            plotfaces=A(ifaces,:);
+            patch('Vertices', defnodes, 'Faces', plotfaces,'FaceColor',col,'EdgeColor','k');
             %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col);
             %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col,"FaceAlpha",0.3);
         end

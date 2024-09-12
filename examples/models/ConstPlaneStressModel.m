@@ -6,8 +6,8 @@ classdef ConstPlaneStressModel< ModelLinear
         function obj = ConstPlaneStressModel(sf,l,res,E,nu,p)
 
             obj.mesh = Mesh();
-            elems = obj.mesh.addRectMesh2D(0, 0, 2*l, l, 2*res, res, sf.pattern);
-            obj.fe=PlaneStressElem( sf, elems );
+            obj.mesh.addRectMesh2D(0, 0, 2*l, l, 2*res, res, sf.pattern);
+            obj.fe=PlaneStressElem( sf, obj.mesh.elems );
             material = PlaneStressMaterial('mat1');
             material.setElasticIzo(E, nu);
             obj.fe.setMaterial( material );
@@ -20,7 +20,7 @@ classdef ConstPlaneStressModel< ModelLinear
             obj.analysis.fixNodes( fixedEdgeSelector, ["ux" ] );
             obj.analysis.fixClosestNode([0 0],["uy"], 0);
             obj.analysis.printProblemInfo();
-            obj.x=ones(obj.analysis.getTotalElemsNumber(),1);
+            obj.x=ones(1,obj.analysis.getTotalElemsNumber());
             obj.result_number=17;
         end
 

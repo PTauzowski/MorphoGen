@@ -87,7 +87,7 @@ classdef (Abstract) FEAnalysis < handle
                 if ismethod(obj.felems{k},fname)
                     K = [ K obj.felems{k}.(fname)(obj.mesh.nodes) ];
                 else
-                    error("Class " + class(fe) + " or its predecessors not implements function :"+fname);
+                    error("Class " + class(obj.felems{k}) + " or its predecessors not implements function :"+fname);
                 end
             end
         end

@@ -7,8 +7,8 @@ classdef ConstPlaneStressModelTriangular < ModelLinear
     methods
         function obj = ConstPlaneStressModelTriangular(sf,l,res,E,nu, pressure)
             obj.mesh = Mesh();
-            elems = obj.mesh.addRectMeshTriangular2D( 'quad', 0, 0, 2*l, l, 2*res, res );
-            obj.fe=PlaneStressElem( sf, elems );
+            obj.mesh.addRectMeshTriangular2D( 'quad', 0, 0, 2*l, l, 2*res, res );
+            obj.fe=PlaneStressElem( sf, obj.mesh.elems );
             material = PlaneStressMaterial('mat1');
             material.setElasticIzo(E, nu);
             obj.fe.setMaterial( material );
@@ -21,7 +21,7 @@ classdef ConstPlaneStressModelTriangular < ModelLinear
             obj.analysis.fixNodes( fixedEdgeSelector, ["ux" ] );
             obj.analysis.fixClosestNode([0 0],["uy"], 0);
             obj.analysis.printProblemInfo();
-            obj.x=ones(obj.analysis.getTotalElemsNumber(),1);
+            obj.x=ones(1,obj.analysis.getTotalElemsNumber());
             obj.result_number=17;
         end
 

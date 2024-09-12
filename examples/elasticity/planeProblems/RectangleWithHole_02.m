@@ -8,14 +8,14 @@ a=10;
 hf = 0.5;
 sf = ShapeFunctionL16;
 mesh = Mesh();
-mesh.addRectWithHoleMesh2D( 10, x0, y0, hf, res, sf.pattern );
+elems = mesh.addRectWithHoleMesh2D( 10, x0, y0, hf, res, sf.pattern );
 %mesh.transformMeshDeg2D( [137 0], -90, [-137 0] );
-fe=PlaneStressElem( sf, mesh.elems );
+fe=PlaneStressElem( sf, elems );
 material = PlaneStressMaterial('mat1');
 material.setElasticIzo(210000, 0.3);
 fe.props.h=1;
 fe.setMaterial( material );
-fe.plot(mesh.nodes);
+%fe.plot(mesh.nodes);
 
 analysis = LinearElasticity( fe, mesh );
 loadedEdge1 = Selector( @(x)( abs(x(:,1) -(x0 - a) ) < 0.001 ) );
@@ -26,7 +26,7 @@ circleSelector = Selector( @(x)( abs(((x(:,1) - x0).^2 + (x(:,2) - y0).^2 ) - (a
 analysis.elementLoadLineIntegral( "local", circleSelector,  ["ux" "uy"], @(x)( x*0 + [ 0 -100 ] ));
 analysis.fixClosestNode( [ x0-a y0-a], ["ux" "uy"], [0 0] );
 analysis.fixClosestNode([ x0+a y0-a],"uy", 0 );
-analysis.plotCurrentLoad();
+%analysis.plotCurrentLoad();
 %problem.plotSupport();
 
 analysis.printProblemInfo();

@@ -8,9 +8,9 @@ classdef LameProblemModel < ModelLinear
             x0 = 0;
             y0 = 0;
             obj.mesh = Mesh();
-            elems = obj.mesh.addRing2D( x0, y0 , r1, r2, div, round(3*pi*div), sf.pattern );
+            obj.mesh.addRing2D( x0, y0 , r1, r2, div, round(3*pi*div), sf.pattern );
             %mesh.transformMeshDeg2D( [137 0], -90, [-137 0] );
-            obj.fe=PlaneStressElem( sf, elems );
+            obj.fe=PlaneStressElem( sf, obj.mesh.elems );
             material = PlaneStressMaterial('mat1');
             material.setElasticIzo(E, nu);
             obj.fe.setMaterial( material );
@@ -24,7 +24,7 @@ classdef LameProblemModel < ModelLinear
             obj.analysis.plotCurrentLoad();
             obj.analysis.plotSupport();           
             obj.analysis.printProblemInfo();
-            obj.x=ones(obj.analysis.getTotalElemsNumber(),1);
+            obj.x=ones(1,obj.analysis.getTotalElemsNumber());
             obj.result_number=17;
         end
 

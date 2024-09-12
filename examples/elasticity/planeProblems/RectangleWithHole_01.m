@@ -11,9 +11,9 @@ sf = ShapeFunctionL4;
 
 
 mesh = Mesh();
-mesh.addRectWithHoleMesh2D( 10, x0, y0, hf, res, sf.pattern );
+elems = mesh.addRectWithHoleMesh2D( 10, x0, y0, hf, res, sf.pattern );
 %mesh.transformMeshDeg2D( [137 0], -90, [-137 0] );
-fe=PlaneStressElem( sf, mesh.elems );
+fe=PlaneStressElem( sf, elems );
 material = PlaneStressMaterial('mat1');
 material.setElasticIzo(210000, 0.3);
 fe.props.h=1;
