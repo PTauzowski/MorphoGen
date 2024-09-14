@@ -2,14 +2,14 @@ classdef ManipulatorModel3D < FEModel
  
     
     properties
-        analysis, fixedEdgeSelector, alpha, elems, fe;
+        analysis, fixedEdgeSelector, alpha, elems, fe, const_elems, upper_nodes;
     end
     
     methods                       
         function obj = ManipulatorModel3D(ls,R,r,res, alpha, betas, ShapeFn)
             alpha=alpha*pi/180;
             betas=betas*pi/180;
-            Th = R-r;
+
             obj.mesh=Mesh();
             obj.geterateManipulator( ls, R, r, res, alpha, betas, ShapeFn );
             obj.fe = SolidElasticElem( ShapeFn, obj.elems );
@@ -29,56 +29,58 @@ classdef ManipulatorModel3D < FEModel
 
         function geterateManipulator(obj, ls, R, r, res, alpha, betas, sf )
             th=R-r;
-            [mesh, obj.elems]=obj.generateSegment(ls, R, r, res, alpha, sf);
             %obj.elems = obj.mesh.merge(mesh.nodes,obj.elems);
-            x0=[0 0 ls];
+            x0=[0 0 0];
+            x1=[0 0 ls/2];
             c=cos(alpha);
             s=sin(alpha);
-            Ry=[c 0 s; 0 1 0; -s 0 c];
-            Rot=R;
+            Ryp=[c 0 s; 0 1 0; -s 0 c];
+            c=cos(-alpha);
+            s=sin(-alpha);
+            Rym=[c 0 s; 0 1 0; -s 0 c];
+            Rot1=eye(3);
+            Rot2=Ryp;
+            Rotk=Rot2;
+            xs=x1;
+            [obj.mesh, obj.elems]=obj.generateSegment(R, r, ls, res, x0, x1, 0, Rot1, Rot2, sf);
+            obj.const_elems=[ obj.const_elems obj.elems(end-res:end,:) ];
+            phase = 0;
             for k=1:length(betas)
-                [mesh1, elems1]=obj.generateSegment(ls, R, r, res, alpha, sf);
-                [mesh2, elems2]=obj.generateSegment(ls, R, r, res, alpha, sf);
-                c=cos(pi);
-                s=sin(pi);
-                Ry=[c 0 s; 0 1 0; -s 0 c];
-                Rz=[c -s 0; s c 0; 0 0 1];
-                mesh1.nodes=mesh1.nodes*Ry;
-                mesh1.nodes=mesh1.nodes*Rz;
-                elems=[ elems1; mesh1.merge(mesh2.nodes, elems2)];
-                mesh1.nodes=mesh1.nodes*Ry;
-                mesh1.nodes = mesh1.nodes+[0 0 ls];
-                c=cos(-alpha);
-                s=sin(-alpha);
-                Ry=[c 0 s; 0 1 0; -s 0 c];
                 c=cos(betas(k));
                 s=sin(betas(k));
-                 Rz=[c -s 0; s c 0; 0 0 1];
-                mesh1.nodes=mesh1.nodes*Rz;
-                obj.elems=[ obj.elems; obj.mesh.merge(mesh1.nodes, elems) ];
-                x0=x0+[0 0 2*ls];
+                Rb=[c -s 0; s c 0; 0 0 1];
+                Rotm=Rym*Rb*Rotk;
+                phase=phase+betas(k);
+                xm=[0 0 ls/2]*Rotm+xs;
+                [mesh, elems]=obj.generateSegment(R, r, ls, res, xs, xm, phase, Rb*Rotk, Rotm, sf);
+                obj.elems = [obj.elems; obj.mesh.merge(mesh.nodes, elems)];
+                xs=[0 0 ls]*Rotm+xs;
+                Rotk=Rym*Rotm;
+                [mesh, elems]=obj.generateSegment(R, r, ls, res, xm, xs, phase, Rotm, Rotk, sf);
+                obj.elems = [obj.elems; obj.mesh.merge(mesh.nodes, elems)];
+                obj.const_elems=[ obj.const_elems obj.elems(end-res:end,:) ];
             end
         end
 
-        function [mesh, elems] = generateSegment(obj,ls, R, r, res, alpha, sf)
+        function [mesh, elems] = generateSegment(obj, R, r, ls, res, x1, x2, phase, Rot1, Rot2, sf)
             Th=R-r;
             resLen=res;
             resCirc = ceil(resLen/ls*2*pi*R);
             resTh = ceil(resLen/ls*Th);
             mesh = Mesh();
-            elems = mesh.addRectMesh3D( R-Th, 0, 0, Th, 2*pi, ls, resTh, resCirc, resLen, sf.localNodes );
+            elems = mesh.addRectMesh3D( R-Th, phase, 0, Th, 2*pi, 1, resTh, resCirc, resLen, sf.localNodes );      
             elems = mesh.transformToCylindrical3D( [0 0], elems );
-            c=cos(alpha);
-            s=sin(alpha);
-            Ry=[c 0 s; 0 1 0; -s 0 c];
-            nodesR = [mesh.nodes(:,1) mesh.nodes(:,2) 0*mesh.nodes(:,3)]*Ry;
-            nodes  = [ (1-mesh.nodes(:,3)./ls) .* mesh.nodes(:,1) + mesh.nodes(:,3)./ls .* nodesR(:,1)...
-                       (1-mesh.nodes(:,3)./ls) .* mesh.nodes(:,2) + mesh.nodes(:,3)./ls .* nodesR(:,2)... 
-                         mesh.nodes(:,3)./ls .* (ls+nodesR(:,3))];
+           
+            nodesR1 = [mesh.nodes(:,1) mesh.nodes(:,2) 0*mesh.nodes(:,3)]*Rot1+x1;
+            nodesR2 = [mesh.nodes(:,1) mesh.nodes(:,2) 0*mesh.nodes(:,3)]*Rot2+x2;
+            nodes= (1-mesh.nodes(:,3)) .* nodesR1 + mesh.nodes(:,3) .* nodesR2;
             mesh.nodes=nodes;
-
+            
         end
-        
+
+        function xnew=rotatePoints(x0,R,x)
+            xnew=(x-x0)*R+x0;
+        end       
         
     end
 end
