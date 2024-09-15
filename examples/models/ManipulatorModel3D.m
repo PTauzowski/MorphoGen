@@ -2,7 +2,7 @@ classdef ManipulatorModel3D < FEModel
  
     
     properties
-        analysis, fixedEdgeSelector, alpha, elems, fe, const_elems, upper_nodes;
+        analysis, fixedEdgeSelector, alpha, elems, fe, const_elems, upper_nodes,loadSurfaceNodes;
     end
     
     methods                       
@@ -43,7 +43,7 @@ classdef ManipulatorModel3D < FEModel
             Rotk=Rot2;
             xs=x1;
             [obj.mesh, obj.elems]=obj.generateSegment(R, r, ls, res, x0, x1, 0, Rot1, Rot2, sf);
-            obj.const_elems=[ obj.const_elems obj.elems(end-res:end,:) ];
+            obj.const_elems=(size(obj.elems,1)-2*res-1:size(obj.elems,1))';
             phase = 0;
             for k=1:length(betas)
                 c=cos(betas(k));
@@ -58,8 +58,15 @@ classdef ManipulatorModel3D < FEModel
                 Rotk=Rym*Rotm;
                 [mesh, elems]=obj.generateSegment(R, r, ls, res, xm, xs, phase, Rotm, Rotk, sf);
                 obj.elems = [obj.elems; obj.mesh.merge(mesh.nodes, elems)];
-                obj.const_elems=[ obj.const_elems obj.elems(end-res:end,:) ];
+                last_const_elems=obj.elems(size(obj.elems,1)-2*res-1:size(obj.elems,1),:);
+                obj.const_elems=[ obj.const_elems; (size(obj.elems,1)-2*res:size(obj.elems,1))' ];
             end
+            ne=size(last_const_elems,1);
+            nodesCount=zeros(size(obj.mesh.nodes,1),1);
+            for k=1:ne
+                nodesCount(last_const_elems(k,:))=nodesCount(last_const_elems(k,:))+1;
+            end
+            obj.loadSurfaceNodes=nodesCount==2;
         end
 
         function [mesh, elems] = generateSegment(obj, R, r, ls, res, x1, x2, phase, Rot1, Rot2, sf)

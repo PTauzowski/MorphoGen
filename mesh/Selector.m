@@ -15,7 +15,12 @@ classdef Selector
         end
         
         function s = select( obj, points )
-            s = abs(obj.fn(points)) > obj.tolerance;
+            if islogical(obj.fn)
+                s=obj.fn;
+            else
+                s = abs(obj.fn(points)) > obj.tolerance;
+            end
+           
         end
         
     end

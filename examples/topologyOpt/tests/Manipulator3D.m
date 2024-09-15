@@ -9,7 +9,7 @@ alpha=30;
 betas=[ 90 90 180 90 90 ];
 
 
-resLen=5;
+resLen=20;
 resCirc = ceil(resLen/Length*2*pi*R);
 resTh = ceil(resLen/Length*Th);
 
@@ -32,15 +32,16 @@ fe.setMaterial(material);
 analysis = LinearElasticityWeighted( fe, model.mesh, false );
 %problem = LinearElasticity( fe, mesh );
 fixedEdgeSelector = Selector( @(x)( abs(x(:,3)) < 0.001 ) );
-loadedFaceSelector = Selector( @(x)( abs(x(:,3)- Length) < 0.001 ) );
+loadedFaceSelector = Selector( model.loadSurfaceNodes );
 constElemsSelector =  Selector( @(x)( (x(:,3) < 0.05 * Length ) ) & (x(:,3) > 0.96 * Length ) );
 
 N=-0.0E8;
 Tx=-1.0E8;
 Tz=-0.0E8;
+P=-1.0E7;
 
 %analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [-x(:,2)./sqrt(x(:,1).^2+x(:,2).^2) x(:,1)./sqrt(x(:,1).^2+x(:,2).^2) -x(:,2)./x(:,2)] )); 
-analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [Tx Tz N] ));
+analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [0 0 P ]));
 analysis.fixNodes( fixedEdgeSelector, ["ux" "uy" "uz"] );
 %analysis.fixClosestNode( [0 0 0], ["ux" "uy" "uz"], [0 0 0]);
 const_elems = model.const_elems;
@@ -55,7 +56,7 @@ view(3);
 analysis.printProblemInfo();
 
 nEigenForms=10;
-stability = LinearStability( analysis.felems, mesh);
+stability = LinearStability( analysis.felems, model.mesh) ;
 stability.Pnodal = analysis.Pnodal;
 stability.Pfem = analysis.Pfem;
 stability.supports = analysis.supports;
@@ -65,18 +66,18 @@ for k=1:min(10,nEigenForms)
     %figure;
     subplot(5, 2, k);
     stability.setForm(k);
-    fe.plotSolidDeformed(mesh.nodes,stability.qnodal,0.2);
+    fe.plotSolidDeformed(model.mesh.nodes,stability.qnodal,0.2);
     axis on, xlabel('x-axis'), ylabel('y-axis'), view(3)
     lambda_str = sprintf('%.4g', lambdas(k));
     title(['Form:' num2str(k), ' \lambda=' lambda_str]);
 end
 
-analysisWithBuckling = SecondOrderElasticityWeighted( fe, mesh, 0.90, false );
+analysisWithBuckling = SecondOrderElasticityWeighted( fe, model.mesh, 0.90, false );
 analysisWithBuckling.Pnodal=stability.Pnodal;
 analysisWithBuckling.Pfem=stability.Pfem;
 analysisWithBuckling.supports=stability.supports;
 
-analysisWithBuckling = SecondOrderElasticityWeighted( fe, mesh, 0.95, false );
+analysisWithBuckling = SecondOrderElasticityWeighted( fe, model.mesh, 0.95, false );
 analysisWithBuckling.Pnodal=stability.Pnodal;
 analysisWithBuckling.Pfem=stability.Pfem;
 analysisWithBuckling.supports=stability.supports;
