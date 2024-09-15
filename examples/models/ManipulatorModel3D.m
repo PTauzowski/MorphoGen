@@ -54,6 +54,7 @@ classdef ManipulatorModel3D < FEModel
                 xm=[0 0 ls/2]*Rotm+xs;
                 [mesh, elems]=obj.generateSegment(R, r, ls, res, xs, xm, phase, Rb*Rotk, Rotm, sf);
                 obj.elems = [obj.elems; obj.mesh.merge(mesh.nodes, elems)];
+                obj.const_elems=[ obj.const_elems; (size(obj.elems,1)-2*res:size(obj.elems,1))' ];
                 xs=[0 0 ls]*Rotm+xs;
                 Rotk=Rym*Rotm;
                 [mesh, elems]=obj.generateSegment(R, r, ls, res, xm, xs, phase, Rotm, Rotk, sf);

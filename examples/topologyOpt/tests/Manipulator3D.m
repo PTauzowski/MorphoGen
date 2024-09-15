@@ -2,14 +2,14 @@ clear;
 close all;
 
 R=5;
-r=4.5;
-Th=0.2;
+r=4.8;
+Th=R-r;
 Length=15;
 alpha=30;
-betas=[ 90 90 180 90 90 ];
+betas=[ 0 90 90 90 90 ];
 
 
-resLen=20;
+resLen=40;
 resCirc = ceil(resLen/Length*2*pi*R);
 resTh = ceil(resLen/Length*Th);
 
@@ -25,7 +25,8 @@ fe = SolidElasticElem( ShapeFn, model.elems );
 fe.plot(model.mesh.nodes);
 fe.props.h=1;
 material = SolidMaterial('mat1');
-material.setElasticIzo(210.0E9, 0.3);
+%material.setElasticIzo(210.0E9, 0.3);
+material.setElasticIzo(1, 0.3);
 material.setElasticIzoGrad();
 fe.setMaterial(material);
 
@@ -38,7 +39,7 @@ constElemsSelector =  Selector( @(x)( (x(:,3) < 0.05 * Length ) ) & (x(:,3) > 0.
 N=-0.0E8;
 Tx=-1.0E8;
 Tz=-0.0E8;
-P=-1.0E7;
+P=-1.0E-3; %E7;
 
 %analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [-x(:,2)./sqrt(x(:,1).^2+x(:,2).^2) x(:,1)./sqrt(x(:,1).^2+x(:,2).^2) -x(:,2)./x(:,2)] )); 
 analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [0 0 P ]));
@@ -82,12 +83,12 @@ analysisWithBuckling.Pnodal=stability.Pnodal;
 analysisWithBuckling.Pfem=stability.Pfem;
 analysisWithBuckling.supports=stability.supports;
 
-figure;
-tic
-topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.2, false );
-topOptLinear.setConstElems(const_elems);
-[objF, xopt]  = topOptLinear.solve();
-toc
+% figure;
+% tic
+% topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.2, false );
+% topOptLinear.setConstElems(const_elems);
+% [objF, xopt]  = topOptLinear.solve();
+% toc
 
 % figure;
 % tic
@@ -102,3 +103,9 @@ toc
 % toc
 
 
+figure;
+tic
+topOpt = SIMP_MMA_TopologyOptimizationElasticCompliance(Rfilter, analysis, penal, 0.3, false);
+topOpt.setConstElems(const_elems);
+[objF, xopt]  = topOpt.solve();
+toc
