@@ -82,7 +82,8 @@ classdef Mesh < handle
             yv = unifrnd(min(P(:,2)),max(P(:,2)),1,nnodes);
             in = inpolygon(xv,yv,P(:,1),P(:,2));
             new_nodes=[xv(in); yv(in)]';
-            new_nodes=[new_nodes; P];
+            %new_nodes=[new_nodes; P];
+            new_nodes=P;
             DT = delaunayTriangulation(new_nodes);
             ic = incenter(DT);
             in = inpolygon(ic(:,1),ic(:,2),P(:,1),P(:,2));
