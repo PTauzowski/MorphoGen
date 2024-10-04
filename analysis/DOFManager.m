@@ -2,7 +2,7 @@ classdef DOFManager < handle
    
     
     properties
-        dofmapToFEM, nnodeFromFEM, dofFromFEM, ndofs, gdofs;
+        dofmapToFEM, ndofs, gdofs;
         nnodes;
     end
     
@@ -22,6 +22,7 @@ classdef DOFManager < handle
         function dim = getDimension(obj)
             dim=max(size(obj.dofmapToFEM(:)));
         end
+
 
     end
 
