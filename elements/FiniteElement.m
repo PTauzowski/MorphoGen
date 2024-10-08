@@ -3,8 +3,8 @@ classdef (Abstract) FiniteElement < handle
     properties
        props;
        elems;
-       ndofs;
-       sf;
+       eDofs;
+       shapeFn;
        results;
        mat;
     end
@@ -20,10 +20,9 @@ classdef (Abstract) FiniteElement < handle
     end
     
     methods
-        function obj = FiniteElement(sf, elems)
-                     obj.sf=sf;
+        function obj = FiniteElement(shapeFn, elems)
+                     obj.shapeFn=shapeFn;
                      obj.elems = elems;
-                     obj.props.h=1;
                      obj.props.thermal=zeros(size(elems,1),1);
         end
         function setMaterial(obj, mat)
@@ -32,7 +31,7 @@ classdef (Abstract) FiniteElement < handle
         function i = findDofIndices( obj, sdof ) 
             i = zeros(size(sdof));
             for k=1:size(i,2)
-                i(k) = find( obj.ndofs == sdof(k) );
+                i(k) = find( obj.eDofs == sdof(k) );
             end
         end
         function multiList = multiObjectList( obj, ElemObjectList )
@@ -49,11 +48,11 @@ classdef (Abstract) FiniteElement < handle
         function  [I,J,V,Ksize] = sparseMatrixAllocDataUniform( obj, gdofs )
             nelems = size( obj.elems, 1 );
             nnodes = size( obj.elems, 2 );
-            [~,~,idofs] = intersect(obj.ndofs,gdofs);
-            Kdim  = size(obj.ndofs,2) * nnodes;
+            [~,~,idofs] = intersect(obj.eDofs,gdofs);
+            Kdim  = size(obj.eDofs,2) * nnodes;
             Ksize = Kdim * Kdim;
             [ix, iy] = meshgrid( 1:Kdim, 1:Kdim );
-            alldofs = (repelem( obj.elems, 1, size(obj.ndofs,2))-1)*size(gdofs,2)+repmat(idofs',nelems,nnodes);
+            alldofs = (repelem( obj.elems, 1, size(obj.eDofs,2))-1)*size(gdofs,2)+repmat(idofs',nelems,nnodes);
             I = alldofs(1:nelems,ix(:));
             J = alldofs(1:nelems,iy(:));
             V = alldofs;
@@ -74,12 +73,12 @@ classdef (Abstract) FiniteElement < handle
               obj.results.nodal = nres ./ ires;
         end
         function qelems = createElemSolutionVectors(obj,q)
-            qelems = reshape( q( obj.elems',:)', size(obj.elems,2) * size(obj.ndofs,2), size(obj.elems,1) );
+            qelems = reshape( q( obj.elems',:)', size(obj.elems,2) * size(obj.eDofs,2), size(obj.elems,1) );
         end
         function K = createShapeBasedElemMatrix(obj, nodes, integrator )
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
-            nudofs = size( obj.ndofs,2);
+            nudofs = size( obj.eDofs,2);
             dim = nnodes * nudofs;
             nip = size(integrator.points,1);
             N = obj.shapeMatrix( integrator.points );
@@ -98,7 +97,7 @@ classdef (Abstract) FiniteElement < handle
         function K = createGradBasedElemMatrix(obj, nodes, integrator, matrixB)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
-            nudofs = size( obj.ndofs,2);
+            nudofs = size( obj.eDofs,2);
             dim = nnodes * nudofs;
             nip = size(integrator.points,1);
             dN = obj.sf.computeGradient( integrator.points );
