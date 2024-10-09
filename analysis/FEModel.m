@@ -18,7 +18,7 @@ classdef FEModel < handle
             obj.nodes = nodes;
             obj.modelDofs = obj.fElems{1}.elemDofs;
             for k=max(size(obj.fElems))
-                obj.modelDofs = union(obj.modelDofs,obj.fElems{k}.ndofs);
+                obj.modelDofs = union(obj.modelDofs,obj.fElems{k}.eDofs);
             end
             obj.selTolerance=norm(max(nodes),2)*1.0E-06;
         end
