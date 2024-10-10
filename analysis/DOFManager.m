@@ -3,8 +3,9 @@ classdef DOFManager < handle
     
     properties
         dofmapToFEM, ndofs, gdofs;
-        nnodes;
     end
+
+    
     
     methods
 
