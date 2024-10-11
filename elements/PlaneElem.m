@@ -319,8 +319,8 @@ classdef PlaneElem < FiniteElement
         function plot(obj,nodes)
             hold on, axis off;
             daspect([1 1 1]);
-            patch('Vertices', nodes, 'Faces', obj.elems(:,obj.sf.contour),'FaceColor','none','EdgeColor','k');
-            patch('Vertices', nodes, 'Faces', obj.elems(:,obj.sf.contour),'FaceColor',[0.8 0.8 0.8]);
+            patch('Vertices', nodes, 'Faces', obj.elems(:,obj.shapeFn.contour),'FaceColor','none','EdgeColor','k');
+            patch('Vertices', nodes, 'Faces', obj.elems(:,obj.shapeFn.contour),'FaceColor',[0.8 0.8 0.8]);
         end
         function plotMap(obj,nodes,q,C,scd)
             hold, axis off;

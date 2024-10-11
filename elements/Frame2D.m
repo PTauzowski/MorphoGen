@@ -6,7 +6,7 @@ classdef Frame2D < FiniteElement
     methods
         function obj = Frame2D(elems)
             obj = obj@FiniteElement(ShapeFunctionsFrame2D, elems);
-            obj.ndofs=["ux" "uz" "fiy"];
+             obj.eDofs=["ux" "uz" "fiy"];
              obj.results.names = ["N" "Tz" "My" ];
              obj.results.descriptions = ["normal force" "shear force" "bending moment" ];
                  
@@ -77,15 +77,42 @@ classdef Frame2D < FiniteElement
                  l=norm(nodes(obj.elems(k,2))-nodes(obj.elems(k,1)));
                  l2=l^2;
                  l3=l^3;
-                 K(:,:,k) =  [ 0, 0, 0, 0 ,0, 0;...
-		                       0, 0, 0, 0 ,0, 0; ...
-		                       0, 0, 0, 0, 0, 0;...
-		                       0, 0, 0, 0, 0, 0;...
-		                       0, 0, 0, 0, 0, 0;...
-		                       0, 0, 0, 0, 0, 0 ];
+                 K(:,:,k) =  [ 0  0  0  0  0  0;...
+		                       0  0  0  0  0  0; ...
+		                       0  0  0  0  0  0;...
+		                       0  0  0  0  0  0;...
+		                       0  0  0  0  0  0;...
+		                       0  0  0  0  0  0 ];
              end
              K=K(:);
         end
+
+        function plot(obj, nodes)
+            figure;
+            hold on;
+            daspect([1 1 1]);
+            plot([ nodes(obj.elems(:,1),1) nodes(obj.elems(:,2),1) NaN(21,1) ]',...
+                 [ nodes(obj.elems(:,1),2) nodes(obj.elems(:,2),2) NaN(21,1) ]',...
+                    "LineStyle","-","Marker","o","Color","k","LineWidth",2);
+        end
+        function plotMap(nodes,q,mapName,scd)
+        end
+
+        function N = shapeMatrix( obj, points )
+        end
+        function P = loadLineIntegral(obj, mode, nodes, fedges, dofnames, valueFn )
+        end
+
+        function initializeResults(obj)
+        end
+
+        function computeResults(obj,nodes,q,varargin)
+        end
+
+        function plotWired(nodes,varargin)
+        end
+
+
     end
 end
 

@@ -3,7 +3,7 @@ classdef PlaneStressElem < PlaneElem
    methods
         function obj = PlaneStressElem(sf,elems)
              obj = obj@PlaneElem(sf,elems);
-             obj.ndofs=["ux" "uy"];
+             obj.eDofs=["ux" "uy"];
              obj.results.names  = ["exx" "eyy" "exy" "sxx" "syy" "sxy" "e1" "e2" "gmax" "etheta" "tr(e)" "Vol" "s1" "s2" "tmax" "stheta" "sHM" "rho"];
              obj.results.descriptions  = ["strain member exx" "strain member eyy" "strain member exy" "stress member sxx"...
                  "stress member syy" "stress member sxy" "principal strain e1" "principal strain e2" "maximal shear strain"...

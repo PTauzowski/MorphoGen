@@ -413,6 +413,22 @@ classdef Mesh < handle
                         obj.addRectMesh3D( 0, 0, h, h,   h, l-h, nh,    nh, nl-nh, lnodes);
                         obj.addRectMesh3D( h, 0, 0, l-h, h, h,   nl-nh, nh, nh,    lnodes) ];
         end
+        
+        function elems = addHframe( obj, nspan, lspan, nfloor, hfloor, xp )
+                [X,Y]=meshgrid(xp(1):lspan:(xp(1)+nspan*lspan),xp(2):hfloor:(xp(2)+nfloor*hfloor));
+                obj.nodes = [ obj.nodes; [ X(:) Y(:) ] ];
+                elems=[];
+                beams=[2:nfloor+1; (2:nfloor+1)+nfloor+1]'
+                cols=[1:nfloor; (1:nfloor)+1]'
+                for k=1:nspan
+                    elems =[ elems; (k-1)*(nfloor+1)+beams ];
+                end
+                for k=1:nspan    
+                    elems =[ elems; (k-1)*(nfloor+1)+cols ];
+                end
+                elems =[ elems; nspan*(nfloor+1)+cols ];
+        end
+
         function elems = duplicateTransformedMeshDeg2D( obj, x0, angleDeg, xm , oldelems)
             angleRad = angleDeg*pi/180;
             elems = obj.merge( [ x0(1)+(obj.nodes(:,1)-x0(1)).*cos(angleRad)-(obj.nodes(:,2)-x0(2)).*sin(angleRad)...
