@@ -1,6 +1,6 @@
 clear;
 close all;
-res = 30;
+res = 50;
 l = 1;
 aspect=4;
 
