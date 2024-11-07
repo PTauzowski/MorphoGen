@@ -6,8 +6,8 @@ classdef Frame2D < FiniteElement
     methods
         function obj = Frame2D(elems)
             obj = obj@FiniteElement(ShapeFunctionsFrame2D, elems);
-             obj.eDofs=["ux" "uz" "fiy"];
-             obj.results.names = ["N" "Tz" "My" ];
+             obj.eDofs=["ux" "uy" "fiz"];
+             obj.results.names = ["N" "Ty" "Mz" ];
              obj.results.descriptions = ["normal force" "shear force" "bending moment" ];
                  
         end

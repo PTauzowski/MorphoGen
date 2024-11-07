@@ -418,8 +418,8 @@ classdef Mesh < handle
                 [X,Y]=meshgrid(xp(1):lspan:(xp(1)+nspan*lspan),xp(2):hfloor:(xp(2)+nfloor*hfloor));
                 obj.nodes = [ obj.nodes; [ X(:) Y(:) ] ];
                 elems=[];
-                beams=[2:nfloor+1; (2:nfloor+1)+nfloor+1]'
-                cols=[1:nfloor; (1:nfloor)+1]'
+                beams=[2:nfloor+1; (2:nfloor+1)+nfloor+1]';
+                cols=[1:nfloor; (1:nfloor)+1]';
                 for k=1:nspan
                     elems =[ elems; (k-1)*(nfloor+1)+beams ];
                 end

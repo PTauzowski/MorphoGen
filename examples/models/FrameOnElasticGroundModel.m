@@ -41,9 +41,13 @@ classdef FrameOnElasticGroundModel
                 
                 elem2D = PlaneStressElem(shapeFn2D,elemsgr);
                 elem2D.plot(mesh.nodes);
-
                 
-
+                nnodes  = size(mesh.nodes,1);
+                nodesFr = false(nnodes,1);
+                nodes2D = false(nnodes,1);
+                nodesFr( frameFe.elems(:) ) = true;
+                nodes2D( elem2D.elems(:) ) = true;
+                find( nodes2D & nodesFr );
 
         end
         
