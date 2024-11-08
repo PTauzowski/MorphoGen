@@ -109,7 +109,8 @@ classdef Frame2D < FiniteElement
         function computeResults(obj,nodes,q,varargin)
         end
 
-        function plotWired(nodes,varargin)
+        function plotWired(obj,nodes,varargin)
+            obj.plot(nodes);
         end
 
 

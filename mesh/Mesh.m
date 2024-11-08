@@ -30,6 +30,10 @@ classdef Mesh < handle
                 mergedElems(:) = ninds( newElems(:) );
           end
         end
+
+        function dim = getDim(obj)
+            dim=size(obj.nodes,2);
+        end
         function newIndices = mergeMesh( obj, newMesh )
             [~, iNodes, iNewNodes] = intersect( round(obj.nodes .* obj.tolerance), round(newMesh.nodes.*obj.tolerance), 'rows' );
             uniqueIndices=1:size(newMesh.nodes,1);
@@ -77,6 +81,24 @@ classdef Mesh < handle
             end
             elems = obj.merge( newNodes, newElems );
         end
+
+        function elems = addRectMeshArray2D( obj, x1, y1, dx, dy, minres, pattern )
+                elemsize = min([dx dy])/minres;
+                xp=x1;
+                yp=y1;
+                mesh=Mesh();
+                elems = [];
+                for k=1:size(dx,2)
+                    yp=y1;
+                    for l=1:size(dy,2)
+                        elems = [elems; mesh.addRectMesh2D(xp,yp,dx(k),dy(l),round(dx(k)/elemsize),round(dy(l)/elemsize),pattern)];
+                        yp=yp+dy(l);
+                    end
+                    xp=xp+dx(k);
+                end
+                elems = obj.merge( mesh.nodes, elems );
+        end
+
         function elems = addDelaunayMesh2D( obj, P, C, nnodes )
             xv = unifrnd(min(P(:,1)),max(P(:,1)),1,nnodes);
             yv = unifrnd(min(P(:,2)),max(P(:,2)),1,nnodes);
@@ -145,7 +167,7 @@ classdef Mesh < handle
                 end
             end
         end
-       function boundaryNodes = detectBoundaryNodes(obj, connectivityArray, numNodes)
+        function boundaryNodes = detectBoundaryNodes(obj, connectivityArray, numNodes)
             % Initialize boundaryNodes as false
             boundaryNodes = false(numNodes, 1);
         

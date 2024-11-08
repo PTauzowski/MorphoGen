@@ -23,23 +23,13 @@ classdef FrameOnElasticGroundModel
                 obj.resgr=resgr;
 
                 xp=[(lgr-nspan*lspan)/2 hgr];
-                baseRes = min( [hgr, lspan, xp(1)] );
-
+       
                 mesh=Mesh();
-                frameElems = mesh.addHframe(nspan,lspan,nfloor,hfloor,xp);
-                frameFe = Frame2D(frameElems);
+                frameFe = Frame2D( mesh.addHframe(nspan,lspan,nfloor,hfloor,xp) );
                 frameFe.plot(mesh.nodes);
-                meshgr=Mesh();
-                elemsgr = meshgr.addRectMesh2D(0,0,xp(1),hgr,round(xp(1)/baseRes*resgr),round(hgr/baseRes*resgr),shapeFn2D.pattern);
-                xs=xp(1);
-                for k=1:nspan
-                    elemsgr = [elemsgr; meshgr.addRectMesh2D(xs,0,lspan,hgr,round(lspan/baseRes*resgr),round(hgr/baseRes*resgr),shapeFn2D.pattern)];
-                    xs=xs+lspan;
-                end
-                elemsgr = [elemsgr; meshgr.addRectMesh2D(xs,0,xp(1),hgr,round(xp(1)/baseRes*resgr),round(hgr/baseRes*resgr),shapeFn2D.pattern)];
-                elemsgr= mesh.merge(meshgr.nodes,elemsgr);
-                
-                elem2D = PlaneStressElem(shapeFn2D,elemsgr);
+                elemsGround = mesh.addRectMeshArray2D(0,0,[xp(1) repelem(lspan,1,nspan) xp(1)], xp(2), resgr, shapeFn2D.pattern);
+
+                elem2D = PlaneStressElem(shapeFn2D, elemsGround );
                 elem2D.plot(mesh.nodes);
                 
                 nnodes  = size(mesh.nodes,1);
@@ -54,6 +44,7 @@ classdef FrameOnElasticGroundModel
         function outputArg = method1(obj,inputArg)
             
         end
+
     end
 end
 

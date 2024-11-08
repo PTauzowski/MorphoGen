@@ -308,7 +308,7 @@ classdef PlaneElem < FiniteElement
             hold on;
             daspect([1 1 1]);
             if nargin==2
-                patch('Vertices', nodes, 'Faces', obj.elems(:,obj.sf.contour),'FaceColor','none','EdgeColor','k');
+                patch('Vertices', nodes, 'Faces', obj.elems(:,obj.shapeFn.contour),'FaceColor','none','EdgeColor','k');
             elseif nargin == 4
                 dg     = norm( max(nodes) - min(nodes) );
                 maxs = max( abs(min(min(varargin{1}))), abs(max(max(varargin{1})) ) );

@@ -18,7 +18,7 @@ classdef Selector
             if islogical(obj.fn)
                 s=obj.fn;
             else
-                s = abs(obj.fn(points)) > obj.tolerance;
+                s = abs(obj.fn(points)) < obj.tolerance;
             end
            
         end
