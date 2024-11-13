@@ -20,12 +20,12 @@ classdef FEModel < handle
             
         end
 
-        function plotNodes(obj)
+        function plotNodes(obj,marker, color)
             switch obj.mesh.getDim()
                 case 2
-                     plot(obj.mesh.nodes(:,1),obj.mesh.nodes(:,2),"LineStyle","none","Marker","square",'MarkerFaceColor',[0.0,0.0,0.8]);
+                     plot(obj.mesh.nodes(:,1),obj.mesh.nodes(:,2),"LineStyle","none","Marker",marker,'MarkerFaceColor',color);
                 case 3
-                     plot(obj.mesh.nodes(:,1),obj.mesh.nodes(:,2),obj.mesh.nodes(:,3),"LineStyle","none","Marker","square",'MarkerFaceColor',[0.0,0.0,0.8]);                 
+                     plot(obj.mesh.nodes(:,1),obj.mesh.nodes(:,2),obj.mesh.nodes(:,3),"LineStyle","none","Marker",marker,'MarkerFaceColor',color);                 
             end
         end
 

@@ -88,7 +88,6 @@ classdef Frame2D < FiniteElement
         end
 
         function plot(obj, nodes)
-            figure;
             hold on;
             daspect([1 1 1]);
             plot([ nodes(obj.elems(:,1),1) nodes(obj.elems(:,2),1) NaN(21,1) ]',...

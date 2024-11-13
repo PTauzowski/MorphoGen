@@ -35,5 +35,5 @@ model = FEModel( { frameElem planeElem }, mesh );
 model.plotWired();
 edgeX0 = selectX(0.0);
 model.fixDOF( edgeX0, ["ux" "uy"] , [0 0]);
-model.plotSelectedNodes(edgeX0,'m');
-%model.plotNodes();
+%model.plotSelectedNodes(edgeX0,'m');
+model.plotNodes(".",'b');

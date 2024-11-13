@@ -30,7 +30,6 @@ classdef Mesh < handle
                 mergedElems(:) = ninds( newElems(:) );
           end
         end
-
         function dim = getDim(obj)
             dim=size(obj.nodes,2);
         end
@@ -42,8 +41,7 @@ classdef Mesh < handle
             newIndices(iNewNodes)=iNodes;
             newIndices(uniqueIndices)=1:size(uniqueIndices,2)+size(obj.nodes,1);
             obj.nodes=[obj.nodes; newMesh.nodes(uniqueIndices,:)];
-        end
-        
+        end       
         function obj = transformDeg2D( obj, x0, angleDeg, xm )
             angleRad = angleDeg*pi/180;
             obj.nodes = [ x0(1)+(obj.nodes(:,1)-x0(1)).*cos(angleRad)-(obj.nodes(:,2)-x0(2)).*sin(angleRad)...
@@ -81,7 +79,6 @@ classdef Mesh < handle
             end
             elems = obj.merge( newNodes, newElems );
         end
-
         function elems = addRectMeshArray2D( obj, x1, y1, dx, dy, minres, pattern )
                 elemsize = min([dx dy])/minres;
                 xp=x1;
@@ -98,7 +95,6 @@ classdef Mesh < handle
                 end
                 elems = obj.merge( mesh.nodes, elems );
         end
-
         function elems = addDelaunayMesh2D( obj, P, C, nnodes )
             xv = unifrnd(min(P(:,1)),max(P(:,1)),1,nnodes);
             yv = unifrnd(min(P(:,2)),max(P(:,2)),1,nnodes);
@@ -187,8 +183,7 @@ classdef Mesh < handle
             % Mark nodes on boundary edges as boundary nodes
             boundaryEdges = uniqueEdges(boundaryEdgeIdx, :);
             boundaryNodes(unique(boundaryEdges(:))) = true;
-       end
-
+        end
         function elems = addRectMeshTriangular2D( obj, mode, x1, y1, dx, dy, nx, ny )
             ddx = dx/nx;
             ddy = dy/ny;
@@ -408,7 +403,6 @@ classdef Mesh < handle
             mesh.transformToCylindrical3D(x0);
             elems = obj.merge(mesh.nodes,elems);
         end
-
         function elems = addrectPipe(obj,w,h,l1,th,nth,lnodes)
             nx=round(l1/th)*nth;
             ny=round((w-2*th)/th)*nth;
@@ -422,7 +416,6 @@ classdef Mesh < handle
                         obj.addRectMesh3D( 0, th, 0, l1, w-2*th, th, nx, ny, nth, lnodes );...
                         obj.addRectMesh3D( 0, th, h-th, l1, w-2*th, th, nx, ny, nth, lnodes ) ];
         end
-
         function elems = addLshape( obj, l, h, nh, pattern )
             nl = round(l/h*nh+0.5);
             elems = [   obj.addRectMesh2D( 0, 0, h, h, nh, nh, pattern ); ...
@@ -434,8 +427,7 @@ classdef Mesh < handle
             elems = [   obj.addRectMesh3D( 0, 0, 0, h,   h, h,   nh,    nh, nh,    lnodes);
                         obj.addRectMesh3D( 0, 0, h, h,   h, l-h, nh,    nh, nl-nh, lnodes);
                         obj.addRectMesh3D( h, 0, 0, l-h, h, h,   nl-nh, nh, nh,    lnodes) ];
-        end
-        
+        end        
         function elems = addHframe( obj, nspan, lspan, nfloor, hfloor, xp )
                 [X,Y]=meshgrid(xp(1):lspan:(xp(1)+nspan*lspan),xp(2):hfloor:(xp(2)+nfloor*hfloor));
                 obj.nodes = [ obj.nodes; [ X(:) Y(:) ] ];
@@ -450,7 +442,6 @@ classdef Mesh < handle
                 end
                 elems =[ elems; nspan*(nfloor+1)+cols ];
         end
-
         function elems = duplicateTransformedMeshDeg2D( obj, x0, angleDeg, xm , oldelems)
             angleRad = angleDeg*pi/180;
             elems = obj.merge( [ x0(1)+(obj.nodes(:,1)-x0(1)).*cos(angleRad)-(obj.nodes(:,2)-x0(2)).*sin(angleRad)...
@@ -547,6 +538,8 @@ classdef Mesh < handle
             save([filenamebase '_mesh.mat'],"nodes","elems");
             dlmwrite([filenamebase '_nodes.txt'],obj.nodes,'delimiter','\t','precision','%7.3f');
             dlmwrite([filenamebase '_elems.txt'],elems,'delimiter','\t','precision',6,'-append');
+        end
+        function plot(marker, color)
         end
     end
 end
