@@ -23,9 +23,9 @@ classdef FEModel < handle
         function plotNodes(obj,marker, color)
             switch obj.mesh.getDim()
                 case 2
-                     plot(obj.mesh.nodes(:,1),obj.mesh.nodes(:,2),"LineStyle","none","Marker",marker,'MarkerFaceColor',color);
+                     line(obj.mesh.nodes(:,1),obj.mesh.nodes(:,2),"LineStyle","none","Marker",marker,'MarkerFaceColor',color);
                 case 3
-                     plot(obj.mesh.nodes(:,1),obj.mesh.nodes(:,2),obj.mesh.nodes(:,3),"LineStyle","none","Marker",marker,'MarkerFaceColor',color);                 
+                     line(obj.mesh.nodes(:,1),obj.mesh.nodes(:,2),obj.mesh.nodes(:,3),"LineStyle","none","Marker",marker,'MarkerFaceColor',color);                 
             end
         end
 
@@ -38,7 +38,58 @@ classdef FEModel < handle
             end
         end
 
-        function plot(obj)
+        function draw(obj, varanargin)
+             % Parse varargin
+
+             nodeMarker = '.';
+             nodeColor  = 'k';
+             elemStyle  = 'solid';
+             elemColor  = [0.8 0.8 0.8];
+             edgeStyle  = 'solid';
+             edgeColor  = 'k';
+             mode       = 'faceContour';
+             if (nargin>1)
+                 args=varanargin;
+                 for k = 1:2:length(varargin)
+                    name = args{k};
+                    value = args{k+1};
+                    switch lower(name)
+                        case 'nodeMarker'
+                            nodeMarker = value;
+                        case 'nodeColor'
+                            nodeColor = value;
+                        case 'elemStyle'
+                            elemStyle = value;
+                        case 'elemColor'
+                            elemColor = value;
+                        case 'edgeStyle'
+                            edgeStyle = value;  
+                        case 'edgeColor'
+                            edgeColor = value; 
+                        case 'mode'
+                            marker = value;       
+                        otherwise
+                            error('Unknown plot style parameter: %s', name);
+                    end
+                 end
+             end
+             for k=1:size(obj.fElems,2)
+                 if isprop(obj.fElems{k}.shapeFn, 'edges')
+                    edgesPerElem = size(obj.fElems{k}.shapeFn.edges,2);
+                    pedges=obj.fElems{k}.elems(1:2,obj.fElems{k}.shapeFn.edges);
+                    pedges= sort(reshape(pedges',size(pedges,2)/edgesPerElem,size(pedges,1)*edgesPerElem)',2);
+                    [uniqueColumns, ia, ic] = unique(pedges, 'rows', 'stable');
+                    duplicateColumns = setdiff(1:size(pedges, 1), ia);
+                    a=[uniqueColumns repelem(NaN,size(uniqueColumns,1))']';
+                    edgesp=a(:);
+                    line([obj.mesh.nodes(edgesp,1)],obj.mesh.nodes(edgesp,2),obj.mesh.nodes(edgesp,1))
+                 end
+                 if isprop(obj.fElems{k}.shapeFn,'fcontours')
+                 end
+             end
+        end
+            
+        function plot(obj) 
             cellfun( @(fe) fe.plot(obj.mesh.nodes), obj.fElems);
         end
 

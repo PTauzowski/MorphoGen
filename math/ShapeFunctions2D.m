@@ -1,7 +1,7 @@
 classdef (Abstract) ShapeFunctions2D < ShapeFunctions
     
     properties
-        edges,edgesf,contour;
+        edges, edgesf, contour;
     end
 
     methods
