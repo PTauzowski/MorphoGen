@@ -38,22 +38,22 @@ classdef FEModel < handle
             end
         end
 
-        function draw(obj, varanargin)
+        function draw(obj, varargin)
              % Parse varargin
-
+             daspect([1 1 1]);
              nodeMarker = '.';
-             nodeColor  = 'k';
+             nodeColor  = 'm';
              elemStyle  = 'solid';
              elemColor  = [0.8 0.8 0.8];
              edgeStyle  = 'solid';
              edgeColor  = 'k';
              mode       = 'faceContour';
              if (nargin>1)
-                 args=varanargin;
+                 args=varargin;
                  for k = 1:2:length(varargin)
                     name = args{k};
                     value = args{k+1};
-                    switch lower(name)
+                    switch name
                         case 'nodeMarker'
                             nodeMarker = value;
                         case 'nodeColor'
@@ -76,17 +76,25 @@ classdef FEModel < handle
              for k=1:size(obj.fElems,2)
                  if isprop(obj.fElems{k}.shapeFn, 'edges')
                     edgesPerElem = size(obj.fElems{k}.shapeFn.edges,2);
-                    pedges=obj.fElems{k}.elems(1:2,obj.fElems{k}.shapeFn.edges);
-                    pedges= sort(reshape(pedges',size(pedges,2)/edgesPerElem,size(pedges,1)*edgesPerElem)',2);
-                    [uniqueColumns, ia, ic] = unique(pedges, 'rows', 'stable');
-                    duplicateColumns = setdiff(1:size(pedges, 1), ia);
-                    a=[uniqueColumns repelem(NaN,size(uniqueColumns,1))']';
-                    edgesp=a(:);
-                    line([obj.mesh.nodes(edgesp,1)],obj.mesh.nodes(edgesp,2),obj.mesh.nodes(edgesp,1))
+                    nElems = size(obj.fElems{k}.elems,1);
+                    pedges=reshape(obj.fElems{k}.elems(:,obj.fElems{k}.shapeFn.edges)',edgesPerElem, nElems*size(obj.fElems{k}.shapeFn.edges,1))';
+                    %pedgesSorted= sort(reshape(pedges',size(pedges,2)/edgesPerElem,size(pedges,1)*edgesPerElem)',2);
+                    pedgesSorted= sort(pedges,2);
+                    [uniqueColumns, ia, ic] = unique(pedgesSorted, 'rows', 'stable');
+                    pedges=pedges(ia,:);
+                    X=[reshape(obj.mesh.nodes(pedges,1),size(pedges)) repelem(NaN,size(ia,1),1)]';
+                    Y=[reshape(obj.mesh.nodes(pedges,2),size(pedges)) repelem(NaN,size(ia,1),1)]';
+                    line(X(:),Y(:));
                  end
                  if isprop(obj.fElems{k}.shapeFn,'fcontours')
                  end
              end
+             switch obj.mesh.getDim()
+                case 2
+                     line(obj.mesh.nodes(:,1),obj.mesh.nodes(:,2),"LineStyle","none","Marker",nodeMarker,'MarkerFaceColor',nodeColor);
+                case 3
+                     line(obj.mesh.nodes(:,1),obj.mesh.nodes(:,2),obj.mesh.nodes(:,3),"LineStyle","none","Marker",nodeMarker,'MarkerFaceColor',nodeColor);                 
+            end
         end
             
         function plot(obj) 

@@ -36,5 +36,5 @@ model.draw();
 edgeX0 = selectX(0.0);
 model.fixDOF( edgeX0, ["ux" "uy"] , [0 0]);
 %model.plotSelectedNodes(edgeX0,'m');
-model.plotNodes(".",'b');
+%model.plotNodes(".",'b');
 
