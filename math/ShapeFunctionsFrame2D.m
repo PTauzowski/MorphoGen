@@ -1,9 +1,15 @@
-classdef ShapeFunctionsFrame2D< ShapeFunctions
+classdef ShapeFunctionsFrame2D < ShapeFunctions
+
+    properties
+          edges;
+    end
+
     methods
         function obj = ShapeFunctionsFrame2D() 
             obj=obj@ShapeFunctions(1);
             obj.localNodes = [-1; 1];
             obj.vertices=[1 2]';
+            obj.edges=[1 2];
             obj.pattern = [0 1]';
         end
         function value = computeValue( ~, xi )

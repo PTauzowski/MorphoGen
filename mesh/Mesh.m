@@ -6,6 +6,12 @@ classdef Mesh < handle
     end
     
     methods
+        function dim = getDim(obj)
+            dim=size(obj.nodes,2);
+        end
+        function nn = getNumberOfNodes(obj)
+            nn = size(obj.nodes,1);
+        end
         function mergedElems = merge( obj, newNodes, newElems )
             [~,si1,si2] = unique( round(newNodes .* obj.tolerance), 'rows', 'stable' );
             newNodes = newNodes( si1, : );
@@ -30,9 +36,7 @@ classdef Mesh < handle
                 mergedElems(:) = ninds( newElems(:) );
           end
         end
-        function dim = getDim(obj)
-            dim=size(obj.nodes,2);
-        end
+       
         function newIndices = mergeMesh( obj, newMesh )
             [~, iNodes, iNewNodes] = intersect( round(obj.nodes .* obj.tolerance), round(newMesh.nodes.*obj.tolerance), 'rows' );
             uniqueIndices=1:size(newMesh.nodes,1);

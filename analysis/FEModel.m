@@ -9,14 +9,27 @@ classdef FEModel < handle
         function obj = FEModel( felems, mesh )
             obj.fElems = felems;
             obj.mesh = mesh;
+            obj.initDOFs();
         end
 
-        function addFiniteElements( obj, fElems )
-            obj.fElems = { obj.fElems fElems };
+        function ne = getFEClassesNumber(obj)
+            ne=size(obj.fElems,2);
+        end
+
+        function ten = getFEInstancesNumber(obj)
+            ne=[];
+            ten=sum(cellfun( @(fe) [ne size(fe.elems,1)],obj.fElems));       
+        end
+
+        function initDOFs(obj)
+            elemsToNodes=false( obj.mesh.getNumberOfNodes(), obj.getFEClassesNumber() );
+            for k=1:obj.getFEClassesNumber()
+                elemsToNodes(obj.fElems{k}.elems,k)=true;
+            end
         end
 
         function fixDOF( obj, nodeSelector, dofs,  values )
-            nodesToFix = nodeSelector.select(obj.mesh.nodes);
+            nodesToFix = nodeSelector.select(obj.mesh.nodes)
             
         end
 
@@ -42,7 +55,7 @@ classdef FEModel < handle
              % Parse varargin
              daspect([1 1 1]);
              nodeMarker = '.';
-             nodeColor  = 'm';
+             nodeColor  = 'b';
              elemStyle  = 'solid';
              elemColor  = [0.8 0.8 0.8];
              edgeStyle  = 'solid';
@@ -84,16 +97,16 @@ classdef FEModel < handle
                     pedges=pedges(ia,:);
                     X=[reshape(obj.mesh.nodes(pedges,1),size(pedges)) repelem(NaN,size(ia,1),1)]';
                     Y=[reshape(obj.mesh.nodes(pedges,2),size(pedges)) repelem(NaN,size(ia,1),1)]';
-                    line(X(:),Y(:));
+                    line(X(:),Y(:),'Color' ,edgeColor);
                  end
                  if isprop(obj.fElems{k}.shapeFn,'fcontours')
                  end
              end
              switch obj.mesh.getDim()
                 case 2
-                     line(obj.mesh.nodes(:,1),obj.mesh.nodes(:,2),"LineStyle","none","Marker",nodeMarker,'MarkerFaceColor',nodeColor);
+                     line(obj.mesh.nodes(:,1),obj.mesh.nodes(:,2),"LineStyle","none","Marker",nodeMarker,'MarkerFaceColor',nodeColor,'Color' ,nodeColor);
                 case 3
-                     line(obj.mesh.nodes(:,1),obj.mesh.nodes(:,2),obj.mesh.nodes(:,3),"LineStyle","none","Marker",nodeMarker,'MarkerFaceColor',nodeColor);                 
+                     line(obj.mesh.nodes(:,1),obj.mesh.nodes(:,2),obj.mesh.nodes(:,3),"LineStyle","none","Marker",nodeMarker,'MarkerFaceColor',nodeColor,'Color' ,nodeColor);                 
             end
         end
             
