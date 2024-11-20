@@ -32,7 +32,7 @@ frameElem = Frame2D( mesh.addHframe(nspan,lspan,nfloor,hfloor,xp));
 planeElem = PlaneStressElem( shapeFn2D, mesh.addRectMeshArray2D(0,0,[xp(1) repelem(lspan,1,nspan) xp(1)], xp(2), resgr, shapeFn2D.pattern) );
 
 model = FEModel( { frameElem planeElem }, mesh );
-te=model.getTotalElementsNumber();
+te=model.getFEClassesNumber();
 model.draw();
 edgeX0 = selectX(0.0);
 model.fixDOF( edgeX0, ["ux" "uy"] , [0 0]);
