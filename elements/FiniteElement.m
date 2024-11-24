@@ -34,6 +34,10 @@ classdef (Abstract) FiniteElement < handle
                 i(k) = find( obj.eDofs == sdof(k) );
             end
         end
+        function [nodes nDofs] = getNodesDOFs(obj)
+             nodes = unique(sort(obj.elems(:)));
+             nDofs =  repelem({obj.eDofs}, size(nodes,1), 1);
+        end
         function multiList = multiObjectList( obj, ElemObjectList )
              multiList = reshape( obj.elems(:,ElemObjectList)',size( ElemObjectList ,1), size( ElemObjectList,2) * size( obj.elems, 1) )';
         end

@@ -11,6 +11,7 @@ classdef Frame2D < FiniteElement
              obj.results.descriptions = ["normal force" "shear force" "bending moment" ];
                  
         end
+        
         function L = computeTransformationMatrix(obj, nodes)
               nelems = size(obj.elems,1);
               nnodes = size(obj.elems,2);

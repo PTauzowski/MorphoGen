@@ -39,3 +39,16 @@ model.fixDOF( edgeX0, ["ux" "uy"] , [0 0]);
 %model.plotSelectedNodes(edgeX0,'m');
 %model.plotNodes(".",'b');
 
+% Example Input
+A = {1:3; [4 5]};
+B = {2:4; [5 6]};
+
+% Create C where each row is the union of corresponding rows from A and B
+C = cellfun(@union, A, B, 'UniformOutput', false);
+
+% Display result
+disp(C);
+% Output:
+% { [1 2 3 4]      % Union of A{1} and B{1}
+%   [4 5 6] }      % Union of A{2} and B{2}
+

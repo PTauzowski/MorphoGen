@@ -23,9 +23,20 @@ classdef FEModel < handle
 
         function initDOFs(obj)
             elemsToNodes=false( obj.mesh.getNumberOfNodes(), obj.getFEClassesNumber() );
+            nodalDofs=repmat({''},obj.mesh.getNumberOfNodes(),1);
+            nodeNums=cell(obj.mesh.getNumberOfNodes(),1);
+            totalDofs=[];
             for k=1:obj.getFEClassesNumber()
+                [nodes nDofs] = obj.fElems{k}.getNodesDOFs();
                 elemsToNodes(obj.fElems{k}.elems,k)=true;
+                totalDofs=[totalDofs obj.fElems{k}.eDofs];
+                % Use an anonymous function to include the 'stable' option
+                nodalDofs(nodes) = cellfun(@(a, b) union(a, b, 'stable'), nodalDofs(nodes), flip(nDofs), 'UniformOutput', false);
+                nodeNums(nodes) = cellfun(@(a) union(a, b, 'stable'), nodalDofs(nodes), 'UniformOutput', false);
+                %nodalDofs(nodes) = union( nodalDofs(nodes), nDofs, 'stable' );
             end
+            uDofs = cellfun(@(a) a(2:end), nodalDofs, 'UniformOutput', false);
+            obj.modelDofs = [uDofs{:}]';
         end
 
         function fixDOF( obj, nodeSelector, dofs,  values )
