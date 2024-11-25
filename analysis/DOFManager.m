@@ -1,9 +1,13 @@
 classdef DOFManager < handle
    
-    
     properties
-        dofmapToFEM, ndofs, gdofs;
+        allDofTypes;
     end
+
+     methods(Abstract)
+         initDOFs(obj);
+         allocVectors = getAllocationVectors(obj,elems);
+     end
     
     methods
 

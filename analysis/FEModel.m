@@ -1,6 +1,6 @@
 classdef FEModel < handle
     properties
-            fElems, mesh, modelDofs, supports, P, q, rotations;
+            fElems, mesh, dofTypes, modelDofs, dofToNodes, nodesToDofs, supports, P, q, rotations;
             selTolerance;
     end
 
@@ -30,13 +30,29 @@ classdef FEModel < handle
                 [nodes nDofs] = obj.fElems{k}.getNodesDOFs();
                 elemsToNodes(obj.fElems{k}.elems,k)=true;
                 totalDofs=[totalDofs obj.fElems{k}.eDofs];
-                % Use an anonymous function to include the 'stable' option
-                nodalDofs(nodes) = cellfun(@(a, b) union(a, b, 'stable'), nodalDofs(nodes), flip(nDofs), 'UniformOutput', false);
-                nodeNums(nodes) = cellfun(@(a) union(a, b, 'stable'), nodalDofs(nodes), 'UniformOutput', false);
-                %nodalDofs(nodes) = union( nodalDofs(nodes), nDofs, 'stable' );
+                for i = 1:numel(nodalDofs(nodes))
+                    nodalDofs{nodes(i)} = union(nodalDofs{nodes(i)}, nDofs{i}, 'stable');
+                    nodeNums{nodes(i)} = repelem( nodes(i), 1,  numel(nodalDofs{nodes(i)}) );
+                end
             end
             uDofs = cellfun(@(a) a(2:end), nodalDofs, 'UniformOutput', false);
+            nDofs = cellfun(@(a) a(2:end), nodeNums, 'UniformOutput', false);
             obj.modelDofs = [uDofs{:}]';
+            obj.dofToNodes = [nDofs{:}]';
+            obj.dofTypes = unique(totalDofs, 'stable');
+            nodesToDofs = nDofs;
+            i=1;
+            for k=1:obj.mesh.getNumberOfNodes()
+                lDofs=numel(nodesToDofs{k});
+                nodesToDofs{k}=i:i+lDofs-1;
+                i=i+lDofs;
+            end
+            obj.nodesToDofs=nodesToDofs;
+        end
+
+        function allocVectors = getAllocationVectors( obj, inds )
+            a=obj.nodesToDofs(inds);
+            allocVectors = obj.nodesToDofs(inds);
         end
 
         function fixDOF( obj, nodeSelector, dofs,  values )
