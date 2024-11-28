@@ -2,7 +2,7 @@ classdef SolidElasticElem < FiniteElement
     methods
         function obj = SolidElasticElem(sf,p)
              obj = obj@FiniteElement(sf,p);
-             obj.ndofs=["ux" "uy" "uz"];
+             obj.eDofs=["ux" "uy" "uz"];
              obj.results.names  = ["exx" "eyy" "ezz" "exy" "eyz" "exz" "sxx" "syy" "szz" "sxy" "syz" "sxz" "sHM" "rho" "T"];
              obj.results.descriptions  = ["strain member exx" "strain member eyy" "strain member ezz" ...
                  "strain member exy" "strain member eyz" "strain member exz" "stress member sxx" "stress member syy" "stress member szz" ...

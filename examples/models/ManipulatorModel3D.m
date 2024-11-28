@@ -1,8 +1,8 @@
-classdef ManipulatorModel3D < FEModel
+classdef ManipulatorModel3D 
  
     
     properties
-        analysis, fixedEdgeSelector, alpha, elems, fe, const_elems, upper_nodes,loadSurfaceNodes;
+        analysis, fixedEdgeSelector, alpha, mesh, elems, fe, const_elems, upper_nodes,loadSurfaceNodes;
     end
     
     methods                       

@@ -1,4 +1,4 @@
-classdef ChocolateModel < ModelLinear
+classdef ChocolateModel 
 
     properties
         ganTh, alGanTh, intTh, tileXWidth, tileYWidth, notchWidth, nTempVars,xt,xn,zCoords,zCornersCoords;

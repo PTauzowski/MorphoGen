@@ -30,7 +30,7 @@ classdef FEModel < handle
                 [nodes nDofs] = obj.fElems{k}.getNodesDOFs();
                 elemsToNodes(obj.fElems{k}.elems,k)=true;
                 totalDofs=[totalDofs obj.fElems{k}.eDofs];
-                for i = 1:numel(nodalDofs(nodes))
+                for i = 1:size(nodalDofs(nodes),1)
                     nodalDofs{nodes(i)} = union(nodalDofs{nodes(i)}, nDofs{i}, 'stable');
                     nodeNums{nodes(i)} = repelem( nodes(i), 1,  numel(nodalDofs{nodes(i)}) );
                 end
@@ -40,7 +40,7 @@ classdef FEModel < handle
             obj.modelDofs = [uDofs{:}]';
             obj.dofToNodes = [nDofs{:}]';
             obj.dofTypes = unique(totalDofs, 'stable');
-            nodesToDofs = nDofs;
+            obj.nodesToDofs = nDofs;
             i=1;
             for k=1:obj.mesh.getNumberOfNodes()
                 lDofs=numel(nodesToDofs{k});
