@@ -1,29 +1,17 @@
-classdef DOFManagerUniform
-    %DOFMANAGERUNIFORM Summary of this class goes here
-    %   Detailed explanation goes here
-    
-    properties
-        ndofs;
-    end
+classdef DOFManagerUniform < DOFManager
     
     methods
-        function obj = DOFManagerUniform(nnodes,ndofs)
-            obj.allDofTypes=ndofs;
-            obj.nnodes=nnodes;
-        end
-
-        function initDOFs(obj)
-        end
-
-        function allocVectors = getAllocationVectors(obj,elems)
-            idofs=1:obj.ndofs;
-            allocVectors = zeros( size(elems,2)*obj)
-        end
-        
-        function outputArg = method1(obj,inputArg)
-            %METHOD1 Summary of this method goes here
-            %   Detailed explanation goes here
-            outputArg = obj.Property1 + inputArg;
+        function  [I,J,V,Ksize] = getIndices( obj, fElem )
+            nelems = size( fElem.elems, 1 );
+            nnodes = size( fElem.elems, 2 );
+            ndim=size(obj.eDofs,2);
+            Kdim  = ndim * nnodes;
+            Ksize = Kdim * Kdim;
+            [ix, iy] = meshgrid( 1:Kdim, 1:Kdim );
+            alldofs = (repelem( obj.elems, 1, ndim)-1)*ndim+repmat((1:ndim)',nelems,nnodes);
+            I = alldofs(1:nelems,ix(:));
+            J = alldofs(1:nelems,iy(:));
+            V = alldofs;
         end
     end
 end

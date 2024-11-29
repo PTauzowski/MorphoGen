@@ -39,6 +39,10 @@ model.fixDOF( edgeX0, ["ux" "uy"] , [0 0]);
 %model.plotSelectedNodes(edgeX0,'m');
 %model.plotNodes(".",'b');
 
+
+dofs=DOFManagerNonuniform(mesh,{ frameElem planeElem });
+[I,J,V,Ksize] = dofs.getIndices( frameElem )
+
 elems=frameElem.elems(1:3,:)
 
 allocVectors = model.getAllocationVectors( elems )

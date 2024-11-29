@@ -49,6 +49,7 @@ classdef (Abstract) FiniteElement < handle
             end  
             edges = alledges( bedges, : );
         end
+        
         function  [I,J,V,Ksize] = sparseMatrixAllocDataUniform( obj, gdofs )
             nelems = size( obj.elems, 1 );
             nnodes = size( obj.elems, 2 );

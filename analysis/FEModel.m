@@ -40,7 +40,7 @@ classdef FEModel < handle
             obj.modelDofs = [uDofs{:}]';
             obj.dofToNodes = [nDofs{:}]';
             obj.dofTypes = unique(totalDofs, 'stable');
-            obj.nodesToDofs = nDofs;
+            nodesToDofs = nDofs;
             i=1;
             for k=1:obj.mesh.getNumberOfNodes()
                 lDofs=numel(nodesToDofs{k});
