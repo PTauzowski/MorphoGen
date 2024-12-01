@@ -1,7 +1,7 @@
 classdef DOFManagerNonuniform
   
     properties
-        modelDofs,dofToNodes,dofTypes,nodesToDofs;
+        modelDofs, dofToNodes, dofTypes, nodesToDofs;
     end
     
     methods
@@ -17,25 +17,25 @@ classdef DOFManagerNonuniform
             end
             [unique_connections, conn_classes, node_classes] = unique(elemsToNodes, 'rows');
             dofs_classes=cell(numel(conn_classes),1);
+            dofs_numbers=zeros(numel(conn_classes),1);
             for k=1:numel(conn_classes)
                 a=cellfun(@(a) [a.eDofs], {fElems{elemsToNodes(conn_classes(k),:)'}}, 'UniformOutput', false);
                 dofs_classes{k}=unique([a{:}],'stable');
+                dofs_numbers(k)=size(dofs_classes{k},2);
             end
             stringified = cellfun(@(x) strjoin(cellstr(x), ','), dofs_classes, 'UniformOutput', false);
             [~, dofs_classes_id, dofs_clasification] = unique(stringified);
-            uDofs = cellfun(@(a) a(2:end), nodalDofs, 'UniformOutput', false);
-            nDofs = cellfun(@(a) a(2:end), nodeNums, 'UniformOutput', false);
-            obj.modelDofs = [uDofs{:}]';
-            obj.dofToNodes = [nDofs{:}]';
-            obj.dofTypes = unique(totalDofs, 'stable');
-            nodesToDofs = nDofs;
-            i=1;
-            for k=1:mesh.getNumberOfNodes()
-                lDofs=numel(nodesToDofs{k});
-                nodesToDofs{k}=i:i+lDofs-1;
-                i=i+lDofs;
+            nodalDOFSClasses = dofs_clasification(node_classes);
+            nodalDOFS = dofs_classes(nodalDOFSClasses);
+            nodalDOFSnumber = dofs_numbers(nodalDOFSClasses);
+            DOFsInds = [1; cumsum(nodalDOFSnumber)+1];
+            globalDOFs = [ nodalDOFS{:} ]';
+            for k=1:elemClassesNumber
+                [nodes, nDofs] = fElems{k}.getNodesDOFs();
+                elemDOFSclasses = nodalDOFSClasses( fElems{k}.elems );
+                a = nodalDOFS(elemDOFSclasses)
+                elemDOFs = [a{:}];
             end
-            obj.nodesToDofs=nodesToDofs;
         end
 
          function  [I,J,V,Ksize] = getIndices( obj, fElem )
