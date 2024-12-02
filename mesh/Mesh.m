@@ -495,6 +495,12 @@ classdef Mesh < handle
             obj.nodes = newNodes( si1, : );
             elems = si2(oldelems);
         end
+        function elems = transformToCylindricalEliptic3D( obj, x0, a, b, oldelems )
+             newNodes = [ x0(1)+a*obj.nodes(:,1).*cos( obj.nodes(:,2) ) x0(2)+b*obj.nodes(:,1).*sin( obj.nodes(:,2) ) obj.nodes(:,3) ];
+             [~,si1,si2] = unique( round(newNodes .* obj.tolerance), 'rows', 'stable' );
+            obj.nodes = newNodes( si1, : );
+            elems = si2(oldelems);
+        end
         function elems = removeNodes( obj, selector, oldelems )
             nodesToRemove=find(selector.select(obj.nodes));
             nodesToLeave=find(1-selector.select(obj.nodes));

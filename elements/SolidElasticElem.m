@@ -539,7 +539,7 @@ classdef SolidElasticElem < FiniteElement
             else
                 col=varargin{1};
             end
-            allfaces = reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))';
+            allfaces = reshape(obj.elems(:,obj.shapeFn.fcontours)',size(obj.shapeFn.fcontours,1),size(obj.shapeFn.fcontours,2)*size(obj.elems,1))';
             %allfaces = obj.elems(obj.sf.fcontours,:);
             [~,ifaces] = unique( sort(allfaces,2), 'rows' );
             A=allfaces(ifaces,:);
@@ -547,7 +547,7 @@ classdef SolidElasticElem < FiniteElement
             delfaces(ifaces,:)=[];
             [~,ifaces,~]=setxor( sort(A,2), sort(delfaces,2), 'rows' );
             plotfaces=A(ifaces,:);
-            patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col,'EdgeColor','k');
+            patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col,'EdgeColor','k',"FaceAlpha",1.0);
             %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col);
             %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col,"FaceAlpha",0.3);
         end

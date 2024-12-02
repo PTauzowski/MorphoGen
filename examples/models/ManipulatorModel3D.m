@@ -1,4 +1,4 @@
-classdef ManipulatorModel3D 
+classdef ManipulatorModel3D < handle
  
     
     properties
@@ -11,7 +11,7 @@ classdef ManipulatorModel3D
             betas=betas*pi/180;
 
             obj.mesh=Mesh();
-            obj.geterateManipulator( ls, R, r, res, alpha, betas, ShapeFn );
+            obj.geterateManipulator2( ls, R, r, res, alpha, betas, ShapeFn );
             obj.fe = SolidElasticElem( ShapeFn, obj.elems );
 
             obj.fe.props.h=1;
@@ -75,6 +75,7 @@ classdef ManipulatorModel3D
             resLen=res;
             resCirc = ceil(resLen/ls*2*pi*R);
             resTh = ceil(resLen/ls*Th);
+            
             mesh = Mesh();
             elems = mesh.addRectMesh3D( R-Th, phase, 0, Th, 2*pi, 1, resTh, resCirc, resLen, sf.localNodes );      
             elems = mesh.transformToCylindrical3D( [0 0], elems );
@@ -82,8 +83,80 @@ classdef ManipulatorModel3D
             nodesR1 = [mesh.nodes(:,1) mesh.nodes(:,2) 0*mesh.nodes(:,3)]*Rot1+x1;
             nodesR2 = [mesh.nodes(:,1) mesh.nodes(:,2) 0*mesh.nodes(:,3)]*Rot2+x2;
             nodes= (1-mesh.nodes(:,3)) .* nodesR1 + mesh.nodes(:,3) .* nodesR2;
-            mesh.nodes=nodes;
+            mesh.nodes=nodes;            
+        end
+
+
+        function geterateManipulator2(obj, ls, R, r, res, alpha, betas, sf )
+            %obj.elems = obj.mesh.merge(mesh.nodes,obj.elems);
+            xm=[0 0 0];
+            plot3(xm(1),xm(2),xm(3),LineStyle="none",Marker="o");
             
+            c=cos(alpha);
+            s=sin(alpha);
+            Redge=[c 0 s; 0 1 0; -s 0 c]';
+            c=cos(betas(1));
+            s=sin(betas(1));
+            Rsegment=[c -s 0; s c 0; 0 0 1]'
+            
+            phase=betas(1);
+            [obj.mesh, obj.elems]=obj.generateSegment2a(R, r, ls, res, phase, Redge, sf);
+            obj.const_elems=(size(obj.elems,1)-2*res-1:size(obj.elems,1))';
+            last_const_elems=obj.elems(size(obj.elems,1)-2*res-1:size(obj.elems,1),:);
+            obj.mesh.nodes=obj.mesh.nodes*Rsegment;
+            prevRot=Rsegment*Redge;
+            %plot3(xm(1),xm(2),xm(3),LineStyle="none",Marker="o");
+            for k=2:length(betas)
+                c=cos(betas(k));
+                s=sin(betas(k));
+                Rsegment=[c -s 0; s c 0; 0 0 1]';
+                phase=phase+betas(k);
+                [mesh1, elems1]=obj.generateSegment2a(R, r, ls, res, phase, Redge, sf);
+                [mesh2, elems2]=obj.generateSegment2b(R, r, ls, res, phase, Redge, sf);
+                elems1=[elems2; mesh1.merge(mesh2.nodes,elems2)];
+                mesh1.nodes=mesh1.nodes*Rsegment*Redge*prevRot+xm;
+                obj.elems =[ obj.elems; obj.mesh.merge(mesh1.nodes, elems1) ];
+                xm=xm+[0 0 ls]*prevRot;
+                prevRot=prevRot*Rsegment;
+            end
+            ne=size(last_const_elems,1);
+            nodesCount=zeros(size(obj.mesh.nodes,1),1);
+            for k=1:ne
+                nodesCount(last_const_elems(k,:))=nodesCount(last_const_elems(k,:))+1;
+            end
+            obj.loadSurfaceNodes=nodesCount==2;
+        end
+
+        function [mesh, elems] = generateSegment2a(obj, R, r, ls, res, phase, Redge, sf)
+            Th=R-r;
+            resLen=res;
+            resCirc = ceil(resLen/ls*2*pi*R);
+            resTh = ceil(resLen/ls*Th);
+            
+            mesh = Mesh();
+            elems = mesh.addRectMesh3D( R-Th, phase, 0, Th, 2*pi, 1, resTh, resCirc, resLen, sf.localNodes );      
+            elems = mesh.transformToCylindrical3D( [0 0], elems );
+           
+            nodesR1 = [mesh.nodes(:,1) mesh.nodes(:,2) 0*mesh.nodes(:,3)]*Redge;
+            %nodesR2 = [mesh.nodes(:,1) mesh.nodes(:,2) 0*mesh.nodes(:,3)]*Rot2;
+            nodes= [nodesR1(:,1) nodesR1(:,2) mesh.nodes(:,3) .* (nodesR1(:,3)+ls/2)];
+            mesh.nodes=nodes;            
+        end
+
+        function [mesh, elems] = generateSegment2b(obj, R, r, ls, res, phase, Redge, sf)
+            Th=R-r;
+            resLen=res;
+            resCirc = ceil(resLen/ls*2*pi*R);
+            resTh = ceil(resLen/ls*Th);
+            
+            mesh = Mesh();
+            elems = mesh.addRectMesh3D( R-Th, phase, 0, Th, 2*pi, 1, resTh, resCirc, resLen, sf.localNodes );      
+            elems = mesh.transformToCylindrical3D( [0 0], elems );
+           
+            nodesR1 = [mesh.nodes(:,1) mesh.nodes(:,2) 0*mesh.nodes(:,3)]*Redge';
+            %nodesR2 = [mesh.nodes(:,1) mesh.nodes(:,2) 0*mesh.nodes(:,3)]*Rot2;
+            nodes= [nodesR1(:,1) nodesR1(:,2) (1-mesh.nodes(:,3)) .* (nodesR1(:,3)-ls/2)];
+            mesh.nodes=nodes;            
         end
 
         function xnew=rotatePoints(x0,R,x)

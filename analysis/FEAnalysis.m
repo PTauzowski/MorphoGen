@@ -13,9 +13,9 @@ classdef (Abstract) FEAnalysis < handle
                 obj.felems = { felems };
             end
             obj.mesh = mesh;
-            obj.ndofs = obj.felems{1}.ndofs;
+            obj.ndofs = obj.felems{1}.eDofs;
             for k=max(size(obj.felems))
-                obj.ndofs = union(obj.ndofs,obj.felems{k}.ndofs);
+                obj.ndofs = union(obj.ndofs,obj.felems{k}.eDofs);
             end
             obj.selTolerance=1.0E-05;
             obj.Pnodal = zeros( size(mesh.nodes,1), size(obj.ndofs,2) );
