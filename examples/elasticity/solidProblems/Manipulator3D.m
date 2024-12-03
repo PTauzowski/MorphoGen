@@ -6,9 +6,9 @@ R=0.5;
 r=0.4;
 res=20;
 alpha=30;
-betas=[ 0 0 ];
+betas=[ 23 15 83 42 56 ];
 ShapeFn = ShapeFunctionL8;
-segmentLength=1.5;
+segmentLength=0.6;
 model = ManipulatorModel3D(segmentLength,R,r,res, alpha, betas, ShapeFn);
 
 model.fe.plot(model.mesh.nodes);

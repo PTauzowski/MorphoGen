@@ -88,36 +88,49 @@ classdef ManipulatorModel3D < handle
 
 
         function geterateManipulator2(obj, ls, R, r, res, alpha, betas, sf )
-            %obj.elems = obj.mesh.merge(mesh.nodes,obj.elems);
-            xm=[0 0 0];
-            plot3(xm(1),xm(2),xm(3),LineStyle="none",Marker="o");
+            %obj.elems = obj.mesh.merge(mesh.nodes,obj.elems)
             
-            c=cos(alpha);
-            s=sin(alpha);
-            Redge=[c 0 s; 0 1 0; -s 0 c]';
-            c=cos(betas(1));
-            s=sin(betas(1));
-            Rsegment=[c -s 0; s c 0; 0 0 1]'
+           c=cos(alpha);
+           s=sin(alpha);
+           rotCut=[c 0 s; 0 1 0; -s 0 c]';
+           c=cos(2*alpha);
+           s=sin(2*alpha);
+           rotCut2=[c 0 s; 0 1 0; -s 0 c]';
+           c=cos(betas(1));
+           s=sin(betas(1));
+           rotBeta=[c -s 0; s c 0; 0 0 1]';
             
-            phase=betas(1);
-            [obj.mesh, obj.elems]=obj.generateSegment2a(R, r, ls, res, phase, Redge, sf);
+            phase=-betas(1);
+            [obj.mesh, obj.elems]=obj.generateSegment2a(R, r, ls, res, phase, rotCut, sf);
             obj.const_elems=(size(obj.elems,1)-2*res-1:size(obj.elems,1))';
             last_const_elems=obj.elems(size(obj.elems,1)-2*res-1:size(obj.elems,1),:);
-            obj.mesh.nodes=obj.mesh.nodes*Rsegment;
-            prevRot=Rsegment*Redge;
-            %plot3(xm(1),xm(2),xm(3),LineStyle="none",Marker="o");
+            obj.mesh.nodes=obj.mesh.nodes*rotBeta;
+            prevRot=rotCut*rotBeta;
+            xEnd=[0 0 ls];
+            xEnds=[ [0 0 0]; xEnd];
+            plot3(xEnd(1),xEnd(2),xEnd(3),LineStyle="none",Marker="o");
             for k=2:length(betas)
                 c=cos(betas(k));
                 s=sin(betas(k));
-                Rsegment=[c -s 0; s c 0; 0 0 1]';
-                phase=phase+betas(k);
-                [mesh1, elems1]=obj.generateSegment2a(R, r, ls, res, phase, Redge, sf);
-                [mesh2, elems2]=obj.generateSegment2b(R, r, ls, res, phase, Redge, sf);
-                elems1=[elems2; mesh1.merge(mesh2.nodes,elems2)];
-                mesh1.nodes=mesh1.nodes*Rsegment*Redge*prevRot+xm;
+                rotBeta=[c -s 0; s c 0; 0 0 1]';
+                phase = phase-betas(k);
+                [mesh1, elems1]=obj.generateSegment2b(R, r, ls, res, phase, rotCut, sf);
+                [mesh2, elems2]=obj.generateSegment2a(R, r, ls, res, phase, rotCut, sf);
+                if k<length(betas)
+                    elems1=[elems2; mesh1.merge(mesh2.nodes,elems2)];
+                end
+                mesh1.nodes=(mesh1.nodes+[0 0 ls])*rotCut*rotBeta*prevRot+xEnd;         %*rotCut*rotBeta*prevRot+xEnd;
                 obj.elems =[ obj.elems; obj.mesh.merge(mesh1.nodes, elems1) ];
-                xm=xm+[0 0 ls]*prevRot;
-                prevRot=prevRot*Rsegment;
+                last_const_elems=obj.elems(size(obj.elems,1)-2*res-1:size(obj.elems,1),:);
+                obj.const_elems=[ obj.const_elems; (size(obj.elems,1)-2*res:size(obj.elems,1))' ];
+                if k<length(betas)
+                    xEnd=xEnd+[0 0 2*ls]*rotCut*rotBeta*prevRot;
+                else
+                    xEnd=xEnd+[0 0 ls]*rotCut*rotBeta*prevRot;
+                end
+                xEnds=[ xEnds; xEnd ];
+                prevRot=rotCut2*rotBeta*prevRot;
+                plot3(xEnd(1),xEnd(2),xEnd(3),LineStyle="none",Marker="o");
             end
             ne=size(last_const_elems,1);
             nodesCount=zeros(size(obj.mesh.nodes,1),1);
@@ -125,6 +138,7 @@ classdef ManipulatorModel3D < handle
                 nodesCount(last_const_elems(k,:))=nodesCount(last_const_elems(k,:))+1;
             end
             obj.loadSurfaceNodes=nodesCount==2;
+            line(xEnds(:,1),xEnds(:,2),xEnds(:,3),Marker="o");
         end
 
         function [mesh, elems] = generateSegment2a(obj, R, r, ls, res, phase, Redge, sf)
@@ -139,7 +153,7 @@ classdef ManipulatorModel3D < handle
            
             nodesR1 = [mesh.nodes(:,1) mesh.nodes(:,2) 0*mesh.nodes(:,3)]*Redge;
             %nodesR2 = [mesh.nodes(:,1) mesh.nodes(:,2) 0*mesh.nodes(:,3)]*Rot2;
-            nodes= [nodesR1(:,1) nodesR1(:,2) mesh.nodes(:,3) .* (nodesR1(:,3)+ls/2)];
+            nodes= [nodesR1(:,1) nodesR1(:,2) mesh.nodes(:,3) .* (nodesR1(:,3)+ls)];
             mesh.nodes=nodes;            
         end
 
@@ -155,7 +169,7 @@ classdef ManipulatorModel3D < handle
            
             nodesR1 = [mesh.nodes(:,1) mesh.nodes(:,2) 0*mesh.nodes(:,3)]*Redge';
             %nodesR2 = [mesh.nodes(:,1) mesh.nodes(:,2) 0*mesh.nodes(:,3)]*Rot2;
-            nodes= [nodesR1(:,1) nodesR1(:,2) (1-mesh.nodes(:,3)) .* (nodesR1(:,3)-ls/2)];
+            nodes= [nodesR1(:,1) nodesR1(:,2) (1-mesh.nodes(:,3)) .* (nodesR1(:,3)-ls)];
             mesh.nodes=nodes;            
         end
 
