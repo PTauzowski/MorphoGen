@@ -546,7 +546,7 @@ classdef SolidElasticElem < FiniteElement
             delfaces(ifaces,:)=[];
             [~,ifaces,~]=setxor( sort(A,2), sort(delfaces,2), 'rows' );
             plotfaces=A(ifaces,:);
-            patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col,'EdgeColor','k');
+            patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col,'EdgeColor','k',"FaceAlpha",0.3);
             %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col);
             %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col,"FaceAlpha",0.3);
         end

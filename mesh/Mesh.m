@@ -178,7 +178,7 @@ classdef Mesh < handle
             end
             obj.merge( newNodes, newElems );
         end
-        function obj = addRectMesh3D( obj, x1, y1, z1, dx, dy, dz, nx, ny, nz, lnodes )
+        function newElems = addRectMesh3D( obj, x1, y1, z1, dx, dy, dz, nx, ny, nz, lnodes )
             ddx=dx/nx;
             ddy=dy/ny;
             ddz=dz/nz;
@@ -201,6 +201,37 @@ classdef Mesh < handle
             end
             obj.merge(newNodes, newElems);
         end
+
+        function [newElems, zElems] = addRectMeshZlayer3D( obj, x1, y1, z1, dx, dy, dz, nx, ny, nz, zLayers, lnodes )
+            ddx=dx/nx;
+            ddy=dy/ny;
+            ddz=dz/nz;
+            nelems=nx*ny*nz;
+            nnodes=size(lnodes,1)*nelems;
+            newNodes=zeros(nnodes,size(lnodes,2));
+            newElems=zeros(size(lnodes,1),nelems);
+            newElems(:)=(1:nnodes);
+            newElems = newElems';
+            counter=1;
+            zCounter=1;
+            zElems=zeros(nx*ny,1);
+            for iz=1:nz
+                for iy=1:ny
+                    for ix=1:nx
+                        newNodes(newElems(counter,:),1) = (2*x1+ddx*lnodes(:,1)+2*ddx*ix-ddx)/2;
+                        newNodes(newElems(counter,:),2) = (2*y1+ddy*lnodes(:,2)+2*ddy*iy-ddy)/2;
+                        newNodes(newElems(counter,:),3) = (2*z1+ddz*lnodes(:,3)+2*ddz*iz-ddz)/2;
+                        counter=counter+1;
+                    end
+                end
+                if ( nz-iz < zLayers)
+                   zElems(zCounter) = counter; 
+                   zCounter=zCounter+1;
+                end
+            end
+            zElems = obj.merge(newNodes, newElems);
+        end
+
         function obj = addShapedMesh2D( obj, sf, x, ndiv1, ndiv2, pattern )
             baseMesh = Mesh();
             baseMesh.addRectMesh2D( -1, -1, 2, 2, ndiv1, ndiv2, pattern );
