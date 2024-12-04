@@ -2,7 +2,7 @@ classdef ManipulatorModel3D < handle
  
     
     properties
-        analysis, fixedEdgeSelector, alpha, mesh, elems, fe, const_elems, upper_nodes, loadSurfaceNodes, fixedSurfaceNodes;
+        analysis, fixedEdgeSelector, alpha, mesh, elems, fe, xEnd, const_elems, upper_nodes, loadSurfaceNodes, fixedSurfaceNodes;
     end
     
     methods                       
@@ -18,13 +18,18 @@ classdef ManipulatorModel3D < handle
             material = SolidMaterial('mat1');
             material.setElasticIzo(E, nu);
             material.setElasticIzoGrad();
+            obj.fe.setMaterial(material);
 
             obj.analysis = LinearElasticityWeighted( obj.fe, obj.mesh, false );
+            %analysis = LinearElasticityWeighted( model.fe, model.mesh, false );
             %problem = LinearElasticity( fe, mesh );
-            fixedEdgeSelector = Selector( @(x)( abs(x(:,3)) < 0.001 ) );
-            loadedFaceSelector = Selector( @(x)( abs(x(:,3)- Length) < 0.001 ) );
-            constElemsSelector =  Selector( @(x)( (x(:,3) < 0.05 * Length ) ) & (x(:,3) > 0.96 * Length ) );
-            %obj.setX(ones(obj.analysis.getTotalElemsNumber(),1));
+            fixedEdgeSelector = Selector( obj.fixedSurfaceNodes );
+            loadedFaceSelector = Selector( obj.loadSurfaceNodes );
+            
+            obj.analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [0 0 -10] ));
+            obj.analysis.fixNodes( fixedEdgeSelector, ["ux" "uy" "uz"] );
+            obj.analysis.fixClosestNode( [0 0 0], ["ux" "uy" "uz"], [0 0 0]);
+
         end
 
         function geterateManipulator(obj, ls, R, r, res, alpha, betas, sf )
@@ -107,8 +112,8 @@ classdef ManipulatorModel3D < handle
             selector = Selector( @(x)( (x(:,3) < 1.0E-4) ) );
             obj.fixedSurfaceNodes = selector.select( obj.mesh.nodes );
             prevRot=rotCut*rotBeta;
-            xEnd=[0 0 ls];
-            xEnds=[ [0 0 0]; xEnd];
+            obj.xEnd=[0 0 ls];
+            xEnds=[ [0 0 0]; obj.xEnd];
             for k=2:length(betas)
                 c=cos(betas(k));
                 s=sin(betas(k));
@@ -120,23 +125,24 @@ classdef ManipulatorModel3D < handle
                     elems1=[elems2; mesh1.merge(mesh2.nodes,elems2)];                    
                 end
                 
-                mesh1.nodes=(mesh1.nodes+[0 0 ls])*rotCut*rotBeta*prevRot+xEnd;  
+                mesh1.nodes=(mesh1.nodes+[0 0 ls])*rotCut*rotBeta*prevRot+obj.xEnd;  
                 obj.elems =[ obj.elems; obj.mesh.merge(mesh1.nodes, elems1) ];
                 last_const_elems=obj.elems(size(obj.elems,1)-2*res-1:size(obj.elems,1),:);
                 obj.const_elems=[ obj.const_elems; (size(obj.elems,1)-2*res:size(obj.elems,1))' ];
                 if k<length(betas)
-                    xEnd=xEnd+[0 0 2*ls]*rotCut*rotBeta*prevRot;
+                    obj.xEnd=obj.xEnd+[0 0 2*ls]*rotCut*rotBeta*prevRot;
                 else
-                    xEnd=xEnd+[0 0 ls]*rotCut*rotBeta*prevRot;
+                    obj.xEnd=obj.xEnd+[0 0 ls]*rotCut*rotBeta*prevRot;
                 end
-                xEnds=[ xEnds; xEnd ];
+                xEnds=[ xEnds; obj.xEnd ];
                 prevRot=rotCut2*rotBeta*prevRot;
-                tNodes = (obj.mesh.nodes-repmat(xEnd,size(obj.mesh.nodes,1),1))*prevRot';
-                sNodes = abs(tNodes(:,3))<1.0E-4;
-                obj.loadSurfaceNodes = find(sNodes);
-                plot3(obj.mesh.nodes(sNodes,1),obj.mesh.nodes(sNodes,2),obj.mesh.nodes(sNodes,3),LineStyle="none",Marker="*",Color='r');
+                
             end
-            line(xEnds(:,1),xEnds(:,2),xEnds(:,3),Marker="o",Color='r');
+            tNodes = (obj.mesh.nodes-repmat(obj.xEnd,size(obj.mesh.nodes,1),1))*prevRot'*rotCut;
+            sNodes = abs(tNodes(:,3))<1.0E-4;
+            obj.loadSurfaceNodes = sNodes;
+            %plot3(obj.mesh.nodes(sNodes,1),obj.mesh.nodes(sNodes,2),obj.mesh.nodes(sNodes,3),LineStyle="none",Marker="*",Color='r');
+            %line(tNodes(:,1),tNodes(:,2),tNodes(:,3),Marker="o",Color='r');
         end
 
         function [mesh, elems] = generateSegment2a(obj, R, r, ls, res, phase, Redge, sf)
