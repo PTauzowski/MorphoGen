@@ -278,7 +278,7 @@ classdef (Abstract) FEAnalysis < handle
               dim    = size(obj.mesh.nodes,2);
               dg     = norm( max(obj.mesh.nodes) - min(obj.mesh.nodes) );
               maxs = max( abs(min(min(obj.Pnodal))), abs(max(max(obj.Pnodal)) ) );
-              xp = obj.mesh.nodes - obj.Pnodal ./ maxs * dg * 0.05;
+              xp = obj.mesh.nodes - obj.Pnodal(:,1:3) ./ maxs * dg * 0.05;
 
               if dim == 2
                 X = [xp(:,1) obj.mesh.nodes(:,1)]';
@@ -300,7 +300,7 @@ classdef (Abstract) FEAnalysis < handle
 
               irots = find(obj.rotations);
 
-              xp = xps - obj.supports * dg * 0.02;
+              xp = xps - obj.supports(:,1:3) * dg * 0.02;
               
               for k=1:length(irots(:))
                   alpha = obj.rotations(irots(k));

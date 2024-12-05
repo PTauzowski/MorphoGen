@@ -2,7 +2,7 @@ classdef ManipulatorModel3D < handle
  
     
     properties
-        analysis, fixedEdgeSelector, alpha, mesh, elems, fe, xEnd, const_elems, upper_nodes, loadSurfaceNodes, fixedSurfaceNodes;
+        analysis, fixedEdgeSelector, alpha, mesh, elems, fe, xEnd, const_elems, upper_nodes, loadSurfaceNodes, fixedSurfaceNodes, frameNodes;
     end
     
     methods                       
@@ -141,6 +141,7 @@ classdef ManipulatorModel3D < handle
             tNodes = (obj.mesh.nodes-repmat(obj.xEnd,size(obj.mesh.nodes,1),1))*prevRot'*rotCut;
             sNodes = abs(tNodes(:,3))<1.0E-4;
             obj.loadSurfaceNodes = sNodes;
+            obj.frameNodes=xEnds;
             %plot3(obj.mesh.nodes(sNodes,1),obj.mesh.nodes(sNodes,2),obj.mesh.nodes(sNodes,3),LineStyle="none",Marker="*",Color='r');
             %line(tNodes(:,1),tNodes(:,2),tNodes(:,3),Marker="o",Color='r');
         end
