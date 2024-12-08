@@ -528,7 +528,7 @@ classdef SolidElasticElem < FiniteElement
                 defnodes = (nodes + varargin{1} ./ maxs * dg * varargin{2});
                 allfaces = reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))';
                 [~,ifaces] = unique( sort(allfaces,2),'rows' );
-                patch('Vertices', defnodes, 'Faces', allfaces(ifaces,:),'FaceColor','none','EdgeColor','r');
+                patch('Vertices', defnodes, 'Faces', allfaces(ifaces,:),'FaceColor','none','EdgeColor','k');
             end
         end
         function plot(obj,nodes,varargin)

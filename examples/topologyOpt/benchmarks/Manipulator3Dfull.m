@@ -6,12 +6,13 @@ nu=0.3;
 R=0.25;
 r=0.20;
 segmentLength=0.3;
-res=10;
+res=12;
 alpha=30;
 
-nArms=6;
+nArms=7;
 nSamples=5000;
 samples=random("Uniform",0,360,nSamples,nArms);
+samples(:,1)=0;
 maxNM=zeros(nSamples,1);    
 endPoints=zeros(nSamples,3);
 ShapeFn = ShapeFunctionL8;
@@ -39,7 +40,8 @@ load("ManipulatorOpti5000.mat");
 
 modelMin = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, samples(imin,:), ShapeFn);
 modelMin.fe.plot(modelMin.mesh.nodes);
-line(endPoints(:,1),endPoints(:,2),endPoints(:,3),Marker=".",Color='r',LineStyle='none');
+modelMin.analysis.plotCurrentLoad();
+%line(endPoints(:,1),endPoints(:,2),endPoints(:,3),Marker=".",Color='r',LineStyle='none');
 title('Model for minimal Huber-Mises');
 
 % figure
@@ -52,7 +54,8 @@ title('Model for minimal Huber-Mises');
 figure;
 modelMax = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, samples(imax,:), ShapeFn);
 modelMax.fe.plot(modelMax.mesh.nodes);
-line(endPoints(:,1),endPoints(:,2),endPoints(:,3),Marker=".",Color='r',LineStyle='none');
+modelMin.analysis.plotCurrentLoad();
+%line(endPoints(:,1),endPoints(:,2),endPoints(:,3),Marker=".",Color='r',LineStyle='none');
 title('Model for maximal Huber-Mises');
 
 % figure
@@ -64,27 +67,27 @@ title('Model for maximal Huber-Mises');
 
 
 
-% nSort=10;
-% 
-% for k=1:nSort
-%     %sortId = nSamples-k+1;
-%     sortId = nSamples/nSort*k;
-%     modelSort = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, samples(isort(sortId),:), ShapeFn);
-%     %modelSort.fe.plot(modelMin.mesh.nodes);
-%     %line(endPoints(:,1),endPoints(:,2),endPoints(:,3),Marker=".",Color='r',LineStyle='none');
-% 
-%     x=ones(modelSort.analysis.getTotalElemsNumber(),1);
-%     modelSort.analysis.solveWeighted(x);
-%     modelSort.analysis.computeElementResults();
-%     modelSort.analysis.plotMaps(["sHM"],0.1);
-%     modelSort.fe.plotWired(modelSort.mesh.nodes,modelSort.analysis.qnodal,0.1);
-%     title(['Model for minimal Huber-Mises for HMmax=' num2str(vSort(sortId))]);
-% 
-% end
+nSort=12;
+
+for k=1:nSort
+    sortId = nSamples-k+1;
+    %sortId = nSamples/nSort*k;
+    modelSort = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, samples(isort(sortId),:), ShapeFn);
+    %modelSort.fe.plot(modelMin.mesh.nodes);
+    %line(endPoints(:,1),endPoints(:,2),endPoints(:,3),Marker=".",Color='r',LineStyle='none');
+
+    x=ones(modelSort.analysis.getTotalElemsNumber(),1);
+    modelSort.analysis.solveWeighted(x);
+    modelSort.analysis.computeElementResults();
+    modelSort.analysis.plotMaps(["sHM"],0.1);
+    modelSort.fe.plotWired(modelSort.mesh.nodes,modelSort.analysis.qnodal,0.1);
+    title(['Model for minimal Huber-Mises for HMmax=' num2str(vSort(sortId))]);
+
+end
 
 %save("ManipulatorOpti5000.mat");
 
-frameElems=[1 2; 2 3; 3 4; 4 5; 5 6; 6 7];
+frameElems=[1 2; 2 3; 3 4; 4 5; 5 6; 6 7; 7 8];
 mesh=Mesh();
 frameElem=Frame3D(frameElems,E,0.02,0.8*E,0.0004,0.0004,0.003);
 
@@ -113,7 +116,7 @@ rowNames = {
     'Torsion Moment X End', 'Moment Y End', 'Moment Z End'
 };
 
-columnNames = {'Bar 1', 'Bar 2', 'Bar 3', 'Bar 4', 'Bar 5', 'Bar 6'};
+columnNames = {'Bar 1', 'Bar 2', 'Bar 3', 'Bar 4', 'Bar 5', 'Bar 6', 'Bar 7'};
 
 % Create table
 internalForcesTable = array2table(Fel, 'VariableNames', columnNames, 'RowNames', rowNames);
