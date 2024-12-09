@@ -56,7 +56,7 @@ toc
 
 figure;
 tic
-topOpt = SIMP_MMA_TopologyOptimizationElasticCompliance(Rfilter, analysis, penal, 0.4, true);
+topOpt = SIMP_MMA_TopologyOptimizationElasticCompliance(Rfilter, analysis, penal, 0.6, true);
 [objF, xopt]  = topOpt.solve();
 toc
 
