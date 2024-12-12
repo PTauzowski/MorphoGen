@@ -1,10 +1,7 @@
-function  ArmTopOptBucklingFn(name,Tx,Ty,N,Mx,My,Ms)
+function  ArmTopOptBucklingFn(name,R,r,h,alpha,Tx,Ty,N,Mx,My,Ms)
 
-    R=0.1;
-    th=0.005;
-    r=R-th;
-    h=0.2;
-    alpha=30;
+    th=R-r;
+
     
     % resCirc=100;
     % resTh=max(1,round(th/2/pi/R*resCirc));
@@ -86,8 +83,8 @@ function  ArmTopOptBucklingFn(name,Tx,Ty,N,Mx,My,Ms)
         %subplot(5, 2, k);
         stability.setForm(k);
         fe.plotSolidDeformed(mesh.nodes,stability.qnodal,0.2);
-        %axis on, xlabel('x-axis'), ylabel('y-axis'), view(3)
-        %lambda_str = sprintf('%.4g', lambdas(k));
+        axis on, xlabel('x-axis'), ylabel('y-axis'), view(3)
+        lambda_str = sprintf('%.4g', lambdas(k));
         title(['Form:' num2str(k), ' \lambda=' lambda_str]);
     end
     
