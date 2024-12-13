@@ -148,9 +148,13 @@ classdef ManipulatorModel3D < handle
 
         function [mesh, elems] = generateSegment2a(obj, R, r, ls, res, phase, Redge, sf)
             Th=R-r;
-            resLen=res;
-            resCirc = ceil(resLen/ls*2*pi*R);
-            resTh = ceil(resLen/ls*Th);
+            % resLen=res;
+            % resCirc = ceil(resLen/ls*2*pi*R);
+            % resTh = ceil(resLen/ls*Th);
+
+            resTh=1;
+            resCirc=round(2*pi*R/Th*resTh);
+            resLen=round(ls/Th*resTh);
             
             mesh = Mesh();
             elems = mesh.addRectMesh3D( R-Th, phase, 0, Th, 2*pi, 1, resTh, resCirc, resLen, sf.localNodes );      
@@ -165,9 +169,13 @@ classdef ManipulatorModel3D < handle
 
         function [mesh, elems] = generateSegment2b(obj, R, r, ls, res, phase, Redge, sf)
             Th=R-r;
-            resLen=res;
-            resCirc = ceil(resLen/ls*2*pi*R);
-            resTh = ceil(resLen/ls*Th);
+            % resLen=res;
+            % resCirc = ceil(resLen/ls*2*pi*R);
+            % resTh = ceil(resLen/ls*Th);
+
+            resTh=1;
+            resCirc=round(2*pi*R/Th*resTh);
+            resLen=round(ls/Th*resTh);
             
             mesh = Mesh();
             elems = mesh.addRectMesh3D( R-Th, phase, 0, Th, 2*pi, 1, resTh, resCirc, resLen, sf.localNodes );      

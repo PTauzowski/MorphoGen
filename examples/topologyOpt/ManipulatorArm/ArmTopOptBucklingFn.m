@@ -1,4 +1,4 @@
-function  ArmTopOptBucklingFn(name,R,r,h,alpha,Tx,Ty,N,Mx,My,Ms)
+function  [xopt, xopt_buckling, lambda1,lambda2] = ArmTopOptBucklingFn(name,R,r,h,alpha,Tx,Ty,N,Mx,My,Ms)
 
     th=R-r;
 
@@ -113,7 +113,7 @@ function  ArmTopOptBucklingFn(name,R,r,h,alpha,Tx,Ty,N,Mx,My,Ms)
     
     figure;
     tic
-    topOptBuckling = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisWithBuckling, cutTreshold, penal, 0.43, true );
+    topOptBuckling = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisWithBuckling, cutTreshold, penal, 0.4, true );
     topOptBuckling.setConstElems(const_elems);
     [objF, xopt]  = topOptBuckling.solve();
     toc
@@ -132,7 +132,7 @@ function  ArmTopOptBucklingFn(name,R,r,h,alpha,Tx,Ty,N,Mx,My,Ms)
     analysisSecondOrder.Pfem=analysisSecondOrder.Pfem*Pcr;
     topOptSecondOrder = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.4, true );
     topOptSecondOrder.setConstElems(const_elems);
-    [objF, xopt]  = topOptSecondOrder.solve();
+    [objF, xopt_buckling]  = topOptSecondOrder.solve();
     lambda1=abs(topOptSecondOrder.plLambda(end));
     toc
     savefig([name '_l.fig']);

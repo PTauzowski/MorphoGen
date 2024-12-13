@@ -380,7 +380,7 @@ classdef Mesh < handle
         function addManipulatorHalfSegment3D(obj,r,R,h,alpha,nr,nc,nz,lnodes)
             mesh=Mesh();
             mesh.addRectMesh3D( r, 0, 0, R-r, 2*pi, h, nr, nc, nz, lnodes);
-            mesh.transformToCylindrical3D([R 0]);
+            mesh.transformToCylindrical3D([0 0]);
            [mesh.convex_hull_nodes, ~] = convhull(mesh.nodes(:,1), mesh.nodes(:,2), mesh.nodes(:,3));
 
             xp=mesh.nodes;
