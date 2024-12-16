@@ -21,7 +21,7 @@ samples(:,1)=0;
 
 load("ManipulatorOpti5000.mat");
 
-r=0.24;
+r=0.23;
 res=10;
 
 [vMin, imin]=min(maxHM);
@@ -51,6 +51,7 @@ title(['Model for maximal [averaged] Huber-Mises for HMmax=' num2str(maxHMa(2))]
 
 modelMinA = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, sampleMinA, ShapeFn);
 modelMaxA = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, sampleMaxA, ShapeFn);
+
 frameElems=[1 2; 2 3; 3 4; 4 5; 5 6; 6 7; 7 8];
 mesh=Mesh();
 frameElem=Frame3D(frameElems,E,0.02,0.8*E,0.0004,0.0004,0.003);
@@ -79,32 +80,32 @@ Ms = Fel(10,barNumber)*loadFactor;
 Mz = Fel(11,barNumber)*loadFactor;
 My = Fel(12,barNumber)*loadFactor;
 
-[xopt, xopt_buckling, lambda1, lambda2 ] = ArmTopOptBucklingFn('maximal1',R,r,segmentLength,alpha,Ty,Tz,N,My,Mz,Ms);
- 
-% Filtering radius
-Rfilter = 1.5*(R-r);
-penal=3;
-cutTreshold = 0.02;
-
-plotArmTopOptConfig(Rfilter, modelMin.analysis, xopt, cutTreshold, penal, false);
-title("Minimal HM topology without buckling");
-plotArmTopOptConfig(Rfilter, modelMin.analysis, xopt_buckling, cutTreshold, penal, false);
-title("Minimal HM topology with buckling");
-
-plotArmTopOptConfig(Rfilter, modelMax.analysis, xopt, cutTreshold, penal, false);
-title("Maximal HM topology without buckling");
-plotArmTopOptConfig(Rfilter, modelMax.analysis, xopt_buckling, cutTreshold, penal, false);
-title("Maximal HM topology with buckling");
-
-plotArmTopOptConfig(Rfilter, modelMinA.analysis, xopt, cutTreshold, penal, false);
-title("Vertical HM topology without buckling");
-plotArmTopOptConfig(Rfilter, modelMinA.analysis, xopt_buckling, cutTreshold, penal, false);
-title("Vertical HM topology with buckling");
-
-plotArmTopOptConfig(Rfilter, modelMaxA.analysis, xopt, cutTreshold, penal, false);
-title("Horizontal HM topology without buckling");
-plotArmTopOptConfig(Rfilter, modelMaxA.analysis, xopt_buckling, cutTreshold, penal, false);
-title("Horizontal HM topology with buckling");
+% [xopt, xopt_buckling, lambda1, lambda2 ] = ArmTopOptBucklingFn('maximal1',R,r,segmentLength,alpha,Ty,Tz,N,My,Mz,Ms);
+% 
+% % Filtering radius
+% Rfilter = 1.5*(R-r);
+% penal=3;
+% cutTreshold = 0.02;
+% 
+% plotArmTopOptConfig(Rfilter, modelMin.analysis, xopt, cutTreshold, penal, false);
+% title("Minimal HM topology without buckling");
+% plotArmTopOptConfig(Rfilter, modelMin.analysis, xopt_buckling, cutTreshold, penal, false);
+% title("Minimal HM topology with buckling");
+% 
+% plotArmTopOptConfig(Rfilter, modelMax.analysis, xopt, cutTreshold, penal, false);
+% title("Maximal HM topology without buckling");
+% plotArmTopOptConfig(Rfilter, modelMax.analysis, xopt_buckling, cutTreshold, penal, false);
+% title("Maximal HM topology with buckling");
+% 
+% plotArmTopOptConfig(Rfilter, modelMinA.analysis, xopt, cutTreshold, penal, false);
+% title("Vertical HM topology without buckling");
+% plotArmTopOptConfig(Rfilter, modelMinA.analysis, xopt_buckling, cutTreshold, penal, false);
+% title("Vertical HM topology with buckling");
+% 
+% plotArmTopOptConfig(Rfilter, modelMaxA.analysis, xopt, cutTreshold, penal, false);
+% title("Horizontal HM topology without buckling");
+% plotArmTopOptConfig(Rfilter, modelMaxA.analysis, xopt_buckling, cutTreshold, penal, false);
+% title("Horizontal HM topology with buckling");
 
 
 
