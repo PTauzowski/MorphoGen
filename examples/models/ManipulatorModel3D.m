@@ -2,7 +2,7 @@ classdef ManipulatorModel3D < handle
  
     
     properties
-        analysis, fixedEdgeSelector, alpha, mesh, elems, fe, xEnd, const_elems, upper_nodes, loadSurfaceNodes, fixedSurfaceNodes, frameNodes;
+        analysis, fixedEdgeSelector, alpha, mesh, elems, fe, xEnd, const_elems, upper_nodes, loadSurfaceNodes, fixedSurfaceNodes, frameNodes, halfSegmentNelems;
     end
     
     methods                       
@@ -106,6 +106,7 @@ classdef ManipulatorModel3D < handle
             
             phase=-betas(1);
             [obj.mesh, obj.elems]=obj.generateSegment2a(R, r, ls, res, phase, rotCut, sf);
+            obj.halfSegmentNelems=size(obj.elems,1);
             obj.const_elems=(size(obj.elems,1)-2*res-1:size(obj.elems,1))';
             last_const_elems=obj.elems(size(obj.elems,1)-2*res-1:size(obj.elems,1),:);
             obj.mesh.nodes=obj.mesh.nodes*rotBeta;

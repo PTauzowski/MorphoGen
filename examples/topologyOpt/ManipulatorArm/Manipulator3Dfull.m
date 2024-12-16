@@ -34,8 +34,10 @@ modelMax = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, samples(iSort(n
 %manipulatorHMplot(modelMin,endPoints);
 %manipulatorHMplot(modelMax,endPoints);
 
-nConfigs=2;
+nConfigs=3;
 plotExtremalConfigurations(E,nu,segmentLength,R,r,res,alpha,ShapeFn,nConfigs,samples,vSort,iSort);
+
+plotArmConfigurationHMextended('MaxHM.pdf',E,nu,segmentLength,R,r,res, alpha, samples(iSort(nSamples-2),:), ShapeFn)
 
 sampleMinA=[0 180 180 180 180 180 180]; %  0  164.4607  177.0448  215.1802  214.3430  186.1769  240.6389
 sampleMaxA=[0 0 0 180 180 180 180];     %  0  343.7190   54.9144  125.4541  163.9858  169.3933  110.6999
@@ -43,11 +45,11 @@ sampleMaxA=[0 0 0 180 180 180 180];     %  0  343.7190   54.9144  125.4541  163.
 
 [maxHMa, endPointsa] = computeArmSamples(E,nu,segmentLength,R,r,res, alpha, [sampleMinA; sampleMaxA], ShapeFn);
 
-plotArmConfigurationHM(E,nu,segmentLength,R,r,res, alpha, sampleMinA, ShapeFn);
-title(['Model for minimal [averaged] Huber-Mises for HMmax=' num2str(maxHMa(1))]);
-
-plotArmConfigurationHM(E,nu,segmentLength,R,r,res, alpha, sampleMaxA, ShapeFn);
-title(['Model for maximal [averaged] Huber-Mises for HMmax=' num2str(maxHMa(2))]);
+% plotArmConfigurationHM(E,nu,segmentLength,R,r,res, alpha, sampleMinA, ShapeFn);
+% title(['Model for minimal [averaged] Huber-Mises for HMmax=' num2str(maxHMa(1))]);
+% 
+% plotArmConfigurationHM(E,nu,segmentLength,R,r,res, alpha, sampleMaxA, ShapeFn);
+% title(['Model for maximal [averaged] Huber-Mises for HMmax=' num2str(maxHMa(2))]);
 
 modelMinA = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, sampleMinA, ShapeFn);
 modelMaxA = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, sampleMaxA, ShapeFn);
