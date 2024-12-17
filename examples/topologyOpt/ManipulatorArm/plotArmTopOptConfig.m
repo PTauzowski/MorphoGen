@@ -4,7 +4,7 @@ function plotArmTopOptConfig(Rfilter, analysis, xopt, cutTreshold, penal, false)
     xtop_full=xopt;
     nArms=size(analysis.mesh.elems,1)/size(xopt,1);
     for k=1:nArms-1
-        xtop_full=[xtop_full; xopt; flip(xopt)];
+        xtop_full=[xtop_full; flip(xopt); xopt ];
     end
     xtop_full=[xtop_full; flip(xopt)];
     topOpt.x=xtop_full;

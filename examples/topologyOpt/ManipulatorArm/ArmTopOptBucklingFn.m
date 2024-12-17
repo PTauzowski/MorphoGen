@@ -58,7 +58,8 @@ function  [xopt, xopt_buckling, lambda1,lambda2] = ArmTopOptBucklingFn(name,R,r,
     
     analysis.fixNodes( fixedEdgeSelector, ["ux" "uy" "uz"] );
     %analysis.fixClosestNode( [0 0 0], ["ux" "uy" "uz"], [0 0 0]);
-    const_elems = [upElems downElems];
+    %const_elems = [upElems downElems];
+    const_elems = upElems;
     
     %mesh.transformNodesXY( @(x)( [ x(:,1) x(:,2) x(:,3)-0.3*x(:,1).*x(:,3)/Length ] )  );
     

@@ -7,6 +7,7 @@ classdef (Abstract) FiniteElement < handle
        sf;
        results;
        mat;
+       selectedElems;
     end
     
     methods(Abstract)
@@ -25,6 +26,7 @@ classdef (Abstract) FiniteElement < handle
                      obj.elems = elems;
                      obj.props.h=1;
                      obj.props.thermal=zeros(size(elems,1),1);
+                     obj.selectedElems=[];
         end
         function setMaterial(obj, mat)
                      obj.mat=mat;

@@ -521,12 +521,20 @@ classdef SolidElasticElem < FiniteElement
             hold on;
             daspect([1 1 1]);
             if nargin==2
-                patch('Vertices', nodes, 'Faces', obj.elems(:,obj.sf.contour),'FaceColor','none','EdgeColor','k');
+                if isempty(obj.selectedElems)
+                    patch('Vertices', nodes, 'Faces', obj.elems(:,obj.sf.contour),'FaceColor','none','EdgeColor','k');
+                else
+                    patch('Vertices', nodes, 'Faces', obj.elems(obj.selectedElems,obj.sf.contour),'FaceColor','none','EdgeColor','k');
+                end
             elseif nargin == 4
                 dg     = norm( max(nodes) - min(nodes) );
                 maxs = max( abs(min(min(varargin{1}))), abs(max(max(varargin{1})) ) );
                 defnodes = (nodes + varargin{1} ./ maxs * dg * varargin{2});
-                allfaces = reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))';
+                if isempty(obj.selectedElems)
+                    allfaces = reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))';
+                else
+                    allfaces = reshape(obj.elems(obj.selectedElems,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems(obj.selectedElems,:),1))';
+                end
                 [~,ifaces] = unique( sort(allfaces,2),'rows' );
                 patch('Vertices', defnodes, 'Faces', allfaces(ifaces,:),'FaceColor','none','EdgeColor','k');
             end
@@ -592,10 +600,19 @@ classdef SolidElasticElem < FiniteElement
             daspect([1 1 1]);
             colormap('jet');
             colorbar;
-            allfaces = reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))';
-            [~,ifaces] = unique( sort(reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))',2),'rows' );
-            patch('Vertices', nodes+scd*q, 'Faces', allfaces(ifaces,:), 'FaceVertexCData', C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
+            if isempty(obj.selectedElems)
+                allfaces = reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))';
+                [~,ifaces] = unique( sort(reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))',2),'rows' );
+                patch('Vertices', nodes+scd*q, 'Faces', allfaces(ifaces,:), 'FaceVertexCData', C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
+        
+            else
+
+                allfaces = reshape(obj.elems(obj.selectedElems,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems(obj.selectedElems,:),1))';
+                [~,ifaces] = unique( sort(reshape(obj.elems(obj.selectedElems,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems(obj.selectedElems,:),1))',2),'rows' );
+                patch('Vertices', nodes+scd*q, 'Faces', allfaces(ifaces,:), 'FaceVertexCData', C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
+            end
         end
-    end
+        end
+
 end
 

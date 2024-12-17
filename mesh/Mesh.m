@@ -521,12 +521,12 @@ classdef Mesh < handle
             obj.nodes=mesh.Nodes';
             obj.elems=mesh.Elements';
         end
-        function exportMeshToFile(obj, filenamebase)
+        function exportMeshToFile(obj, seleced, filenamebase)
             nodes=obj.nodes;
             elems=obj.elems;
             save([filenamebase '_mesh.mat'],"nodes","elems");
             dlmwrite([filenamebase '_nodes.txt'],obj.nodes,'delimiter','\t','precision','%7.3f');
-            dlmwrite([filenamebase '_elems.txt'],obj.elems,'delimiter','\t','precision',6,'-append');
+            dlmwrite([filenamebase '_elems.txt'],obj.elems(seleced,:),'delimiter','\t','precision',6,'-append');
         end
         function upward_facing_nodes = findUpwardFacingNodes(obj)
             % Preallocate for storing upward-facing node indices
