@@ -204,4 +204,4 @@ plotArmTopOptConfigProjections("TorsionTopology","Torsion topology",Rfilter, mod
 % 
 
 
-save("ManipulatorBucklingAndTorsion.mat");
+%save("ManipulatorBucklingAndTorsion.mat");
