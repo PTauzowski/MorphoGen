@@ -60,7 +60,7 @@ sampleMaxTy = samples(imaxTy1,:);
 %save("ManipulatorOpti5000_2f.mat");
 
 alpha=22.5;
-r=0.24;
+r=0.22;
 res=15;
 Rfilter = 1.5*(R-r);
 penal=3;
@@ -84,8 +84,8 @@ modelMaxTy = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, sampleMaxTy, 
 %manipulatorHMplot(modelMax,endPoints);
 
 nConfigs=5;
-%
-% plotExtremalConfigurations(E,nu,segmentLength,R,r,res,alpha,ShapeFn,nConfigs,samples,vSortTy1,iSortTy1);
+
+%plotExtremalConfigurations(E,nu,segmentLength,R,r,res,alpha,ShapeFn,nConfigs,samples,vSortMs1,iSortMs1);
 
 % plotArmConfigurationHMextended("maximal Huber-Mises stress configuration 1, \sigma_{HM}=" + num2str(vSort(nSamples-0)),'MaxHM_configuration1.pdf',E,nu,segmentLength,R,r,res, modelMax.halfSegmentNelems, alpha, samples(iSort(nSamples-0),:), ShapeFn, 0.0);
 % plotArmConfigurationHMextended("maximal Huber-Mises stress configuration 2, \sigma_{HM}=" + num2str(vSort(nSamples-1)),'MaxHM_configuration2.pdf',E,nu,segmentLength,R,r,res, modelMax.halfSegmentNelems, alpha, samples(iSort(nSamples-1),:), ShapeFn, 0.0);
@@ -107,106 +107,36 @@ nConfigs=5;
 % plotArmConfigurationHMextended("maximal Huber-Mises stress configuration 1, \sigma_{HM}=" + num2str(vSort(nSamples-0)),'BendingConfiguration.pdf',E,nu,segmentLength,R,r,res, modelMax.halfSegmentNelems, alpha, samples(iSort(nSamples-0),:), ShapeFn, 0.0);
 % plotArmConfigurationHMextended("maximal torsion moment configuration 1, M_{s}=" + num2str(vSortMs1(nSamples-0)),'TorsionConfiguration.pdf',E,nu,segmentLength,R,r,res, modelMax.halfSegmentNelems, alpha, samples(iSortMs1(nSamples-0),:), ShapeFn, 0.0);
 
-sampleMinA=[0 180 180 180 180 180 180]; %  0  164.4607  177.0448  215.1802  214.3430  186.1769  240.6389
-sampleMaxA=[0 0 0 180 180 180 180];     %  0  343.7190   54.9144  125.4541  163.9858  169.3933  110.6999
-sampleMvA=[ 0  0  180 180 180  0  180]; %  0    0.0253  246.2603  287.9922  340.8601  106.8641  112.8238
+sampleMinN=[0 180 180 180 180 180 180]; %  0  164.4607  177.0448  215.1802  214.3430  186.1769  240.6389
+sampleMaxMz=[0 0 0 180 180 180 180];     %  0  343.7190   54.9144  125.4541  163.9858  169.3933  110.6999
+sampleMaxTy=[ 0  0  180 0 180  180  180]; %  0    0.0253  246.2603  287.9922  340.8601  106.8641  112.8238
+sampleMaxMs=[ 0  45 45 45  270  180 180]; %  0 0   33.5628   56.5082   36.2258  278.0525  195.3981  122.2441
 
-[maxHMa, endPointsa, frameNodes] = computeArmSamples(E,nu,segmentLength,R,r,res, alpha, [sampleMinA; sampleMaxA; sampleMvA], ShapeFn);
+[maxHMa, endPointsa, frameNodes] = computeArmSamples(E,nu,segmentLength,R,r,res, alpha, [ sampleMaxMz; sampleMaxTy; sampleMaxMs], ShapeFn);
 % 
-plotArmConfigurationHM(E,nu,segmentLength,R,r,res, alpha, sampleMinA, ShapeFn);
+plotArmConfigurationHM(E,nu,segmentLength,R,r,res, alpha, sampleMaxMz, ShapeFn);
 title(['Model for minimal [averaged] Huber-Mises for HMmax=' num2str(maxHMa(1))]);
 
-plotArmConfigurationHM(E,nu,segmentLength,R,r,res, alpha, sampleMaxA, ShapeFn);
-title(['Model for maximal [averaged] Huber-Mises for HMmax=' num2str(maxHMa(2))]);
+plotArmConfigurationHM(E,nu,segmentLength,R,r,res, alpha, sampleMaxTy, ShapeFn);
+title(['Model for maximal shear force Ty max=' num2str(maxHMa(2))]);
 
-plotArmConfigurationHM(E,nu,segmentLength,R,r,res, alpha, sampleMvA, ShapeFn);
-title(['Model for maximal [averaged] Huber-Mises for HMmax=' num2str(maxHMa(3))]);
-
-modelMinA = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, sampleMinA, ShapeFn, false);
-modelMaxA = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, sampleMaxA, ShapeFn, false);
-
-
-mesh=Mesh();
-frameElem=Frame3D(frameElems,E,0.02,0.8*E,0.0004,0.0004,0.003);
-mesh.nodes=modelMaxA.frameNodes;
-[Fel, Feg] = computeInternalForces(frameElem,mesh);
-
-lb=[0 0 0 0 0 0];
-ub=[360 360 360 360 360 360];
-x0=[180 180 180 180 180 180];
-
-%xopt = optimizeArmHM(E,nu,segmentLength,R,r,res, alpha, lb, ub, x0, ShapeFn);
-
-disp("Global internal forces");
-printInternalForcesTable(Feg);
-
-disp("Local internal forces");
-printInternalForcesTable(Fel);
-
-barNumber=2;
-loadFactor=0.5E8;
-
-N  = Fel(7,barNumber)*loadFactor;
-Tz = Fel(8,barNumber)*loadFactor;
-Ty = Fel(9,barNumber)*loadFactor;
-Ms = Fel(10,barNumber)*loadFactor;
-Mz = Fel(11,barNumber)*loadFactor;
-My = Fel(12,barNumber)*loadFactor;
-
-% [xopt_bending, xopt_bending_buckling, lambda1, lambda2 ] = ArmTopOptBucklingFn('maxHM',R,r,segmentLength,alpha,Ty,Tz,N,My,Mz,Ms);
-% 
-% plotArmTopOptConfigProjections("BendingTopology","Bending topology",Rfilter, modelMaxMs.analysis, xopt_bending_buckling, cutTreshold, penal, false);
-
-% 
-% % Filtering radius
-% Rfilter = 1.5*(R-r);
-% penal=3;
-% cutTreshold = 0.02;
-% 
-% plotArmTopOptConfig(Rfilter, modelMin.analysis, xopt, cutTreshold, penal, false);
-% title("Minimal HM topology without buckling");
-% plotArmTopOptConfig(Rfilter, modelMin.analysis, xopt_buckling, cutTreshold, penal, false);
-% title("Minimal HM topology with buckling");
-% 
-% plotArmTopOptConfig(Rfilter, modelMax.analysis, xopt, cutTreshold, penal, false);
-% title("Maximal HM topology without buckling");
-% plotArmTopOptConfig(Rfilter, modelMax.analysis, xopt_buckling, cutTreshold, penal, false);
-% title("Maximal HM topology with buckling");
-% 
-% plotArmTopOptConfig(Rfilter, modelMinA.analysis, xopt, cutTreshold, penal, false);
-% title("Vertical HM topology without buckling");
-% plotArmTopOptConfig(Rfilter, modelMinA.analysis, xopt_buckling, cutTreshold, penal, false);
-% title("Vertical HM topology with buckling");
-% 
-
-%load("ArmBendingTopOpt.mat");
-
-% % xopt_full_nobuckling = plotArmTopOptConfig(Rfilter, modelMaxA.analysis, xopt, cutTreshold, penal, false);
-% % title("Horizontal HM topology without buckling");
-% % xopt_full_nobuckling = plotArmTopOptConfig(Rfilter, modelMaxA.analysis, xopt_buckling, cutTreshold, penal, false);
-% % modelMaxA.analysis.mesh.exportMeshToFile(find(xopt_full_nobuckling>0.5),"OptTopologyArmMeshBending");
-% % title("Horizontal HM topology with buckling");
-
+plotArmConfigurationHM(E,nu,segmentLength,R,r,res, alpha, sampleMaxMs, ShapeFn);
+title(['Model for maximal torsion moment Ms max=' num2str(maxHMa(3))]);
 
 loadFactor=0.5E8;
+[xopt_bending, xopt_bending_buckling, lambda1, lambda2 ]  = configurationTopology(E,nu,R,r,segmentLength,ShapeFn,alpha,sampleMaxMz,frameElems,loadFactor);
+[xopt_shear, xopt_shear_buckling, lambda1, lambda2 ]  = configurationTopology(E,nu,R,r,segmentLength,ShapeFn,alpha,sampleMaxTy,frameElems,loadFactor);
+[xopt_torsion, xopt_torsion_buckling, lambda1, lambda2 ]  = configurationTopology(E,nu,R,r,segmentLength,ShapeFn,alpha,sampleMaxMs,frameElems,loadFactor);
 
-N  = vN(iminMs,1)*loadFactor;
-Tz = vTz(iminMs,1)*loadFactor;
-Ty = vTy(iminMs,1)*loadFactor;
-Ms = vMs(iminMs,1)*loadFactor;
-Mz = vMz(iminMs,1)*loadFactor;
-My = vMy(iminMs,1)*loadFactor;
+modelMz = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, sampleMaxMz, ShapeFn, false);
+modelTy = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, sampleMaxTy, ShapeFn, false);
+modelMs = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, sampleMaxMs, ShapeFn, false);
 
-[xopt_torsion, xopt_torsion_buckling, lambda1, lambda2 ] = ArmTopOptBucklingFn('maxMs',R,r,segmentLength,alpha,Ty,Tz,N,My,Mz,Ms);
-
-plotArmTopOptConfigProjections("TorsionTopology","Torsion topology",Rfilter, modelMaxMs.analysis, xopt_torsion_buckling, cutTreshold, penal, false);
+plotArmTopOptConfigProjections("BendingTopology","Bending topology",Rfilter, modelMz.analysis, xopt_bending_buckling, cutTreshold, penal, false);
+plotArmTopOptConfigProjections("ShearTopology","Shear topology",Rfilter, modelTy.analysis, xopt_shear_bucling, cutTreshold, penal, false);
+plotArmTopOptConfigProjections("TorsionTopology","Bending topology",Rfilter, modelMs.analysis, xopt_torsion_buckling, cutTreshold, penal, false);
 
 
-% xopt_full_nobuckling = plotArmTopOptConfig(Rfilter, modelMaxMs.analysis, xopt, cutTreshold, penal, false);
-% title("Max Ms topology without buckling");
-% xopt_full_nobuckling = plotArmTopOptConfig(Rfilter, modelMaxMs.analysis, xopt_buckling, cutTreshold, penal, false);
-% modelMaxA.analysis.mesh.exportMeshToFile(find(xopt_full_nobuckling>0.5),"OptTopologyArmMeshTorsion");
-% title("Max Ms HM topology with buckling");
 
 
 
