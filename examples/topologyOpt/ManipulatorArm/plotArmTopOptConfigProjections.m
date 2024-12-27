@@ -1,6 +1,6 @@
-function xtop_full = plotArmTopOptConfigProjections(pdfFileName,plotTitle,Rfilter, analysis, halfSegmentNelems, nthSegment, xopt, cutTreshold, penal, false)
+function xtop_full = plotArmTopOptConfigProjections(pdfFileName,plotTitle,Rfilter, analysis, halfSegmentNelems, nthSegment, xopt, cutTreshold, penal, is_const)
     figure;
-    topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.4, false );
+    topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.4, is_const );
     xtop_full=xopt;
     analysis.mesh.exportMeshToFile( xopt>0.5, pdfFileName);
     nArms=size(analysis.mesh.elems,1)/size(xopt,1)/2;

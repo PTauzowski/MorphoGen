@@ -60,7 +60,7 @@ sampleMaxTy = samples(imaxTy1,:);
 %save("ManipulatorOpti5000_2f.mat");
 
 alpha=22.5;
-r=0.22;
+r=0.24;
 res=15;
 Rfilter = 1.5*(R-r);
 penal=3;
@@ -124,19 +124,24 @@ plotArmConfigurationHM(E,nu,segmentLength,R,r,res, alpha, sampleMaxMs, ShapeFn);
 title(['Model for maximal torsion moment Ms max=' num2str(maxHMa(3))]);
 
 loadFactor=0.5E8;
-[xopt_bending, xopt_bending_buckling, lambda1, lambda2 ]  = configurationTopology(E,nu,R,r,segmentLength,ShapeFn,alpha,sampleMaxMz,frameElems,loadFactor);
-[xopt_shear, xopt_shear_buckling, lambda1, lambda2 ]  = configurationTopology(E,nu,R,r,segmentLength,ShapeFn,alpha,sampleMaxTy,frameElems,loadFactor);
-[xopt_torsion, xopt_torsion_buckling, lambda1, lambda2 ]  = configurationTopology(E,nu,R,r,segmentLength,ShapeFn,alpha,sampleMaxMs,frameElems,loadFactor);
+% [xopt_bending, xopt_bending_buckling, lambda1, lambda2 ]  = configurationTopology(E,nu,R,r,segmentLength,ShapeFn,alpha,sampleMaxMz,frameElems,loadFactor);
+% [xopt_shear, xopt_shear_buckling, lambda1, lambda2 ]  = configurationTopology(E,nu,R,r,segmentLength,ShapeFn,alpha,sampleMaxTy,frameElems,loadFactor);
+% [xopt_torsion, xopt_torsion_buckling, lambda1, lambda2 ]  = configurationTopology(E,nu,R,r,segmentLength,ShapeFn,alpha,sampleMaxMs,frameElems,loadFactor);
+
+load("ComposedTopology.mat");
+
+xopt_final = ( xopt_bending_buckling + xopt_shear_buckling + xopt_torsion_buckling )/3;
 
 modelMz = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, sampleMaxMz, ShapeFn, false);
 modelTy = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, sampleMaxTy, ShapeFn, false);
 modelMs = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, sampleMaxMs, ShapeFn, false);
 
-plotArmTopOptConfigProjections("BendingTopology","Bending topology",Rfilter, modelMz.analysis, xopt_bending_buckling, cutTreshold, penal, false);
-plotArmTopOptConfigProjections("ShearTopology","Shear topology",Rfilter, modelTy.analysis, xopt_shear_bucling, cutTreshold, penal, false);
-plotArmTopOptConfigProjections("TorsionTopology","Bending topology",Rfilter, modelMs.analysis, xopt_torsion_buckling, cutTreshold, penal, false);
+plotArmTopOptConfigProjections("BendingTopology","Bending topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xopt_bending_buckling, cutTreshold, penal, false);
+plotArmTopOptConfigProjections("ShearTopology","Shear topology",Rfilter, modelTy.analysis, modelTy.halfSegmentNelems, 2, xopt_shear_buckling, cutTreshold, penal, false);
+plotArmTopOptConfigProjections("TorsionTopology","Torsion topology",Rfilter, modelMs.analysis, modelMs.halfSegmentNelems, 2, xopt_torsion_buckling, cutTreshold, penal, false);
+plotArmTopOptConfigProjections("FinalTopology","Final topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xopt_final, cutTreshold, penal, false);
 
-
+% save("ComposedTopology.mat");
 
 
 
@@ -155,4 +160,3 @@ plotArmTopOptConfigProjections("TorsionTopology","Bending topology",Rfilter, mod
 % 
 
 
-%save("ManipulatorBucklingAndTorsion.mat");
