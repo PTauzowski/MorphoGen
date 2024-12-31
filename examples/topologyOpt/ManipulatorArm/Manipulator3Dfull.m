@@ -129,7 +129,7 @@ loadFactor=0.5E8;
 % [xopt_shear, xopt_shear_buckling, lambda1, lambda2 ]  = configurationTopology(E,nu,R,r,segmentLength,ShapeFn,alpha,sampleMaxTy,frameElems,loadFactor);
 % [xopt_torsion, xopt_torsion_buckling, lambda1, lambda2 ]  = configurationTopology(E,nu,R,r,segmentLength,ShapeFn,alpha,sampleMaxMs,frameElems,loadFactor);
 
-load("ComposedTopology.mat");
+load("ComposedTopologyMultiMaxAv.mat");
 
 xopt_final = ( xopt_bending_buckling + xopt_shear_buckling + xopt_torsion_buckling )/3;
 
@@ -144,10 +144,13 @@ xopt_final = ( xopt_bending_buckling + xopt_shear_buckling + xopt_torsion_buckli
 
 
 
-[ xopt_linear, xoptBuckling ]   = configurationTopologyMulti(E,nu,R,r,segmentLength,ShapeFn,alpha,modeSamples,frameElems,loadFactor,Rfilter, cutTreshold, penal, 0.4, false);
+[xopt_av, xoptBuckling_av, xopt_max, xoptBuckling_max ]   = configurationTopologyMulti(E,nu,R,r,segmentLength,ShapeFn,alpha,modeSamples,frameElems,loadFactor,Rfilter, cutTreshold, penal, 0.4, false);
 
-plotArmTopOptConfigProjections("FinalTopologyLinear","Final topology linear",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xopt_linear, cutTreshold, penal, false);
-plotArmTopOptConfigProjections("FinalTopologyBuckling","Final topology buckling",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling, cutTreshold, penal, false);
+plotArmTopOptConfigProjections("FinalTopologyLinearAv","Final average topology linear",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xopt_av, cutTreshold, penal, false);
+plotArmTopOptConfigProjections("FinalTopologyBucklingAv","Final average topology buckling",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling_av, cutTreshold, penal, false);
+
+plotArmTopOptConfigProjections("FinalTopologyLinearMax","Final envelope topology linear",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xopt_max, cutTreshold, penal, false);
+plotArmTopOptConfigProjections("FinalTopologyBucklingMax","Final envelope topology buckling",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling_max, cutTreshold, penal, false);
 
 
 %[objF, xopt]  = topOpt.solve();
@@ -163,4 +166,4 @@ plotArmTopOptConfigProjections("FinalTopologyBuckling","Final topology buckling"
 % 
 % 
 
-save("ComposedTopologyMultiMax.mat");
+save("ComposedTopologyMultiMaxAv.mat");

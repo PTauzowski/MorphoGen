@@ -1,4 +1,4 @@
-classdef StressIntensityMultiAnalysisTopologyOptimization < StressIntensityTopologyOptimizationVol
+classdef StressIntensityMultiMaxTopologyOptimization < StressIntensityTopologyOptimizationVol
     %UNTITLED Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -7,7 +7,7 @@ classdef StressIntensityMultiAnalysisTopologyOptimization < StressIntensityTopol
     end
     
     methods
-        function obj = StressIntensityMultiAnalysisTopologyOptimization(Rmin,FEAnalyses,maxais,penal,volFr,is_const)
+        function obj = StressIntensityMultiMaxTopologyOptimization(Rmin,FEAnalyses,maxais,penal,volFr,is_const)
             obj=obj@StressIntensityTopologyOptimizationVol(Rmin,FEAnalyses(1),maxais,penal,volFr,is_const);
             obj.FEAnalyses=FEAnalyses;
             obj.maxais=maxais;

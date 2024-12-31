@@ -1,4 +1,4 @@
-function  [analysisSecondOrder,  analysisWithBuckling ] = ArmTopOptBucklingAnalyses(name,R,r,h,alpha,Tx,Ty,N,Mx,My,Ms)
+function  [analysisSecondOrder,  analysisWithBuckling, const_elems ] = ArmTopOptBucklingAnalyses(name,R,r,h,alpha,Tx,Ty,N,Mx,My,Ms)
 
     th=R-r;
 
