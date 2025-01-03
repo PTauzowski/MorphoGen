@@ -521,10 +521,33 @@ classdef Mesh < handle
             obj.nodes=mesh.Nodes';
             obj.elems=mesh.Elements';
         end
+        
+        function [tnodes, telems] = getTetrahedralMesh(obj,selected)
+            Tetrahedra = [
+                1 4 3 5;  % Tetrahedron 1
+                5 8 4 7;  % Tetrahedron 2
+                7 3 5 8;  % Tetrahedron 3
+                1 2 4 5;  % Tetrahedron 4
+                5 2 4 6;  % Tetrahedron 5
+                6 5 8 4   % Tetrahedron 6
+            ];
+            snodes=false(size(obj.nodes,1),1);
+            snodes(obj.elems(selected,:))=true;
+            nSelElems=size(find(selected),1);
+            nSelNodes=size(find(snodes),1);
+            tnodes=obj.nodes;
+            telems=reshape(obj.elems(selected,Tetrahedra'),4,6*nSelElems)';
+        end
+
         function exportMeshToFile(obj, selected, filenamebase)
             %save([filenamebase '_mesh.mat'],"nodes","elems");
             dlmwrite(filenamebase + '.txt',obj.nodes,'delimiter','\t','precision','%7.3f');
             dlmwrite(filenamebase + '.txt',obj.elems(selected,:),'delimiter','\t','precision',6,'-append');
+            
+            [~, telems] = obj.getTetrahedralMesh(selected);
+            
+            dlmwrite(filenamebase + '_tetrahedral.txt',obj.nodes,'delimiter',',','precision','%7.3f');
+            dlmwrite(filenamebase + '_tetrahedral.txt',telems,'delimiter',',','precision',6,'-append');
         end
         function upward_facing_nodes = findUpwardFacingNodes(obj)
             % Preallocate for storing upward-facing node indices

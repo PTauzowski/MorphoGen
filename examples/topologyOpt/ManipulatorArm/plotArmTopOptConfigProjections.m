@@ -2,6 +2,7 @@ function xtop_full = plotArmTopOptConfigProjections(pdfFileName,plotTitle,Rfilte
     figure;
     topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.4, is_const );
     xtop_full=xopt;
+    analysis.computeElementResults();
     analysis.mesh.exportMeshToFile( xopt>0.5, pdfFileName);
     nArms=size(analysis.mesh.elems,1)/size(xopt,1)/2;
     fontSize=18;
@@ -22,6 +23,7 @@ function xtop_full = plotArmTopOptConfigProjections(pdfFileName,plotTitle,Rfilte
     ax = gca; 
     ax.FontSize = fontSize;  
     exportgraphics(ax, pdfFileName+"_XZ.png", 'Resolution',600); 
+    exportgraphics(ax, pdfFileName+".pdf", 'Resolution',600); 
 
     figure;
     topOpt.plotCurrentFrame();
@@ -36,6 +38,7 @@ function xtop_full = plotArmTopOptConfigProjections(pdfFileName,plotTitle,Rfilte
     ax = gca; 
     ax.FontSize = fontSize;  
     exportgraphics(gcf, pdfFileName+"_YZ.png",  'Resolution',600); 
+    exportgraphics(gcf, pdfFileName+".pdf", 'Append', true, 'Resolution',600);
 
     figure;
     topOpt.plotCurrentFrame();
@@ -50,6 +53,7 @@ function xtop_full = plotArmTopOptConfigProjections(pdfFileName,plotTitle,Rfilte
     ax = gca; 
     ax.FontSize = fontSize;  
     exportgraphics(gcf, pdfFileName+"_XY.png", 'Resolution', 600); 
+    exportgraphics(gcf, pdfFileName+".pdf", 'Append', true, 'Resolution',600);
 
     figure;
     topOpt.plotCurrentFrame();
@@ -64,6 +68,7 @@ function xtop_full = plotArmTopOptConfigProjections(pdfFileName,plotTitle,Rfilte
     ax = gca; 
     ax.FontSize = fontSize;  
     exportgraphics(gcf, pdfFileName+"_PAN.png",  'Resolution', 600); 
+    exportgraphics(gcf, pdfFileName+".pdf", 'Append', true, 'Resolution',600);
     
     segOffset = (nthSegment-1) * 2 * halfSegmentNelems;
     analysis.felems{1}.selectedElems=(halfSegmentNelems+1:3*halfSegmentNelems)'+segOffset;
@@ -80,6 +85,7 @@ function xtop_full = plotArmTopOptConfigProjections(pdfFileName,plotTitle,Rfilte
     ax = gca; 
     ax.FontSize = fontSize;  
     exportgraphics(gcf, pdfFileName+"_Segment.png",  'Resolution', 600); 
+    exportgraphics(gcf, pdfFileName+".pdf", 'Append', true, 'Resolution',600);
     analysis.felems{1}.selectedElems=[];
 end
 
