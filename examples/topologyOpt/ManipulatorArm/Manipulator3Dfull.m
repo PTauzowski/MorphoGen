@@ -143,24 +143,29 @@ xopt_final = ( xopt_bending_buckling + xopt_shear_buckling + xopt_torsion_buckli
 % plotArmTopOptConfigProjections("TorsionTopology","Torsion topology",Rfilter, modelMs.analysis, modelMs.halfSegmentNelems, 2, xopt_torsion_buckling, cutTreshold, penal, false);
 % plotArmTopOptConfigProjections("FinalTopology","Final topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xopt_final, cutTreshold, penal, false);
 
+xOnes = xopt_bending_buckling;
+xOnes(:)=1;
 
+% plotArmTopOptConfigProjections("BendingInitialConfiguration","Bending initial configuration",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xOnes, cutTreshold, penal, false);
+% plotArmTopOptConfigProjections("ShearInitialConfiguration","Shear initial configuration",Rfilter, modelTy.analysis, modelTy.halfSegmentNelems, 2, xOnes, cutTreshold, penal, false);
+% plotArmTopOptConfigProjections("TorsionInitialConfiguration","Torsion initial configuration ",Rfilter, modelMs.analysis, modelMs.halfSegmentNelems, 2, xOnes, cutTreshold, penal, false);
 
 %[xopt_av, xoptBuckling_av, xopt_max, xoptBuckling_max ]   = configurationTopologyMulti(E,nu,R,r,segmentLength,ShapeFn,alpha,modeSamples,frameElems,loadFactor,Rfilter, cutTreshold, penal, 0.4, false);
 
-plotArmTopOptConfigProjections("FinalTopologyLinearAv","Final average topology linear",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xopt_av, cutTreshold, penal, false);
+%plotArmTopOptConfigProjections("FinalTopologyLinearAv","Final average topology linear",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xopt_av, cutTreshold, penal, false);
 % plotArmTopOptConfigProjections("FinalTopologyBucklingAv","Final average topology buckling",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling_av, cutTreshold, penal, false);
 % 
 % plotArmTopOptConfigProjections("FinalTopologyLinearMax","Final envelope topology linear",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xopt_max, cutTreshold, penal, false);
 % plotArmTopOptConfigProjections("FinalTopologyBucklingMax","Final envelope topology buckling",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling_max, cutTreshold, penal, false);
 
 
-% plotArmTopOptConfigProjections("FinalTopologyOneRingAv","Final average topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling_av, cutTreshold, penal, false);
-% plotArmTopOptConfigProjections("FinalTopologyOneRingMax","Final envelope topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling_max, cutTreshold, penal, false);
-% 
-% load("ComposedTopologyMultiMaxAvRing.mat");
-% 
-% plotArmTopOptConfigProjections("FinalTopologyTwoRingsAv", "Final average topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling_av, cutTreshold, penal, false);
-% plotArmTopOptConfigProjections("FinalTopologyTwoRingsMax","Final envelope topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling_max, cutTreshold, penal, false);
+plotArmTopOptConfigProjections("TopologyOneRingAverage","Final average topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling_av, cutTreshold, penal, false);
+plotArmTopOptConfigProjections("TopologyOneRingEnvelope","Final envelope topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling_max, cutTreshold, penal, false);
+
+load("ComposedTopologyMultiMaxAvRing.mat");
+
+plotArmTopOptConfigProjections("TopologyTwoRingsAverage", "Final average topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling_av, cutTreshold, penal, false);
+plotArmTopOptConfigProjections("TopologyTwoRingsEnvelope","Final envelope topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling_max, cutTreshold, penal, false);
 
 %[objF, xopt]  = topOpt.solve();
 
@@ -200,9 +205,9 @@ Tetrahedra = [
 ];
 
 % Visualization
-
-[~, telems] = modelMz.analysis.mesh.getTetrahedralMesh(xopt_torsion_buckling>0.5);
-model = createpde();
-geometryFromMesh(model,modelMz.analysis.mesh.nodes',telems);
-
-pdegplot(model,"FaceLabels","on","FaceAlpha",0.5)
+% 
+% [~, telems] = modelMz.analysis.mesh.getTetrahedralMesh(xopt_torsion_buckling>0.5);
+% model = createpde();
+% geometryFromMesh(model,modelMz.analysis.mesh.nodes',telems);
+% 
+% pdegplot(model,"FaceLabels","on","FaceAlpha",0.5)

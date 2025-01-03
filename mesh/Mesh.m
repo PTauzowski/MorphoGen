@@ -511,6 +511,11 @@ classdef Mesh < handle
             obj.nodes(nodesToRemove,:)=[];
             obj.elems(elemsToRemove,:)=[];
         end
+        function leaveElemsByNumbers( obj, elemsToLeave )
+            elemsToRemove=true(size(obj.elems,1),1);
+            elemsToRemove(elemsToLeave)=false;
+            obj.removeElemsByNumbers(elemsToRemove);
+        end
         function transformNodesXY( obj, transformFn )
             obj.nodes = transformFn( obj.nodes );
         end
@@ -522,7 +527,25 @@ classdef Mesh < handle
             obj.elems=mesh.Elements';
         end
         
-        function [tnodes, telems] = getTetrahedralMesh(obj,selected)
+        % function [tnodes, telems] = getTetrahedralMesh(obj,selected)
+        %     Tetrahedra = [
+        %         1 4 3 5;  % Tetrahedron 1
+        %         5 8 4 7;  % Tetrahedron 2
+        %         7 3 5 8;  % Tetrahedron 3
+        %         1 2 4 5;  % Tetrahedron 4
+        %         5 2 4 6;  % Tetrahedron 5
+        %         6 5 8 4   % Tetrahedron 6
+        %     ];
+        %     snodes=false(size(obj.nodes,1),1);
+        %     snodes(obj.elems(selected,:))=true;
+        %     nSelElems=size(find(selected),1);
+        %     nSelNodes=size(find(snodes),1);
+        %     tnodes=obj.nodes;
+        %     telems=reshape(obj.elems(selected,Tetrahedra'),4,6*nSelElems)';
+        % end
+
+        function [tnodes, telems] = getTetrahedralMesh(obj, selected)
+            % Tetrahedra mapping for a single hexahedron
             Tetrahedra = [
                 1 4 3 5;  % Tetrahedron 1
                 5 8 4 7;  % Tetrahedron 2
@@ -531,23 +554,40 @@ classdef Mesh < handle
                 5 2 4 6;  % Tetrahedron 5
                 6 5 8 4   % Tetrahedron 6
             ];
-            snodes=false(size(obj.nodes,1),1);
-            snodes(obj.elems(selected,:))=true;
-            nSelElems=size(find(selected),1);
-            nSelNodes=size(find(snodes),1);
-            tnodes=obj.nodes;
-            telems=reshape(obj.elems(selected,Tetrahedra'),4,6*nSelElems)';
+        
+            % Identify selected nodes
+            snodes = false(size(obj.nodes, 1), 1);
+            snodes(obj.elems(selected, :)) = true;
+        
+            % Map global indices of selected nodes
+            globalToLocal = find(snodes);
+            localToGlobal = zeros(size(snodes));
+            localToGlobal(globalToLocal) = 1:length(globalToLocal);
+        
+            % Filter nodes and elements
+            tnodes = obj.nodes(globalToLocal, :);
+            nSelElems = sum(selected);
+        
+            % Generate tetrahedrons for each selected hexahedron
+            telems = zeros(nSelElems * 6, 4); % Each hexahedron creates 6 tetrahedrons
+            cnt = 1;
+            for i = find(selected)'
+                hexNodes = obj.elems(i, :); % Global node indices of current hexahedron
+                localHexNodes = localToGlobal(hexNodes); % Map to local indices
+                telems(cnt:cnt + 5, :) = localHexNodes(Tetrahedra);
+                cnt = cnt + 6;
+            end
         end
 
         function exportMeshToFile(obj, selected, filenamebase)
             %save([filenamebase '_mesh.mat'],"nodes","elems");
-            dlmwrite(filenamebase + '.txt',obj.nodes,'delimiter','\t','precision','%7.3f');
-            dlmwrite(filenamebase + '.txt',obj.elems(selected,:),'delimiter','\t','precision',6,'-append');
+            dlmwrite(filenamebase + '_mesh_hexahedral.txt',obj.nodes,'delimiter',',','precision','%7.3f');
+            dlmwrite(filenamebase + '_mesh_hexahedral.txt',obj.elems(selected,:),'delimiter','\t','precision',6,'-append');
             
             [~, telems] = obj.getTetrahedralMesh(selected);
             
-            dlmwrite(filenamebase + '_tetrahedral.txt',obj.nodes,'delimiter',',','precision','%7.3f');
-            dlmwrite(filenamebase + '_tetrahedral.txt',telems,'delimiter',',','precision',6,'-append');
+            dlmwrite(filenamebase + '_mesh_tetrahedral.txt',obj.nodes,'delimiter',',','precision','%7.3f');
+            dlmwrite(filenamebase + '_mesh_tetrahedral.txt',telems,'delimiter',',','precision',6,'-append');
         end
         function upward_facing_nodes = findUpwardFacingNodes(obj)
             % Preallocate for storing upward-facing node indices

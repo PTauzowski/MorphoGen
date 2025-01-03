@@ -602,9 +602,22 @@ classdef SolidElasticElem < FiniteElement
                 sel_inds=sel_inds & elem_inds;
             end
             allfaces = reshape(obj.elems(sel_inds,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(find(sel_inds),1))';
-            [~,ifaces] = unique( sort(reshape(obj.elems(sel_inds,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(find(sel_inds),1))',2),'rows' );
-            patch('Vertices', nodes, 'Faces', allfaces(ifaces,:),'FaceColor','none','EdgeColor','k');
-            patch('Vertices', nodes, 'Faces', allfaces(ifaces,:),'FaceColor',col);
+            alledges = reshape(obj.elems(sel_inds,obj.sf.edges)',size(obj.sf.edges,1),size(obj.sf.edges,2)*size(find(sel_inds),1))';
+            [~,ifaces,~] = unique( sort(reshape(obj.elems(sel_inds,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(find(sel_inds),1))',2),'rows' );
+            [uniqueEdges, ~, idx] = unique(sort(reshape(obj.elems(sel_inds,obj.sf.edges)',size(obj.sf.edges,1),size(obj.sf.edges,2)*size(find(sel_inds),1))',2), 'rows', 'stable');
+            counts = histcounts(idx, 1:(max(idx)+1));
+            edgesNoDuplicates = uniqueEdges(counts == 1, :);
+            %patch('Vertices', nodes, 'Faces', allfaces(ifaces,:),'FaceColor','none','EdgeColor','k');
+            patch('Vertices', nodes, 'Faces', allfaces(ifaces,:),'FaceColor',col,'EdgeColor','none',"FaceAlpha",0.3);
+            x=[nodes(edgesNoDuplicates(:,1),1) nodes(edgesNoDuplicates(:,2),1) NaN(size(edgesNoDuplicates,1),1) ];
+            y=[nodes(edgesNoDuplicates(:,1),2) nodes(edgesNoDuplicates(:,2),2) NaN(size(edgesNoDuplicates,1),1) ];
+            z=[nodes(edgesNoDuplicates(:,1),3) nodes(edgesNoDuplicates(:,2),3) NaN(size(edgesNoDuplicates,1),1) ];
+            x = reshape( x', 3 * size(edgesNoDuplicates,1),1);
+            y = reshape( y', 3 * size(edgesNoDuplicates,1),1);
+            z = reshape( z', 3 * size(edgesNoDuplicates,1),1);
+            line(x,y,z,'Color','k','LineWidth', 2);
+            %patch(x,y,z,'EdgeColor','k','Marker','.','MarkerFaceColor','flat');
+
         end
         function plotMap(obj,nodes,q,C,scd)
             hold, axis off;

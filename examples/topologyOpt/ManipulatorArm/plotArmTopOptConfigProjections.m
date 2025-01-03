@@ -72,6 +72,19 @@ function xtop_full = plotArmTopOptConfigProjections(pdfFileName,plotTitle,Rfilte
     
     segOffset = (nthSegment-1) * 2 * halfSegmentNelems;
     analysis.felems{1}.selectedElems=(halfSegmentNelems+1:3*halfSegmentNelems)'+segOffset;
+    xSeg = xtop_full(analysis.felems{1}.selectedElems);
+    
+    segmentMesh=Mesh();
+    segmentMesh.mergeMesh( analysis.mesh );
+    segmentMesh.leaveElemsByNumbers(analysis.felems{1}.selectedElems);
+
+    segmentTopMesh=Mesh();
+    segmentTopMesh.mergeMesh( segmentMesh );
+    segmentTopMesh.leaveElemsByNumbers(xSeg>0.5);
+
+    [nodes, elems] = segmentMesh.getTetrahedralMesh(xSeg>0.5);
+    save(pdfFileName+"_tetrahedral_mesh.mat","elems","nodes");
+
     figure;
     topOpt.plotCurrentFrame();
     view(45,45);
