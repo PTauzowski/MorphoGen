@@ -529,47 +529,46 @@ classdef Mesh < handle
         
         % function [tnodes, telems] = getTetrahedralMesh(obj,selected)
         %     Tetrahedra = [
-        %         1 4 3 5;  % Tetrahedron 1
-        %         5 8 4 7;  % Tetrahedron 2
-        %         7 3 5 8;  % Tetrahedron 3
-        %         1 2 4 5;  % Tetrahedron 4
-        %         5 2 4 6;  % Tetrahedron 5
-        %         6 5 8 4   % Tetrahedron 6
+        %         2 5 3 1;  % Tetrahedron 1
+        %         2 8 3 5;  % Tetrahedron 2
+        %         3 5 8 7;  % Tetrahedron 3
+        %         8 5 2 6;  % Tetrahedron 4
+        %         3 8 2 4;  % Tetrahedron 5
         %     ];
         %     snodes=false(size(obj.nodes,1),1);
         %     snodes(obj.elems(selected,:))=true;
         %     nSelElems=size(find(selected),1);
         %     nSelNodes=size(find(snodes),1);
         %     tnodes=obj.nodes;
-        %     telems=reshape(obj.elems(selected,Tetrahedra'),4,6*nSelElems)';
+        %     telems=reshape(obj.elems(selected,Tetrahedra'),4,5*nSelElems)';
         % end
 
         function [tnodes, telems] = getTetrahedralMesh(obj, selected)
             % Tetrahedra mapping for a single hexahedron
             Tetrahedra = [
-                1 4 3 5;  % Tetrahedron 1
-                5 8 4 7;  % Tetrahedron 2
-                7 3 5 8;  % Tetrahedron 3
-                1 2 4 5;  % Tetrahedron 4
-                5 2 4 6;  % Tetrahedron 5
-                6 5 8 4   % Tetrahedron 6
+                5 2 1 4;  % Tetrahedron 1
+                8 5 2 6;  % Tetrahedron 2
+                4 5 2 8;  % Tetrahedron 3
+                7 5 4 8;  % Tetrahedron 4
+                4 7 1 5;  % Tetrahedron 5
+                1 7 4 3;  % Tetrahedron 5
             ];
-        
+            
             % Identify selected nodes
             snodes = false(size(obj.nodes, 1), 1);
             snodes(obj.elems(selected, :)) = true;
-        
+            
             % Map global indices of selected nodes
             globalToLocal = find(snodes);
             localToGlobal = zeros(size(snodes));
             localToGlobal(globalToLocal) = 1:length(globalToLocal);
-        
+            
             % Filter nodes and elements
             tnodes = obj.nodes(globalToLocal, :);
             nSelElems = sum(selected);
-        
+            
             % Generate tetrahedrons for each selected hexahedron
-            telems = zeros(nSelElems * 6, 4); % Each hexahedron creates 6 tetrahedrons
+            telems = zeros(nSelElems * size(Tetrahedra, 1), 4); % Each hexahedron creates 5 tetrahedrons
             cnt = 1;
             for i = find(selected)'
                 hexNodes = obj.elems(i, :); % Global node indices of current hexahedron
