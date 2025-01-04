@@ -181,7 +181,7 @@ function  [xopt, xopt_buckling, lambda1,lambda2] = ArmTopOptBucklingFn(name,R,r,
     %     fprintf('a=%5.4g, va=%5.4g, b=%5.4g, vb=%5.4g, s=%5.4g, vs=%5.4g\n', a,va,b,vb,s,vs);
     % end
 
-     fprintf('Topology: a=%s, Pcr=%5.4g, Lambda1=%5.4g, lambda2=%5.4g\n', name,topOptBuckling.plLambda(end),lambda1,lambda2);
+     %fprintf('Topology: a=%s, Pcr=%5.4g, Lambda1=%5.4g, lambda2=%5.4g\n', name,topOptBuckling.plLambda(end),lambda1,lambda2);
      %save(['ArmTopopt_' name '.mat']);
 end
 

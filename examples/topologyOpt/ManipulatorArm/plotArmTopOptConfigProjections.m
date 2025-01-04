@@ -1,5 +1,5 @@
 function xtop_full = plotArmTopOptConfigProjections(pdfFileName,plotTitle,Rfilter, analysis, halfSegmentNelems, nthSegment, xopt, cutTreshold, penal, is_const)
-    figure;
+
     topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.4, is_const );
     xtop_full=xopt;
     analysis.computeElementResults();
@@ -10,35 +10,37 @@ function xtop_full = plotArmTopOptConfigProjections(pdfFileName,plotTitle,Rfilte
         xtop_full=[xtop_full; flip(xopt); xopt ];
     end
     xtop_full=[xtop_full; flip(xopt)];
-    topOpt.x=xtop_full;
-    topOpt.plotCurrentFrame();
-    view(0,0);
-    axis on;
-    xlabel("x");
-    ylabel("y");
-    zlabel("z");
-    title(strcat(plotTitle , ", xz view"));
-    light('Position', [-1 -1 5], 'Style', 'local');
-    light('Position', [1 -1 5], 'Style', 'infinite');
-    ax = gca; 
-    ax.FontSize = fontSize;  
-    exportgraphics(ax, pdfFileName+"_XZ.png", 'Resolution',600); 
-    exportgraphics(ax, pdfFileName+".pdf", 'Resolution',600); 
-
-    figure;
-    topOpt.plotCurrentFrame();
-    view(90,0);
-    axis on;
-    xlabel("x");
-    ylabel("y");
-    zlabel("z");
-    title(strcat(plotTitle , ", yz view"));
-    light('Position', [1 -1 5], 'Style', 'local');
-    light('Position', [1 -1 5], 'Style', 'infinite');
-    ax = gca; 
-    ax.FontSize = fontSize;  
-    exportgraphics(gcf, pdfFileName+"_YZ.png",  'Resolution',600); 
-    exportgraphics(gcf, pdfFileName+".pdf", 'Append', true, 'Resolution',600);
+    topOpt.x=xtop_full;   
+    
+    % figure;
+    % topOpt.plotCurrentFrame();
+    % view(0,0);
+    % axis on;
+    % xlabel("x");
+    % ylabel("y");
+    % zlabel("z");
+    % title(strcat(plotTitle , ", xz view"));
+    % light('Position', [-1 -1 5], 'Style', 'local');
+    % light('Position', [1 -1 5], 'Style', 'infinite');
+    % ax = gca; 
+    % ax.FontSize = fontSize;  
+    % exportgraphics(ax, pdfFileName+"_XZ.png", 'Resolution',600); 
+    % exportgraphics(ax, pdfFileName+".pdf", 'Resolution',600); 
+    % 
+    % figure;
+    % topOpt.plotCurrentFrame();
+    % view(90,0);
+    % axis on;
+    % xlabel("x");
+    % ylabel("y");
+    % zlabel("z");
+    % title(strcat(plotTitle , ", yz view"));
+    % light('Position', [1 -1 5], 'Style', 'local');
+    % light('Position', [1 -1 5], 'Style', 'infinite');
+    % ax = gca; 
+    % ax.FontSize = fontSize;  
+    % exportgraphics(gcf, pdfFileName+"_YZ.png",  'Resolution',600); 
+    % exportgraphics(gcf, pdfFileName+".pdf", 'Append', true, 'Resolution',600);
 
     figure;
     topOpt.plotCurrentFrame();
@@ -83,7 +85,19 @@ function xtop_full = plotArmTopOptConfigProjections(pdfFileName,plotTitle,Rfilte
     segmentTopMesh.leaveElemsByNumbers(xSeg>0.5);
 
     [nodes, elems] = segmentMesh.getTetrahedralMesh(xSeg>0.5);
-    save(pdfFileName+"_tetrahedral_mesh.mat","elems","nodes");
+    save(pdfFileName+"_tetramesh.mat","elems","nodes");
+    trigMesh = Mesh();
+    trigMesh.nodes=nodes;
+    trigMesh.elems=elems;
+    % trigMesh.exportToPLY(pdfFileName); 
+    % trigMesh.exportTetraToSTL(pdfFileName);
+    % trigMesh.exportToStep(pdfFileName);
+
+    [nodes, elems] = analysis.mesh.getTetrahedralMesh(xtop_full>0.5);
+    trigMesh = Mesh();
+    trigMesh.nodes=nodes;
+    trigMesh.elems=elems;
+    trigMesh.exportToPLY(pdfFileName+"_fullArm");
 
     figure;
     topOpt.plotCurrentFrame();

@@ -6,6 +6,6 @@ function  plotArmConfigurationHM(E,nu,segmentLength,R,r,res, alpha, sample, Shap
         modelSort.analysis.solveWeighted(x);
         modelSort.analysis.computeElementResults();
         modelSort.analysis.plotMaps(["sHM"],0.0);
-        modelSort.fe.plotWired(modelSort.mesh.nodes,modelSort.analysis.qnodal,0.0);
+        %modelSort.fe.plotWired(modelSort.mesh.nodes,modelSort.analysis.qnodal,0.0);
 end
 

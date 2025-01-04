@@ -608,7 +608,7 @@ classdef SolidElasticElem < FiniteElement
             counts = histcounts(idx, 1:(max(idx)+1));
             edgesNoDuplicates = uniqueEdges(counts == 1, :);
             %patch('Vertices', nodes, 'Faces', allfaces(ifaces,:),'FaceColor','none','EdgeColor','k');
-            patch('Vertices', nodes, 'Faces', allfaces(ifaces,:),'FaceColor',col,'EdgeColor','none',"FaceAlpha",0.3);
+            patch('Vertices', nodes, 'Faces', allfaces(ifaces,:),'FaceColor',col,'EdgeColor','none',"FaceAlpha",1.0);
             x=[nodes(edgesNoDuplicates(:,1),1) nodes(edgesNoDuplicates(:,2),1) NaN(size(edgesNoDuplicates,1),1) ];
             y=[nodes(edgesNoDuplicates(:,1),2) nodes(edgesNoDuplicates(:,2),2) NaN(size(edgesNoDuplicates,1),1) ];
             z=[nodes(edgesNoDuplicates(:,1),3) nodes(edgesNoDuplicates(:,2),3) NaN(size(edgesNoDuplicates,1),1) ];
