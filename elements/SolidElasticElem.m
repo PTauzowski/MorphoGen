@@ -607,7 +607,7 @@ classdef SolidElasticElem < FiniteElement
             [uniqueEdges, ~, idx] = unique(sort(reshape(obj.elems(sel_inds,obj.sf.edges)',size(obj.sf.edges,1),size(obj.sf.edges,2)*size(find(sel_inds),1))',2), 'rows', 'stable');
             counts = histcounts(idx, 1:(max(idx)+1));
             edgesNoDuplicates = uniqueEdges(counts == 1, :);
-            %patch('Vertices', nodes, 'Faces', allfaces(ifaces,:),'FaceColor','none','EdgeColor','k');
+            patch('Vertices', nodes, 'Faces', allfaces(ifaces,:),'FaceColor','none','EdgeColor','k');
             patch('Vertices', nodes, 'Faces', allfaces(ifaces,:),'FaceColor',col,'EdgeColor','none',"FaceAlpha",1.0);
             x=[nodes(edgesNoDuplicates(:,1),1) nodes(edgesNoDuplicates(:,2),1) NaN(size(edgesNoDuplicates,1),1) ];
             y=[nodes(edgesNoDuplicates(:,1),2) nodes(edgesNoDuplicates(:,2),2) NaN(size(edgesNoDuplicates,1),1) ];
@@ -615,7 +615,7 @@ classdef SolidElasticElem < FiniteElement
             x = reshape( x', 3 * size(edgesNoDuplicates,1),1);
             y = reshape( y', 3 * size(edgesNoDuplicates,1),1);
             z = reshape( z', 3 * size(edgesNoDuplicates,1),1);
-            line(x,y,z,'Color','k','LineWidth', 2);
+            %line(x,y,z,'Color','k','LineWidth', 2);
             %patch(x,y,z,'EdgeColor','k','Marker','.','MarkerFaceColor','flat');
 
         end

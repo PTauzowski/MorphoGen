@@ -319,6 +319,7 @@ classdef (Abstract) FEAnalysis < handle
                 plot3( X, Y, Z, 'b', 'LineWidth', 4 );
              end
         end
+        
         function plotMaps( obj, mapNames, scd )
             for mapName=mapNames(:)'
                 figure, hold on, axis off;
@@ -343,6 +344,7 @@ classdef (Abstract) FEAnalysis < handle
                 end
             end
         end
+        
         function plotAllNodeNumbers(obj)
             text(obj.nodes(:,1),obj.nodes(:,2),num2str(1:size(obj.nodes,1)));
         end

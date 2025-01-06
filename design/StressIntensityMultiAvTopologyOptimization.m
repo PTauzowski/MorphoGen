@@ -3,7 +3,7 @@ classdef StressIntensityMultiAvTopologyOptimization < StressIntensityTopologyOpt
     %   Detailed explanation goes here
     
     properties
-        FEAnalyses, plLambda, plVol, lastStableFrame;
+        FEAnalyses, plLambda, plVol, plMaxStress, lastStableFrame;
     end
     
     methods
@@ -35,6 +35,7 @@ classdef StressIntensityMultiAvTopologyOptimization < StressIntensityTopologyOpt
             nFEAnalyses=size(obj.FEAnalyses,2);
             sais=zeros(obj.FEAnalysis.getTotalElemsNumber(),nFEAnalyses);
             ais=zeros(obj.FEAnalysis.getTotalElemsNumber(),1);
+            maxstress=zeros(1,nFEAnalyses);
             for k=1:nFEAnalyses
                 obj.qnodal = obj.FEAnalyses(k).solveWeighted((obj.x).^obj.penal);
                 obj.FEAnalyses(k).computeElementResults(obj.x.^obj.penal);
@@ -46,8 +47,10 @@ classdef StressIntensityMultiAvTopologyOptimization < StressIntensityTopologyOpt
                    end
                 end
                 obj.maxstress = [ obj.maxstress max(sais(:,k)) ];
+                maxstress(k)=max(sais(:,k));
                 ais = ais + sais(:,k) / max(sais(:,k));
             end
+            obj.plMaxStress=[ obj.plMaxStress;  maxstress ];
             ais = ais / nFEAnalyses;
         end
 

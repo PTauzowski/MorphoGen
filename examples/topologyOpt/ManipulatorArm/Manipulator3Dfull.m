@@ -7,7 +7,7 @@ close all;
 E=2E09;
 nu=0.4;
 R=0.25;
-r=0.235;
+r=0.22;
 alpha=22.5;
 segmentLength=0.3;
 res=15;
@@ -62,7 +62,7 @@ sampleMaxTy = samples(imaxTy1,:);
 %save("ManipulatorOpti5000_2f.mat");
 
 alpha=22.5;
-r=0.22;
+r=0.23;
 res=15;
 Rfilter = 1.5*(R-r);
 penal=3;
@@ -145,24 +145,43 @@ modeSamples = [sampleMaxMz; sampleMaxTy; sampleMaxMs];
 load("ComposedTopologyMultiMaxAv.mat");
 %load("ComposedTopologyMultiMaxAvRing.mat");
 
+E=2.0E9;
+nu=0.4;
+
 modelMz = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, sampleMaxMz, ShapeFn, false);
 modelTy = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, sampleMaxTy, ShapeFn, false);
 modelMs = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, sampleMaxMs, ShapeFn, false);
 
-plotArmTopOptConfigProjections("BendingTopology","Bending topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xopt_bending_buckling, cutTreshold, penal, false);
-plotArmTopOptConfigProjections("ShearTopology","Shear topology",Rfilter, modelTy.analysis, modelTy.halfSegmentNelems, 2, xopt_shear_buckling, cutTreshold, penal, false);
-plotArmTopOptConfigProjections("TorsionTopology","Torsion topology",Rfilter, modelMs.analysis, modelMs.halfSegmentNelems, 2, xopt_torsion_buckling, cutTreshold, penal, false);
-plotArmTopOptConfigProjections("FinalTopology","Final topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xopt_final, cutTreshold, penal, false);
+% plotArmTopOptConfigProjections("BendingTopology","Bending topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xopt_bending_buckling, cutTreshold, penal, false);
+% plotArmTopOptConfigProjections("ShearTopology","Shear topology",Rfilter, modelTy.analysis, modelTy.halfSegmentNelems, 2, xopt_shear_buckling, cutTreshold, penal, false);
+% plotArmTopOptConfigProjections("TorsionTopology","Torsion topology",Rfilter, modelMs.analysis, modelMs.halfSegmentNelems, 2, xopt_torsion_buckling, cutTreshold, penal, false);
+% plotArmTopOptConfigProjections("FinalTopology","Final topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xopt_final, cutTreshold, penal, false);
 
 
-xOnes = xopt_bending_buckling;
-xOnes(:)=1;
+%xOnes = xopt_bending_buckling;
+%xOnes(:)=1;
+segmentNo=2;
+dispFactor=0.0;
+loadFactor=0.1E9;
+
+% developResultsForTopology("OneRingAverage","Average topology",modelMz, R, r, alpha, res , segmentLength, segmentNo,xoptBuckling_av,sampleMaxMz,dispFactor,Rfilter,cutTreshold,penal);
+% developResultsForTopology("OneRingEnvelope","Envelope topology",modelMz, R, r, alpha, res , segmentLength, segmentNo,xoptBuckling_max,sampleMaxMz,dispFactor,Rfilter,cutTreshold,penal);
+% 
+% developResultsForTopology("OneRingAverageLinear","Average topology linear",modelMz, R, r, alpha, res , segmentLength, segmentNo,xopt_av,sampleMaxMz,dispFactor,Rfilter,cutTreshold,penal);
+% developResultsForTopology("OneRingEnvelopeLinear","Envelope topology linear",modelMz, R, r, alpha, res , segmentLength, segmentNo,xopt_max,sampleMaxMz,dispFactor,Rfilter,cutTreshold,penal);
+
+
 
 % plotArmTopOptConfigProjections("BendingInitialConfiguration","Bending initial configuration",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xOnes, cutTreshold, penal, false);
 % plotArmTopOptConfigProjections("ShearInitialConfiguration","Shear initial configuration",Rfilter, modelTy.analysis, modelTy.halfSegmentNelems, 2, xOnes, cutTreshold, penal, false);
 % plotArmTopOptConfigProjections("TorsionInitialConfiguration","Torsion initial configuration ",Rfilter, modelMs.analysis, modelMs.halfSegmentNelems, 2, xOnes, cutTreshold, penal, false);
 
-%[xopt_av, xoptBuckling_av, xopt_max, xoptBuckling_max ]   = configurationTopologyMulti(E,nu,R,r,segmentLength,ShapeFn,alpha,modeSamples,frameElems,loadFactor,Rfilter, cutTreshold, penal, 0.4, false);
+%[xopt_av, xopt_av_lambda, xoptBuckling_av, xoptBuckling_av_lambda, xopt_max, xopt_max_lambda, xoptBuckling_max, xoptBuckling_max_lambda, newLoadFactor ] = configurationTopologyMulti(E,nu,R,r,segmentLength,ShapeFn,alpha,modeSamples,frameElems,loadFactor,Rfilter, cutTreshold, penal, 0.4, false);
+% 
+% disp(['Average lambda linear = ' num2str(xopt_av_lambda) ' Average  lambda buckling = ' num2str(xoptBuckling_av_lambda)]);
+% disp(['Envelope lambda linear   = ' num2str(xopt_max_lambda) ' Envelope lambda buckling   = ' num2str(xoptBuckling_max_lambda)]);
+% disp(['New load factor         = ' num2str(newLoadFactor)]);
+
 
 %plotArmTopOptConfigProjections("FinalTopologyLinearAv","Final average topology linear",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xopt_av, cutTreshold, penal, false);
 % plotArmTopOptConfigProjections("FinalTopologyBucklingAv","Final average topology buckling",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling_av, cutTreshold, penal, false);
@@ -171,27 +190,32 @@ xOnes(:)=1;
 % plotArmTopOptConfigProjections("FinalTopologyBucklingMax","Final envelope topology buckling",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling_max, cutTreshold, penal, false);
 
 
-plotArmTopOptConfigProjections("OneRingAverage","Aaverage topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling_av, cutTreshold, penal, false);
-plotArmTopOptConfigProjections("OneRingEnvelope","Envelope topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling_max, cutTreshold, penal, false);
+% plotArmTopOptConfigProjections("OneRingAverage","Aaverage topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling_av, cutTreshold, penal, false);
+% plotArmTopOptConfigProjections("OneRingEnvelope","Envelope topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling_max, cutTreshold, penal, false);
+% 
+% plotArmTopOptConfigProjections("OneRingAverageLinear","Aaverage topology linear",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xopt_av, cutTreshold, penal, false);
+% plotArmTopOptConfigProjections("OneRingEnvelopeLinear","Envelope topology linear",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xopt_max, cutTreshold, penal, false);
 
-plotArmTopOptConfigProjections("OneRingAverageLinear","Aaverage topology linear",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xopt_av, cutTreshold, penal, false);
-plotArmTopOptConfigProjections("OneRingEnvelopeLinear","Envelope topology linear",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xopt_max, cutTreshold, penal, false);
-% 
-% 
-% 
-% 
-% 
 load("ComposedTopologyMultiMaxAvRing.mat");
+
+developResultsForTopology("TwoRingsAverage","Average topology",modelMs, R, r, alpha, res , segmentLength, segmentNo,xoptBuckling_av,sampleMaxMs,dispFactor,Rfilter,cutTreshold,penal);
+developResultsForTopology("TwoRingsEnvelope","Envelope topology",modelMs, R, r, alpha, res , segmentLength, segmentNo,xoptBuckling_max,sampleMaxMs,dispFactor,Rfilter,cutTreshold,penal);
+
+developResultsForTopology("TwoRingsAverageLinear","Average topology linear",modelMs, R, r, alpha, res , segmentLength, segmentNo,xopt_av,sampleMaxMs,dispFactor,Rfilter,cutTreshold,penal);
+developResultsForTopology("TwoRingsEnvelopeLinear","Envelope topology linear",modelMs, R, r, alpha, res , segmentLength, segmentNo,xopt_max,sampleMaxMs,dispFactor,Rfilter,cutTreshold,penal);
+
+
+% plotArmTopOptConfigProjections("TwoRingsAverage", "Average topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling_av, cutTreshold, penal, false);
+% plotArmTopOptConfigProjections("TwoRingsEnvelope","Envelope topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling_max, cutTreshold, penal, false);
 % 
-plotArmTopOptConfigProjections("TwoRingsAverage", "Average topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling_av, cutTreshold, penal, false);
-plotArmTopOptConfigProjections("TwoRingsEnvelope","Envelope topology",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xoptBuckling_max, cutTreshold, penal, false);
+% 
+% plotArmTopOptConfigProjections("TwoRingsAverageLinear", "Average topology linear",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xopt_av, cutTreshold, penal, false);
+% plotArmTopOptConfigProjections("TwoRingsEnvelopeLinear","Envelope topology linear",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xopt_max, cutTreshold, penal, false);
 
-plotArmTopOptConfigProjections("TwoRingsAverageLinear", "Average topology linear",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xopt_av, cutTreshold, penal, false);
-plotArmTopOptConfigProjections("TwoRingsEnvelopeLinear","Envelope topology linear",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xopt_max, cutTreshold, penal, false);
 
-plotArmTopOptConfigProjections("InitialSegmentModelBendingFound","Initial segment model",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xOnes, cutTreshold, penal, false);
-plotArmTopOptConfigProjections("InitialSegmentModelShearFound","Initial segment model",Rfilter, modelTy.analysis, modelTy.halfSegmentNelems, 2, xOnes, cutTreshold, penal, false);
-plotArmTopOptConfigProjections("InitialSegmentModelTorsionFound","Initial segment model",Rfilter, modelMs.analysis, modelMs.halfSegmentNelems, 2, xOnes, cutTreshold, penal, false);
+% plotArmTopOptConfigProjections("InitialSegmentModelBendingFound","Initial segment model",Rfilter, modelMz.analysis, modelMz.halfSegmentNelems, 2, xOnes, cutTreshold, penal, false);
+% plotArmTopOptConfigProjections("InitialSegmentModelShearFound","Initial segment model",Rfilter, modelTy.analysis, modelTy.halfSegmentNelems, 2, xOnes, cutTreshold, penal, false);
+% plotArmTopOptConfigProjections("InitialSegmentModelTorsionFound","Initial segment model",Rfilter, modelMs.analysis, modelMs.halfSegmentNelems, 2, xOnes, cutTreshold, penal, false);
 
 %[objF, xopt]  = topOpt.solve();
 
@@ -206,3 +230,4 @@ plotArmTopOptConfigProjections("InitialSegmentModelTorsionFound","Initial segmen
 % 
 % 
 
+%save("ComposedTopologyMultiMaxAv23.mat");

@@ -90,14 +90,14 @@ function xtop_full = plotArmTopOptConfigProjections(pdfFileName,plotTitle,Rfilte
     trigMesh.nodes=nodes;
     trigMesh.elems=elems;
     % trigMesh.exportToPLY(pdfFileName); 
-    % trigMesh.exportTetraToSTL(pdfFileName);
+     trigMesh.exportTetraToSTL(pdfFileName);
     % trigMesh.exportToStep(pdfFileName);
 
     [nodes, elems] = analysis.mesh.getTetrahedralMesh(xtop_full>0.5);
     trigMesh = Mesh();
     trigMesh.nodes=nodes;
     trigMesh.elems=elems;
-    trigMesh.exportToPLY(pdfFileName+"_fullArm");
+    %trigMesh.exportToPLY(pdfFileName+"_fullArm");
 
     figure;
     topOpt.plotCurrentFrame();
