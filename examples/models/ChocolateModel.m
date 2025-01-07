@@ -16,6 +16,7 @@ classdef ChocolateModel < ModelLinear
             obj.nTempVars=size(find((round((obj.zCoords-ganTh)*obj.zTol)/obj.zTol)>0),1)-3;
             obj.fe = SolidElasticElem( ShapeFunctionL27, obj.mesh.elems );
             obj.analysis = LinearElasticityWeighted( obj.fe, obj.mesh, false );
+            
 
             obj.allganElemsSelector = Selector( @(x)( x(:,3) > ganTh ) );
             obj.allganTopElemsSelector = Selector( @(x)( x(:,3) > ganTh+alGanTh*0.6 ) );

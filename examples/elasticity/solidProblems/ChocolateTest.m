@@ -18,9 +18,9 @@ model = ChocolateModel( ganTh, alGanTh, notchWidth, relNotchDepth, relRoutndNotc
 model.plotModel();
 
 
-%model.solveWeighted();
-%model.analysis.plotMaps(["uy" "ux" "sxx" "sxy" "syy" "sHM"],0.1);
-%model.fe.plotWired(model.mesh.nodes,model.analysis.qnodal,0.1);
+model.solveWeighted();
+model.analysis.plotMaps(["uy" "ux" "sxx" "sxy" "syy" "sHM"],0.1);
+model.fe.plotWired(model.mesh.nodes,model.analysis.qnodal,0.1);
 
-%model.computeStressObjective()
+model.computeStressObjective()
 
