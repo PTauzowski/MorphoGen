@@ -56,7 +56,7 @@ classdef FEModel < handle
         end
 
         function fixDOF( obj, nodeSelector, dofs,  values )
-            nodesToFix = nodeSelector.select(obj.mesh.nodes)
+            nodesToFix = nodeSelector.select(obj.mesh.nodes);
             
         end
 

@@ -33,7 +33,7 @@ classdef DOFManagerNonuniform
             for k=1:elemClassesNumber
                 [nodes, nDofs] = fElems{k}.getNodesDOFs();
                 elemDOFSclasses = nodalDOFSClasses( fElems{k}.elems );
-                a = nodalDOFS(elemDOFSclasses)
+                a = nodalDOFS(elemDOFSclasses);
                 elemDOFs = [a{:}];
             end
         end
