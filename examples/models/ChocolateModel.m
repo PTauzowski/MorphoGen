@@ -127,10 +127,10 @@ classdef ChocolateModel < ModelLinear
             ytiles=4; 
             
             % FE x - division of the tile
-            ncx=8;
+            ncx=4;
             
             % FE y - division of the tile
-            ncy=8;
+            ncy=4;
             
             % depth FE division of the GaN layer
             ngan=2;
@@ -249,8 +249,10 @@ classdef ChocolateModel < ModelLinear
         function plotZCoordsPoints(obj)
             n=size(obj.zCornersCoords,1);
             x=zeros(n,1);
-            p=plot3(x,x,obj.zCornersCoords,'.');
+            p=plot3(x(obj.zCornersCoords>=obj.alGanTh),x(obj.zCornersCoords>=obj.alGanTh),obj.zCornersCoords(obj.zCornersCoords>=obj.alGanTh),'.');
             p.Color = "red";
+            p=plot3(x(obj.zCornersCoords<obj.alGanTh),x(obj.zCornersCoords<obj.alGanTh),obj.zCornersCoords(obj.zCornersCoords<obj.alGanTh),'.');
+            p.Color = "blue";
         end
 
         function [stressObj, sx1, sy1, sx2, sy2]=computeStressObjective(obj)
