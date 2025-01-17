@@ -35,7 +35,7 @@ classdef ChocolateModel < ModelLinear
             material.setElasticIzoGrad();
             obj.fe.setMaterial(material);
 
-            %obj.analysis.loadClosestNode([meshMax(1)/2 meshMax(2)/2 meshMax(2)], ["uz"], -1);
+            obj.analysis.loadClosestNode([meshMax(1)/2 meshMax(2)/2 meshMax(2)], ["uz"], -1);
             
             obj.x=ones(1,obj.analysis.getTotalElemsNumber());
             obj.result_number=13;
@@ -207,8 +207,7 @@ classdef ChocolateModel < ModelLinear
                         x1   y2      zRt; x1    y3/2 zRt; x1  y1     zRt; ...
 
                 ];
-            
-            
+                       
             mesh.addShapedMesh3D( ShapeFn8, ganNotch1, [ncx,nnotch,ngan], ShapeFn27.localNodes );
             mesh.addShapedMesh3D( ShapeFn8, ganNotch2, [ncy,nnotch,ngan], ShapeFn27.localNodes );
             mesh.addShapedMesh3D( ShapeFn8, thNotch1, [ncx,nnotch,1], ShapeFn27.localNodes );
@@ -249,9 +248,9 @@ classdef ChocolateModel < ModelLinear
         function plotZCoordsPoints(obj)
             n=size(obj.zCornersCoords,1);
             x=zeros(n,1);
-            p=plot3(x(obj.zCornersCoords>=obj.alGanTh),x(obj.zCornersCoords>=obj.alGanTh),obj.zCornersCoords(obj.zCornersCoords>=obj.alGanTh),'.');
+            p=plot3(x(obj.zCornersCoords>=obj.ganTh),x(obj.zCornersCoords>=obj.ganTh),obj.zCornersCoords(obj.zCornersCoords>=obj.ganTh),'.');
             p.Color = "red";
-            p=plot3(x(obj.zCornersCoords<obj.alGanTh),x(obj.zCornersCoords<obj.alGanTh),obj.zCornersCoords(obj.zCornersCoords<obj.alGanTh),'.');
+            p=plot3(x(obj.zCornersCoords<obj.ganTh),x(obj.zCornersCoords<obj.ganTh),obj.zCornersCoords(obj.zCornersCoords<obj.ganTh),'.');
             p.Color = "blue";
         end
 
