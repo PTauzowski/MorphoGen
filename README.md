@@ -6,7 +6,7 @@ Computational MorphoGenesis System
 [Piotr Tauzowski](mailto:ptauzow@ippt.pan.pl)
 
 ## Introduction
-__MorphoGen__ system is used to solve tasks in the field of structural topology optimization. The system is written in MATLAB using an object-oriented programming (OOP) paradigm and a layered architecture, both of which allow efficient development of the system. The system also includes two main layers: the first one is responsible for finite element analysis (FEA) and the second one for reliability assesment. FEA is an essential component of structural topology optimization. Due to OOP implenetation new types of finite elements and analyzes can be easily added. Main directory of the system consists of several subdirectories with source code described below:
+__MorphoGen__ system is used to solve tasks in the field of structural topology optimization [1]. The system is written in MATLAB using an object-oriented programming (OOP) paradigm and a layered architecture, both of which allow efficient development of the system. The system also includes two main layers: the first one is responsible for finite element analysis (FEA) and the second one for reliability assesment. FEA is an essential component of structural topology optimization. Due to OOP implenetation new types of finite elements and analyzes can be easily added. Main directory of the system consists of several subdirectories with source code described below:
 
 * __examples__ - here users find ready-to-use example scripts showcasing the implementation and use of the software.
 * __design__ - layer implements algorithms for topology optimization such as derivative-free approach called stress intensity driven topology optimization, as well as sensitivity-based approach known as Method of
@@ -75,4 +75,4 @@ topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold,
 
 ## Citation
 
-P. Tauzowski et al. MorphoGen: Topology optimization software for Extremely Modular Systems, SoftwareX, Volume 27, 2024, 101797, ISSN 2352-7110, https://doi.org/10.1016/j.softx.2024.101797
+[1] P. Tauzowski et al. MorphoGen: Topology optimization software for Extremely Modular Systems, SoftwareX, Volume 27, 2024, 101797, ISSN 2352-7110, https://doi.org/10.1016/j.softx.2024.101797
