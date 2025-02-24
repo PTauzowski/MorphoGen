@@ -72,3 +72,7 @@ analysis.loadClosestNode([aspect*h, h/2 ], ["ux" "uy"], [0 -1] ); % creating loa
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.4, true );
 [objF, xopt]  = topOpt.solve(); % executing the above mentioned algorithm 
 ```
+
+## Citation
+
+P. Tauzowski et al. MorphoGen: Topology optimization software for Extremely Modular Systems, SoftwareX, Volume 27, 2024, 101797, ISSN 2352-7110, https://doi.org/10.1016/j.softx.2024.101797
