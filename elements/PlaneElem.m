@@ -134,6 +134,7 @@ classdef PlaneElem < FiniteElement
             M = zeros( dim , dim, nelems );
             weights = integrator.weights;
             rho=obj.mat.rho;
+            h = obj.props.h;
             for k=1:nelems
                 elemX = nodes(obj.elems(k,:),:);
                 Me = zeros( dim , dim );

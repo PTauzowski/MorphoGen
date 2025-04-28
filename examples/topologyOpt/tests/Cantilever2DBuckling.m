@@ -36,7 +36,7 @@ fe=PlaneStressElem( sfL4, mesh.elems );
 % Create isotropic material object
 material = PlaneStressMaterial('mat1');
 material.setElasticIzo(205E9, 0.3);
-
+material.setMassIzoMatrix(7850)
 % Assigning material to finite element
 fe.setMaterial( material );
 
@@ -52,7 +52,7 @@ analysisLinear.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
 analysisSecondOrder.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
 
 % Creating load vector with one node loaded at the middle of right edge
-P=-2.0E8; %100;
+P=-2.0E8; x%100;
 %P=-1.5E8; %150;
 
 hp=0;
@@ -81,25 +81,25 @@ analysisWithBuckling.Pnodal=stability.Pnodal;
 analysisWithBuckling.Pfem=stability.Pfem;
 analysisWithBuckling.supports=stability.supports;
 
-% figure;
-% tic
-% topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.4, true );
-% [objF, xopt]  = topOptLinear.solve();
-% toc
+figure;
+tic
+topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.4, true );
+[objF, xopt]  = topOptLinear.solve();
+toc
 
-% figure;
-% tic
-% topOptSecondOrder = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.38, true );
-% [objF, xopt]  = topOptSecondOrder.solve();
-% toc
-% 
-% figure;
-% tic
-% topOptBuckling = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisWithBuckling, cutTreshold, penal, 0.38, true );
-% [objF, xopt]  = topOptBuckling.solve();
-% toc
+figure;
+tic
+topOptSecondOrder = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.38, true );
+[objF, xopt]  = topOptSecondOrder.solve();
+toc
 
-load('Cantilever2DBucklingDown80.mat');
+figure;
+tic
+topOptBuckling = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisWithBuckling, cutTreshold, penal, 0.38, true );
+[objF, xopt]  = topOptBuckling.solve();
+toc
+
+%load('Cantilever2DBucklingDown80.mat');
 
 figure, hold on
 p1=plot(topOptSecondOrder.plVol,topOptSecondOrder.plLambda,'b','LineWidth', 3);

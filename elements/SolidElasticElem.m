@@ -52,6 +52,86 @@ classdef SolidElasticElem < FiniteElement
             end
         end
         function K = computeStifnessMatrix(obj, nodes, varargin)
+            nelems = size(obj.elems, 1);
+            nnodes = size(obj.elems, 2);
+            ndofs = size(obj.ndofs, 2);
+            dim = nnodes * ndofs;
+            
+            integrator = obj.sf.createIntegrator();
+            nip = size(integrator.points, 1);
+            dN = obj.sf.computeGradient(integrator.points);
+            nnd = size(dN, 1); 
+        
+            if nargin == 3
+                x = varargin{1};
+            else
+                x = ones(nelems, 1);
+            end
+            
+            D = obj.mat.D; % Stiffness matrix, same for all elements
+            
+            % Precompute the transposed shape function gradients for all integration points
+            dNtr = permute(dN, [2,1,3]); % Shape (nnodes, dim, nip)
+        
+            % Allocate output stiffness matrix
+            K = zeros(dim, dim, nelems);
+        
+            % Compute Jacobians for all elements and integration points
+            elemX = reshape(nodes(obj.elems, :)', 3, nnodes, nelems); % Shape: (3, nnodes, nelems)
+            J = pagemtimes(dNtr, elemX);  % Shape: (3,3,nip,nelems)
+            
+            % Compute determinants and inverse Jacobians
+            detJ = J(1,1,:,:).*J(2,2,:,:).*J(3,3,:,:) ...
+                 - J(1,2,:,:).*J(2,1,:,:).*J(3,3,:,:) ...
+                 - J(1,1,:,:).*J(2,3,:,:).*J(3,2,:,:) ...
+                 + J(1,3,:,:).*J(2,1,:,:).*J(3,2,:,:) ...
+                 + J(1,2,:,:).*J(2,3,:,:).*J(3,1,:,:) ...
+                 - J(1,3,:,:).*J(2,2,:,:).*J(3,1,:,:); % Shape: (1,1,nip,nelems)
+            
+            invJ = zeros(3,3,nip,nelems);
+            invJ(1,1,:,:) =  (J(2,2,:,:).*J(3,3,:,:) - J(2,3,:,:).*J(3,2,:,:)) ./ detJ;
+            invJ(1,2,:,:) = -(J(1,2,:,:).*J(3,3,:,:) - J(1,3,:,:).*J(3,2,:,:)) ./ detJ;
+            invJ(1,3,:,:) =  (J(1,2,:,:).*J(2,3,:,:) - J(1,3,:,:).*J(2,2,:,:)) ./ detJ;
+            
+            invJ(2,1,:,:) = -(J(2,1,:,:).*J(3,3,:,:) - J(2,3,:,:).*J(3,1,:,:)) ./ detJ;
+            invJ(2,2,:,:) =  (J(1,1,:,:).*J(3,3,:,:) - J(1,3,:,:).*J(3,1,:,:)) ./ detJ;
+            invJ(2,3,:,:) = -(J(1,1,:,:).*J(2,3,:,:) - J(1,3,:,:).*J(2,1,:,:)) ./ detJ;
+            
+            invJ(3,1,:,:) =  (J(2,1,:,:).*J(3,2,:,:) - J(2,2,:,:).*J(3,1,:,:)) ./ detJ;
+            invJ(3,2,:,:) = -(J(1,1,:,:).*J(3,2,:,:) - J(1,2,:,:).*J(3,1,:,:)) ./ detJ;
+            invJ(3,3,:,:) =  (J(1,1,:,:).*J(2,2,:,:) - J(1,2,:,:).*J(2,1,:,:)) ./ detJ;
+        
+            % Compute gradients in the physical space
+            dNx = pagemtimes(invJ, dNtr); % Shape: (3,nnodes,nip,nelems)
+        
+            % Construct strain-displacement matrix B
+            B = zeros(6, dim, nip, nelems);
+            for j = 1:nnd
+                B(1, 3*j-2, :, :) = dNx(1,j,:,:);
+                B(2, 3*j-1, :, :) = dNx(2,j,:,:);
+                B(3, 3*j,   :, :) = dNx(3,j,:,:);
+                B(4, 3*j-1, :, :) = dNx(3,j,:,:);
+                B(4, 3*j,   :, :) = dNx(2,j,:,:);
+                B(5, 3*j-2, :, :) = dNx(3,j,:,:);
+                B(5, 3*j,   :, :) = dNx(1,j,:,:);
+                B(6, 3*j-2, :, :) = dNx(2,j,:,:);
+                B(6, 3*j-1, :, :) = dNx(1,j,:,:);
+            end
+            
+            % Compute Ke using vectorized multiplication
+            BDB = pagemtimes(pagemtimes(B, 'transpose', D, 'none'), B, 'none', 'none'); % Shape: (dim, dim, nip, nelems)
+            
+            % Weighting by integration point
+            weights = permute(integrator.weights, [3, 1, 2, 4]); % Shape: (1, nip, 1, 1)
+            Ke = sum(abs(detJ) .* weights .* BDB, 3); % Sum over integration points
+        
+            % Scale by element-wise factors
+            K = x .* Ke;
+            
+            % Flatten output for compatibility
+            K = K(:);
+        end
+        function K = computeStifnessMatrixOld(obj, nodes, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
             ndofs = size( obj.ndofs,2);
