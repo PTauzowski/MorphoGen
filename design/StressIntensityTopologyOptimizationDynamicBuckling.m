@@ -1,7 +1,7 @@
 classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTopologyOptimization
     
     properties
-         Vend,plLambda,plVol,plOmegas,lastStableFrame;
+         Vend, plLambda, plVol, plOmegas,lastStableFrame, bucklingForms, vibrationForms;
     end
     
     methods

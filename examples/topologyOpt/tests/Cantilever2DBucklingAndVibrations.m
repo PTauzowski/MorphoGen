@@ -64,33 +64,33 @@ stability = LinearStability( analysisLinear.felems, mesh);
 stability.Pnodal = analysisLinear.Pnodal;
 stability.Pfem = analysisLinear.Pfem;
 stability.supports = analysisLinear.supports;
-stability.solve( nEigenForms);
-lambdas = diag(stability.lambdas);
-for k=1:min(10,nEigenForms)
-    subplot(5, 2, k);
-    stability.setForm(k);
-    fe.plotWired(mesh.nodes,stability.qnodal,0.2);
-    axis on, xlabel('x-axis'), ylabel('y-axis'), view(3)
-    lambda_str = sprintf('%.4g', lambdas(k));
-    title(['Form:' num2str(k), ' \lambda=' lambda_str]);
-end
+% stability.solve( nEigenForms);
+% lambdas = diag(stability.lambdas);
+% for k=1:min(10,nEigenForms)
+%     subplot(5, 2, k);
+%     stability.setForm(k);
+%     fe.plotWired(mesh.nodes,stability.qnodal,0.2);
+%     axis on, xlabel('x-axis'), ylabel('y-axis'), view(3)
+%     lambda_str = sprintf('%.4g', lambdas(k));
+%     title(['Form:' num2str(k), ' \lambda=' lambda_str]);
+% end
 
 nEigenForms=10;
 vibrations = LinearNaturalVibration( analysisLinear.felems, mesh );
 vibrations.Pnodal = analysisLinear.Pnodal;
 vibrations.Pfem = analysisLinear.Pfem;
 vibrations.supports = analysisLinear.supports;
-vibrations.solve( nEigenForms);
-omegas = diag(vibrations.omegas)
-for k=1:min(10,nEigenForms)
-    %subplot(5, 2, k);
-    figure
-    vibrations.setForm(k);
-    fe.plotWithSettings(mesh.nodes,"deformed",vibrations.qnodal,0.2);
-    %axis on, xlabel('x-axis'), ylabel('y-axis'), view(3)
-    omega_str = sprintf('%.4g', omegas(k));
-    title(['Form:' num2str(k), ' \omega=' omega_str]);
-end
+% vibrations.solve( nEigenForms);
+% omegas = diag(vibrations.omegas)
+% for k=1:min(10,nEigenForms)
+%     %subplot(5, 2, k);
+%     figure
+%     vibrations.setForm(k);
+%     fe.plotWithSettings(mesh.nodes,"deformed",vibrations.qnodal,0.2);
+%     %axis on, xlabel('x-axis'), ylabel('y-axis'), view(3)
+%     omega_str = sprintf('%.4g', omegas(k));
+%     title(['Form:' num2str(k), ' \omega=' omega_str]);
+% end
 
 analysisWithBuckling = SecondOrderDynamicElasticityWeighted( fe, mesh, 0.90, false );
 analysisWithBuckling.Pnodal=stability.Pnodal;
@@ -103,11 +103,11 @@ analysisWithBuckling.supports=stability.supports;
 % [objF, xopt]  = topOptLinear.solve();
 % toc
 
-figure;
-tic
-topOptSecondOrder = StressIntensityTopologyOptimizationDynamicBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.30, true );
-[objF, xopt]  = topOptSecondOrder.solve();
-toc
+% figure;
+% tic
+% topOptSecondOrder = StressIntensityTopologyOptimizationDynamicBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.30, true );
+% [objF, xopt]  = topOptSecondOrder.solve();
+% toc
 
 % figure;
 % tic
@@ -115,7 +115,7 @@ toc
 % [objF, xopt]  = topOptBuckling.solve();
 % toc
 
-save('Cantilever2DDynamicBuckling.mat');
+load('Cantilever2DDynamicBuckling.mat');
 
 figure, hold on
 p1=plot(topOptSecondOrder.plVol,topOptSecondOrder.plLambda,'b','LineWidth', 3);
@@ -155,7 +155,53 @@ ylabel('Critical force coefficient [%]');
 %xlim([37 57]);
 set(gca, 'FontSize', 24)
 
-fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.modes(1,:),0.2,"elem nums",xopt>=0.5);
+figure;
+i=1;
+fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes1(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
+title(['Mode 1, vol_{fr}' num2str(topOptSecondOrder.plVol(i))]);
+figure
+fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes2(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
+title(['Mode 2, vol_{fr}' num2str(topOptSecondOrder.plVol(i))]);
+
+figure;
+i=100;
+fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes1(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
+title(['Mode 1, vol_{fr}' num2str(topOptSecondOrder.plVol(i))]);
+figure
+fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes2(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
+title(['Mode 2, vol_{fr}' num2str(topOptSecondOrder.plVol(i))]);
+
+figure;
+i=250;
+fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes1(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
+title(['Mode 1, vol_{fr}' num2str(topOptSecondOrder.plVol(i))]);
+figure
+fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes2(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
+title(['Mode 2, vol_{fr}' num2str(topOptSecondOrder.plVol(i))]);
+
+figure;
+i=350;
+fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes1(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
+title(['Mode 1, vol_{fr}' num2str(topOptSecondOrder.plVol(i))]);
+figure
+fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes2(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
+title(['Mode 2, vol_{fr}' num2str(topOptSecondOrder.plVol(i))]);
+
+figure;
+i=450;
+fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes1(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
+title(['Mode 1, vol_{fr}' num2str(topOptSecondOrder.plVol(i))]);
+figure
+fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes2(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
+title(['Mode 2, vol_{fr}' num2str(topOptSecondOrder.plVol(i))]);
+
+figure;
+i=size(topOptSecondOrder.allx,2)-2;
+fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes1(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
+title(['Mode 1, vol_{fr}' num2str(topOptSecondOrder.plVol(i))]);
+figure
+fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes2(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
+title(['Mode 2, vol_{fr}' num2str(topOptSecondOrder.plVol(i))]);
 
 % figure, hold on
 % p2=plot(topOptBuckling.plVol,topOptBuckling.plOmegas,'r','LineWidth', 3);

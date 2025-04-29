@@ -2,7 +2,7 @@ classdef LinearEquationsSystem < handle
         
     properties
         I,J,supports,freedofs,supdofs,newdofs;
-        iK11,iK12,iK21,iK22;
+        iK11,iK12,iK21,iK22,dim;
     end
           
     methods
@@ -15,6 +15,7 @@ classdef LinearEquationsSystem < handle
            obj.supdofs = find(obj.supports);
            ndofs = size(obj.freedofs,1);
            nsup = size(obj.supdofs,1);
+           obj.dim=ndofs+nsup;
            obj.newdofs = zeros(ndofs+nsup,1);
            obj.newdofs( obj.freedofs ) = (1:ndofs)';
            obj.newdofs( obj.supdofs ) = (1:nsup)';
@@ -45,7 +46,8 @@ classdef LinearEquationsSystem < handle
              [q, l] = eigs( sparse(obj.newdofs(obj.I(obj.iK11)),obj.newdofs(obj.J(obj.iK11)),K( obj.iK11),dimfree,dimfree),...
                             sparse(obj.newdofs(obj.I(obj.iK11)),obj.newdofs(obj.J(obj.iK11)),Kg(obj.iK11),dimfree,dimfree),...
                                      num_eigenvalues, 'smallestabs');
-             qforms=real(q);
+             qforms=zeros(obj.dim,num_eigenvalues);
+             qforms(obj.freedofs,:)=real(q);
              lambdas=real(l);
         end
         function [q, R, error] = solveR(obj,K,P)

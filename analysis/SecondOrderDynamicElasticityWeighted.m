@@ -1,7 +1,7 @@
 classdef SecondOrderDynamicElasticityWeighted < FEAnalysis
    
    properties
-        isConst,lambda, omegas, lambdac, modes;
+        isConst,lambda, omegas, lambdac, modes1, modes2, modes3, modes4, modes5;
    end
    
    methods       
@@ -10,6 +10,11 @@ classdef SecondOrderDynamicElasticityWeighted < FEAnalysis
             obj.lambdac = lambdac;
             obj.isConst=isConst;
             obj.rotations=[];
+            obj.modes1=[];
+            obj.modes2=[];
+            obj.modes3=[];
+            obj.modes4=[];
+            obj.modes5=[];
        end
        function K = globalMatrixAggregationWeighted(obj, fname, x)
             K = [];
@@ -41,7 +46,12 @@ classdef SecondOrderDynamicElasticityWeighted < FEAnalysis
            Kg = obj.globalMatrixAggregationWeighted('computeGeometricStifnessMatrix',x);
            M  = obj.globalMatrixAggregationWeighted('computeMassMatrix',x);
            [eigenvectors, lambdas] = solver.solveEigenproblem(K,Kg,10);
-           [obj.modes, omegas] = solver.solveEigenproblem(K,M,10);
+           [mode, omegas] = solver.solveEigenproblem(K,M,10);
+           obj.modes1=[ obj.modes1 mode(:,1) ];
+           obj.modes2=[ obj.modes2 mode(:,2) ];
+           obj.modes3=[ obj.modes3 mode(:,3) ];
+           obj.modes4=[ obj.modes4 mode(:,4) ];
+           obj.modes5=[ obj.modes5 mode(:,5) ];
            obj.lambda=lambdas(1);
            obj.omegas=diag(omegas(1:5,1:5));
            obj.qfem=0*obj.Pfem;
