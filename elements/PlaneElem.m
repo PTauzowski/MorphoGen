@@ -317,18 +317,63 @@ classdef PlaneElem < FiniteElement
                 patch('Vertices', defnodes, 'Faces', obj.elems(:,obj.sf.contour),'FaceColor','none','EdgeColor','r');
             end
         end
+
         function plot(obj,nodes)
             hold on, axis off;
             daspect([1 1 1]);
             patch('Vertices', nodes, 'Faces', obj.elems(:,obj.sf.contour),'FaceColor','none','EdgeColor','k');
             patch('Vertices', nodes, 'Faces', obj.elems(:,obj.sf.contour),'FaceColor',[0.8 0.8 0.8]);
         end
+
         function plotMap(obj,nodes,q,C,scd)
             hold, axis off;
             daspect([1 1 1]);
             colormap('jet');
             colorbar;
             patch('Vertices', nodes+scd*q, 'Faces', obj.elems(:,obj.sf.contour), 'FaceVertexCData', C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
+        end
+
+        function plotWithSettings(obj, nodes, varargin)
+            hold on;
+            daspect([1 1 1]);
+            nodesplot=nodes;
+            plotWired=false;
+            elem_color=[0.8 0.8 0.8];
+            elem_num=1:size(obj.elems,1);
+            for k=1:nargin-2
+                if isstring(varargin{k})
+                    if varargin{k}=="deformed"
+                        dg     = norm( max(nodes) - min(nodes) );
+                        maxs = max( abs(min(min(varargin{k+1}))), abs(max(max(varargin{k+1})) ) );
+                        nodesplot = (nodes + varargin{k+1} ./ maxs * dg * varargin{k+2});
+                    end
+                    if varargin{k}=="map"
+                        C=varargin{k+1};
+                    end
+                    if varargin{k}=="wired"
+                        plotWired=varargin{k+1};
+                        elem_color='r';
+                    end
+                    if varargin{k}=="elem color"
+                        elem_color=varargin{k+1};
+                    end
+                    if varargin{k}=="elem nums"
+                        elem_num=varargin{k+1};
+                    end
+                end
+            end
+            if exist('C','var')
+                colormap('jet');
+                colorbar;
+                patch('Vertices', nodesplot, 'Faces', obj.elems(elem_num,obj.sf.contour), 'FaceVertexCData', C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
+            else 
+                if plotWired
+                    patch('Vertices', nodesplot, 'Faces', obj.elems(elem_num,obj.sf.contour),'FaceColor','none','EdgeColor',elem_color);
+                else
+                    patch('Vertices', nodesplot, 'Faces', obj.elems(elem_num,obj.sf.contour),'FaceColor','none','EdgeColor','k');
+                    patch('Vertices', nodesplot, 'Faces', obj.elems(elem_num,obj.sf.contour),'FaceColor',elem_color);
+                end
+            end
         end
     end
 end

@@ -28,7 +28,7 @@ classdef PlaneStressMaterial < Material
         function D = setElastoPlasticIzo( obj, E, nu, sy )
             obj.setElasticIzo(E,nu);
             obj.sy=sy;
-            obj.invD=inv(obj.D)
+            obj.invD=inv(obj.D);
         end
 
         function [ Dt ] = tangentD( obj, s, dg )
