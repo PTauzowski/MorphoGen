@@ -338,7 +338,9 @@ classdef PlaneElem < FiniteElement
             daspect([1 1 1]);
             nodesplot=nodes;
             plotWired=false;
+            plotNodes=false;
             elem_color=[0.8 0.8 0.8];
+            nodes_color='r';
             elem_num=1:size(obj.elems,1);
             for k=1:nargin-2
                 if isstring(varargin{k})
@@ -360,6 +362,14 @@ classdef PlaneElem < FiniteElement
                     if varargin{k}=="elem nums"
                         elem_num=varargin{k+1};
                     end
+                    if varargin{k}=="wired"
+                        plotWired=varargin{k+1};
+                        elem_color='r';
+                    end
+                    if varargin{k}=="nodes"
+                        plotNodes=varargin{k+1};
+                        nodes_color='r';
+                    end
                 end
             end
             if exist('C','var')
@@ -373,6 +383,9 @@ classdef PlaneElem < FiniteElement
                     patch('Vertices', nodesplot, 'Faces', obj.elems(elem_num,obj.sf.contour),'FaceColor','none','EdgeColor','k');
                     patch('Vertices', nodesplot, 'Faces', obj.elems(elem_num,obj.sf.contour),'FaceColor',elem_color);
                 end
+            end
+            if plotNodes
+                scatter(nodesplot(:,1),nodesplot(:,2),".")
             end
         end
     end

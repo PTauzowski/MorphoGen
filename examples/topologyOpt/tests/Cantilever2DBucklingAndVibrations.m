@@ -103,11 +103,11 @@ analysisWithBuckling.supports=stability.supports;
 % [objF, xopt]  = topOptLinear.solve();
 % toc
 
-% figure;
-% tic
-% topOptSecondOrder = StressIntensityTopologyOptimizationDynamicBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.30, true );
-% [objF, xopt]  = topOptSecondOrder.solve();
-% toc
+figure;
+tic
+topOptSecondOrder = StressIntensityTopologyOptimizationDynamicBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.30, true );
+[objF, xopt]  = topOptSecondOrder.solve();
+toc
 
 % figure;
 % tic
@@ -126,7 +126,9 @@ ylabel('Critical force coefficient [%]');
 %xlim([37 57]);
 set(gca, 'FontSize', 18)
 
-p2=plot(topOptSecondOrder.plVol,topOptSecondOrder.plOmegas(1:2,:)','LineWidth', 3);
+figure, hold on
+first_two=topOptSecondOrder.plOmegas(1:2,:);
+p2=plot(topOptSecondOrder.plVol,first_two','LineWidth', 3);
 legend({'Mode 1', 'Mode 2'});
 set(gca, 'XDir', 'reverse');
 title('First 2 frequencies evolution');
@@ -224,14 +226,82 @@ saveas(gcf,'frame_5.pdf')
 figure;
 subplot(2, 1, 1);
 i=size(topOptSecondOrder.allx,2)-2;
-fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes1(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
+fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes1(:,i) ),0.2,"nodes",true,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
 title(['Mode 1, vol_{fr}=' num2str(topOptSecondOrder.plVol(i))]);
 set(gca, 'FontSize', fontsize)
 subplot(2, 1, 2);
-fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes2(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
+fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes2(:,i) ),0.05,"nodes",true,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
 title(['Mode 2, vol_{fr}=' num2str(topOptSecondOrder.plVol(i))]);
 set(gca, 'FontSize', fontsize)
 saveas(gcf,'frame_6.pdf')
+
+
+figure;
+U = normalize(analysisSecondOrder.modes2, 1); 
+C = abs(U' * U);
+imagesc(C);
+colormap(flipud(hot));
+colorbar;
+axis equal tight;
+xlabel('Mode number');
+ylabel('Mode number');
+title('Correlation matrix of eigenmode 1');
+
+figure;
+U = normalize(analysisSecondOrder.modes2, 1); 
+C = abs(U' * U);
+imagesc(C);
+colormap(flipud(hot));
+colorbar;
+axis equal tight;
+xlabel('Mode number');
+ylabel('Mode number');
+title('Correlation matrix of eigenmode 2');
+
+figure;
+U = normalize(analysisSecondOrder.modes3, 1); 
+C = abs(U' * U);
+imagesc(C);
+colormap(flipud(hot));
+colorbar;
+axis equal tight;
+xlabel('Mode number');
+ylabel('Mode number');
+title('Correlation matrix of eigenmode 3');
+
+pl_mode1_cor = analysisSecondOrder.getModesCorrelation(analysisSecondOrder.modes1);
+pl_mode2_cor = analysisSecondOrder.getModesCorrelation(analysisSecondOrder.modes2);
+pl_mode3_cor = analysisSecondOrder.getModesCorrelation(analysisSecondOrder.modes3);
+
+figure, hold on
+p2=plot(topOptSecondOrder.plVol, pl_mode1_cor(1:end-1)','LineWidth', 2);
+set(gca, 'XDir', 'reverse');
+title('Correlations of mode 1');
+xlabel('Volume fracion [%]');
+ylabel('Correlation');
+%xlim([37 57]);
+set(gca, 'FontSize', 18)
+saveas(gcf,'correlation_1.png')
+
+figure, hold on
+p2=plot(topOptSecondOrder.plVol,pl_mode2_cor(1:end-1)','LineWidth', 2);
+set(gca, 'XDir', 'reverse');
+title('Correlations of mode 2');
+xlabel('Volume fracion [%]');
+ylabel('Correlation');
+%xlim([37 57]);
+set(gca, 'FontSize', 18)
+saveas(gcf,'correlation_2.png')
+
+figure, hold on
+p2=plot(topOptSecondOrder.plVol,pl_mode3_cor(1:end-1)','LineWidth', 2);
+set(gca, 'XDir', 'reverse');
+title('Correlations of mode 3');
+xlabel('Volume fracion [%]');
+ylabel('Correlation');
+%xlim([37 57]);
+set(gca, 'FontSize', 18)
+saveas(gcf,'correlation_3.png')
 
 % figure, hold on
 % p2=plot(topOptBuckling.plVol,topOptBuckling.plOmegas,'r','LineWidth', 3);
