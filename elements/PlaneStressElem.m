@@ -108,6 +108,7 @@ classdef PlaneStressElem < PlaneElem
             obj.results.gp.all(17,:,:) = sHM(1,:,:);
             obj.results.gp.all(18,:,:) = repmat(x,1,nip);
         end
+        
         function computeResultsNew(obj,nodes, q, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
