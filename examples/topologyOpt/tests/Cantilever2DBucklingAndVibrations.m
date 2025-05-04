@@ -105,7 +105,7 @@ analysisWithBuckling.supports=stability.supports;
 
 figure;
 tic
-topOptSecondOrder = StressIntensityTopologyOptimizationDynamicBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.30, true );
+topOptSecondOrder = StressIntensityTopologyOptimizationDynamicBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.90, true );
 [objF, xopt]  = topOptSecondOrder.solve();
 toc
 

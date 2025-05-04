@@ -18,7 +18,61 @@ classdef PlaneElem < FiniteElement
                 N(2,2:2:nd*nnodes,k) = Nsf(k,:);
             end
         end
+        function [J, J1, detJ] = computeJacobian(obj,nodes,dN)
+            nelems = size(obj.elems,1);
+            nnodes = size(obj.elems,2);
+            elem_nodes = nodes(obj.elems',:);
+            %elemX=permute(repmat(reshape(elem_nodes,nnodes,nelems,2),[1,1,1,4]),[1,3,2,4]); 
+
+            elemX = reshape(elem_nodes, nnodes, nelems, 2);
+            elemX = repmat( elemX, [1, 1, 1, 4]);  % then align for pagemtimes
+            elemX = permute(elemX, [1, 3, 2, 4]); % final shape: nnodes × 2 × nelems × 4
+
+            J=pagemtimes(dN,elemX); 
+            detJ = J(1,1,:,:) .* J(2,2,:,:) - J(1,2,:,:) .* J(2,1,:,:);
+            J1 = 1 ./ detJ .* [ J(2,2,:,:) -J(1,2,:,:); -J(2,1,:,:)  J(1,1,:,:) ];
+        end
+        function B = computeStrainDerivativesMatrix(obj,dNx,nip)
+            nelems = size(obj.elems,1);
+            nnodes = size(obj.elems,2);
+            ndofs = size( obj.ndofs,2);
+            dim = nnodes * ndofs;
+            B = zeros(3,dim,nelems,nip);
+            cols = 1:2:(2*nnodes);      
+            cols2 = cols + 1;       
+            
+            B(1, cols,   :, :) = dNx(1, :, :, :);
+            B(2, cols2,  :, :) = dNx(2, :, :, :);
+            B(3, cols,   :, :) = dNx(2, :, :, :);
+            B(3, cols2,  :, :) = dNx(1, :, :, :);
+        end
+        function K = computeElementMatrices(obj,scale, weights, detJ,B,D)
+            Ke =  reshape( scale , 1, 1, [], 1) .* reshape( weights , 1, 1, 1, []) .* detJ .* pagemtimes(pagemtimes(B,'transpose',D,'none'),B);
+            K=sum(Ke,4);
+        end
         function K = computeStifnessMatrix(obj, nodes, varargin)
+            nelems = size(obj.elems,1);
+            nnodes = size(obj.elems,2);
+            ndofs = size( obj.ndofs,2);
+            dim = nnodes * ndofs;
+            integrator = obj.sf.createIntegrator();
+            nip = size(integrator.points,1);
+            dN = permute(repmat(obj.sf.computeGradient( integrator.points ),[1,1,1,nelems]),[2,1,4,3]);
+            nnd = size(dN,nip);
+            if ( nargin == 3 )
+                x=varargin{1};
+            else
+                x=ones(nelems,1);
+            end
+
+            [~, J1, detJ] = obj.computeJacobian(nodes,dN);
+            dNx = pagemtimes(J1,dN);            
+            B = obj.computeStrainDerivativesMatrix(dNx,nip);
+            h = repelem(obj.props.h,nelems,1);
+            Ke = obj.computeElementMatrices(h .* x, integrator.weights, detJ, B, obj.mat.D);
+            K=Ke(:);
+        end
+        function K = computeStifnessMatrixOld(obj, nodes, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
             ndofs = size( obj.ndofs,2);
@@ -62,6 +116,35 @@ classdef PlaneElem < FiniteElement
             K=K(:);
         end
         function K = computeGeometricStifnessMatrix(obj, nodes, varargin)
+            nelems = size(obj.elems,1);
+            nnodes = size(obj.elems,2);
+            ndofs = size( obj.ndofs,2);
+            dim = nnodes * ndofs;
+            integrator = obj.sf.createIntegrator();
+            nip = size(integrator.points,1);
+            dN = permute(repmat(obj.sf.computeGradient( integrator.points ),[1,1,1,nelems]),[2,1,4,3]);
+            nnd = size(dN,nip);
+            if ( nargin == 3 )
+                x=varargin{1};
+            else
+                x=ones(nelems,1);
+            end
+
+            [~, J1, detJ] = obj.computeJacobian(nodes,dN);
+            dNx = pagemtimes(J1,dN);            
+            s = zeros(2,2,nelems,nip);
+            s(1,1,:,:)=obj.results.gp.stress(1,:,:);
+            s(2,2,:,:)=obj.results.gp.stress(2,:,:);
+            s(2,1,:,:)=obj.results.gp.stress(3,:,:);
+            s(1,2,:,:)=obj.results.gp.stress(3,:,:);
+            h = repelem(obj.props.h,nelems,1);
+            Ke = zeros( dim , dim, nelems );
+            So = obj.computeElementMatrices(h .* x, integrator.weights, detJ, dNx, s);
+            Ke(1:2:dim,1:2:dim,:) = So;
+            Ke(2:2:dim,2:2:dim,:) = So;
+            K=Ke(:);
+        end
+        function K = computeGeometricStifnessMatrixOld(obj, nodes, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
             ndofs = size( obj.ndofs,2);
@@ -113,6 +196,24 @@ classdef PlaneElem < FiniteElement
             K=K(:);
         end
         function M = computeMassMatrix(obj, nodes, varargin)
+            nelems = size(obj.elems,1);
+            integrator = obj.sf.createIntegrator();
+            nip = size(integrator.points,1);
+            dN = permute(repmat(obj.sf.computeGradient( integrator.points ),[1,1,1,nelems]),[2,1,4,3]);
+ 
+            if ( nargin == 3 )
+                x=varargin{1};
+            else
+                x=ones(nelems,1);
+            end
+
+            [~, ~, detJ] = obj.computeJacobian(nodes,dN);
+            N = permute(repmat(obj.shapeMatrix( integrator.points ),[1,1,1,nelems]),[1,2,4,3]);
+            h = repelem(obj.props.h,nelems,1);
+            Me = obj.computeElementMatrices(h .* x, integrator.weights, detJ, N, [obj.mat.rho 0; 0 obj.mat.rho]);
+            M = Me(:);
+        end
+        function M = computeMassMatrixOld(obj, nodes, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
             ndofs = size( obj.ndofs,2);
