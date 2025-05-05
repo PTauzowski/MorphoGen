@@ -92,7 +92,7 @@ vibrations.supports = analysisLinear.supports;
 %     title(['Form:' num2str(k), ' \omega=' omega_str]);
 % end
 
-analysisWithBuckling = SecondOrderDynamicElasticityWeighted( fe, mesh, 0.90, false );
+analysisWithBuckling = SecondOrderDynamicElasticityWeighted( fe, mesh, 0.30, false );
 analysisWithBuckling.Pnodal=stability.Pnodal;
 analysisWithBuckling.Pfem=stability.Pfem;
 analysisWithBuckling.supports=stability.supports;
@@ -105,7 +105,7 @@ analysisWithBuckling.supports=stability.supports;
 
 figure;
 tic
-topOptSecondOrder = StressIntensityTopologyOptimizationDynamicBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.90, true );
+topOptSecondOrder = StressIntensityTopologyOptimizationDynamicBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.30, true );
 [objF, xopt]  = topOptSecondOrder.solve();
 toc
 
@@ -127,30 +127,6 @@ ylabel('Critical force coefficient [%]');
 set(gca, 'FontSize', 18)
 
 figure, hold on
-first_two=topOptSecondOrder.plOmegas(1:2,:);
-p2=plot(topOptSecondOrder.plVol,first_two','LineWidth', 3);
-legend({'Mode 1', 'Mode 2'});
-set(gca, 'XDir', 'reverse');
-title('First 2 frequencies evolution');
-xlabel('Volume fracion [%]');
-ylabel('Frequency [Hz]');
-%xlim([37 57]);
-set(gca, 'FontSize', 18)
-saveas(gcf,'First_2_modes.png')
-
-figure, hold on
-p2=plot(topOptSecondOrder.plVol,topOptSecondOrder.plOmegas','LineWidth', 3);
-legend({'Mode 1', 'Mode 2', 'Mode 3', 'Mode 4', 'Mode 5'});
-set(gca, 'XDir', 'reverse');
-title('First 5 frequencies evolution');
-xlabel('Volume fracion [%]');
-ylabel('Frequency [Hz]');
-%xlim([37 57]);
-set(gca, 'FontSize', 18)
-saveas(gcf,'First_5_modes.png')
-
-
-figure, hold on
 p2=plot(topOptSecondOrder.plVol,topOptSecondOrder.plLambda,'r','LineWidth', 3);
 set(gca, 'XDir', 'reverse');
 title('Critical force coefficient evolution with buckling');
@@ -160,148 +136,181 @@ ylabel('Critical force coefficient [%]');
 set(gca, 'FontSize', 24)
 
 
+legend_modes={'Mode 1', 'Mode 2', 'Mode 3', 'Mode 4', 'Mode 5'};
+for l=1:5
+    figure, hold on
+    p2=plot(topOptSecondOrder.plVol,topOptSecondOrder.plOmegas(l,:)','LineWidth', 3);
+    set(gca, 'XDir', 'reverse');
+    title(['Mode '   num2str(l)  ' evolution']);
+    %% 
+    xlabel('Volume fracion [%]');
+    ylabel('Frequency [Hz]');
+    %xlim([37 57]);
+    set(gca, 'FontSize', 18)
+    saveas(gcf,['Mode_'  num2str(l)  '.png'])
+    savefig(gcf,['Mode_'  num2str(l)  '.fig'])
+end
+
+
 fontsize=16;
-figure;
-subplot(2, 1, 1);
-i=1;
-fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes1(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
-title(['Mode 1, vol_{fr}=' num2str(topOptSecondOrder.plVol(i))]);
-set(gca, 'FontSize', fontsize)
+iters=[1 100 250 350  450 size(topOptSecondOrder.allx,2)-2];
+for i=iters(1):size(iters,2)
+    figure;
+    subplot(2, 1, 1);
+    fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes1(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
+    title(['Mode 1, vol_{fr}=' num2str(topOptSecondOrder.plVol(i)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(1,i),4) ' [Hz]'  ', iter:' num2str(i)]);
+    set(gca, 'FontSize', fontsize)
+    
+    subplot(2, 1, 2);
+    fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes2(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
+    title(['Mode 2, vol_{fr}=' num2str(topOptSecondOrder.plVol(i)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(2,i),4) ' [Hz]' ', iter' num2str(i)]);
+    set(gca, 'FontSize', fontsize)
+    saveas(gcf,['frame_' num2str(i) '.pdf'])
+    savefig(gcf,['frame_' num2str(i) '.fig'])
+end
 
-subplot(2, 1, 2);
-fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes2(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
-title(['Mode 2, vol_{fr}=' num2str(topOptSecondOrder.plVol(i))]);
-set(gca, 'FontSize', fontsize)
-saveas(gcf,'frame_1.pdf')
-
-
-figure;
-i=100;
-subplot(2, 1, 1);
-fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes1(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
-title(['Mode 1, vol_{fr}=' num2str(topOptSecondOrder.plVol(i))]);
-set(gca, 'FontSize', fontsize)
-subplot(2, 1, 2);
-fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes2(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
-title(['Mode 2, vol_{fr}=' num2str(topOptSecondOrder.plVol(i))]);
-set(gca, 'FontSize', fontsize)
-saveas(gcf,'frame_2.pdf')
-
-figure;
-i=250;
-subplot(2, 1, 1);
-fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes1(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
-title(['Mode 1, vol_{fr}=' num2str(topOptSecondOrder.plVol(i))]);
-set(gca, 'FontSize', fontsize)
-subplot(2, 1, 2);
-fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes2(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
-title(['Mode 2, vol_{fr}=' num2str(topOptSecondOrder.plVol(i))]);
-set(gca, 'FontSize', fontsize)
-saveas(gcf,'frame_3.pdf')
-
-figure;
-i=350;
-subplot(2, 1, 1);
-fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes1(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
-title(['Mode 1, vol_{fr}=' num2str(topOptSecondOrder.plVol(i))]);
-set(gca, 'FontSize', fontsize)
-subplot(2, 1, 2);
-fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes2(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
-title(['Mode 2, vol_{fr}=' num2str(topOptSecondOrder.plVol(i))]);
-set(gca, 'FontSize', fontsize)
-saveas(gcf,'frame_4.pdf')
-
-figure;
-i=450;
-subplot(2, 1, 1);
-fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes1(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
-title(['Mode 1, vol_{fr}=' num2str(topOptSecondOrder.plVol(i))]);
-set(gca, 'FontSize', fontsize)
-subplot(2, 1, 2);
-fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes2(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
-title(['Mode 2, vol_{fr}=' num2str(topOptSecondOrder.plVol(i))]);
-set(gca, 'FontSize', fontsize)
-saveas(gcf,'frame_5.pdf')
-
-figure;
-subplot(2, 1, 1);
-i=size(topOptSecondOrder.allx,2)-2;
-fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes1(:,i) ),0.2,"nodes",true,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
-title(['Mode 1, vol_{fr}=' num2str(topOptSecondOrder.plVol(i))]);
-set(gca, 'FontSize', fontsize)
-subplot(2, 1, 2);
-fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes2(:,i) ),0.05,"nodes",true,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
-title(['Mode 2, vol_{fr}=' num2str(topOptSecondOrder.plVol(i))]);
-set(gca, 'FontSize', fontsize)
-saveas(gcf,'frame_6.pdf')
-
-
-figure;
-U = normalize(analysisSecondOrder.modes2, 1); 
-C = abs(U' * U);
-imagesc(C);
-colormap(flipud(hot));
-colorbar;
-axis equal tight;
-xlabel('Mode number');
-ylabel('Mode number');
-title('Correlation matrix of eigenmode 1');
-
-figure;
-U = normalize(analysisSecondOrder.modes2, 1); 
-C = abs(U' * U);
-imagesc(C);
-colormap(flipud(hot));
-colorbar;
-axis equal tight;
-xlabel('Mode number');
-ylabel('Mode number');
-title('Correlation matrix of eigenmode 2');
-
-figure;
-U = normalize(analysisSecondOrder.modes3, 1); 
-C = abs(U' * U);
-imagesc(C);
-colormap(flipud(hot));
-colorbar;
-axis equal tight;
-xlabel('Mode number');
-ylabel('Mode number');
-title('Correlation matrix of eigenmode 3');
+% figure;
+% U = normalize(analysisSecondOrder.modes2, 1); 
+% C = abs(U' * U);
+% imagesc(C);
+% colormap(flipud(hot));
+% colorbar;
+% axis equal tight;
+% xlabel('Mode number');
+% ylabel('Mode number');
+% title('Correlation matrix of eigenmode 1');
+% 
+% figure;
+% U = normalize(analysisSecondOrder.modes2, 1); 
+% C = abs(U' * U);
+% imagesc(C);
+% colormap(flipud(hot));
+% colorbar;
+% axis equal tight;
+% xlabel('Mode number');
+% ylabel('Mode number');
+% title('Correlation matrix of eigenmode 2');
+% 
+% figure;
+% U = normalize(analysisSecondOrder.modes3, 1); 
+% C = abs(U' * U);
+% imagesc(C);
+% colormap(flipud(hot));
+% colorbar;
+% axis equal tight;
+% xlabel('Mode number');
+% ylabel('Mode number');
+% title('Correlation matrix of eigenmode 3');
 
 pl_mode1_cor = analysisSecondOrder.getModesCorrelation(analysisSecondOrder.modes1);
 pl_mode2_cor = analysisSecondOrder.getModesCorrelation(analysisSecondOrder.modes2);
 pl_mode3_cor = analysisSecondOrder.getModesCorrelation(analysisSecondOrder.modes3);
+pl_mode4_cor = analysisSecondOrder.getModesCorrelation(analysisSecondOrder.modes4);
+pl_mode5_cor = analysisSecondOrder.getModesCorrelation(analysisSecondOrder.modes5);
 
-figure, hold on
-p2=plot(topOptSecondOrder.plVol, pl_mode1_cor(1:end-1)','LineWidth', 2);
-set(gca, 'XDir', 'reverse');
-title('Correlations of mode 1');
-xlabel('Volume fracion [%]');
-ylabel('Correlation');
-%xlim([37 57]);
-set(gca, 'FontSize', 18)
-saveas(gcf,'correlation_1.png')
+pl_modes_cor = [analysisSecondOrder.getModesCorrelation(analysisSecondOrder.modes1); analysisSecondOrder.getModesCorrelation(analysisSecondOrder.modes2); analysisSecondOrder.getModesCorrelation(analysisSecondOrder.modes3); analysisSecondOrder.getModesCorrelation(analysisSecondOrder.modes4); analysisSecondOrder.getModesCorrelation(analysisSecondOrder.modes5)];
 
-figure, hold on
-p2=plot(topOptSecondOrder.plVol,pl_mode2_cor(1:end-1)','LineWidth', 2);
-set(gca, 'XDir', 'reverse');
-title('Correlations of mode 2');
-xlabel('Volume fracion [%]');
-ylabel('Correlation');
-%xlim([37 57]);
-set(gca, 'FontSize', 18)
-saveas(gcf,'correlation_2.png')
 
-figure, hold on
-p2=plot(topOptSecondOrder.plVol,pl_mode3_cor(1:end-1)','LineWidth', 2);
-set(gca, 'XDir', 'reverse');
-title('Correlations of mode 3');
-xlabel('Volume fracion [%]');
-ylabel('Correlation');
-%xlim([37 57]);
-set(gca, 'FontSize', 18)
-saveas(gcf,'correlation_3.png')
+for k=1:5
+    kstr=num2str(k);
+    figure, hold on
+    p2=plot(topOptSecondOrder.plVol(1:end-1), pl_modes_cor(k,1:end)','LineWidth', 2);
+    set(gca, 'XDir', 'reverse');
+    title(['Correlations of mode ' kstr]);
+    xlabel('Volume fracion [%]');
+    ylabel('Correlation');
+    %xlim([37 57]);
+    set(gca, 'FontSize', 18)
+    saveas(gcf,['correlation_' kstr '.png'])
+    savefig(gcf,['correlation_' kstr '.fig'])
+end
+
+for k=1:size(pl_mode1_cor,2)
+    if pl_mode1_cor(k)<0.3
+        figure;
+
+        subplot(2, 1, 1);
+        fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes1(:,k) ),0.1,"elem nums",topOptSecondOrder.allx(:,k)>=0.5,"nodes",false);
+        title(['Mode 1, vol_{fr}=' num2str(topOptSecondOrder.plVol(k)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(1,k-1),4) ' [Hz]'], [ 'MAC=' num2str(pl_mode1_cor(k),3) ', iter:' num2str(k)]);
+        set(gca, 'FontSize', fontsize)
+        
+        subplot(2, 1, 2);
+        fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes1(:,k+1) ),0.1,"elem nums",topOptSecondOrder.allx(:,k+1)>=0.5,"nodes",false);
+        title(['Mode 1, vol_{fr}=' num2str(topOptSecondOrder.plVol(k+1)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(1,k+1),4) ' [Hz]' ', iter' num2str(k+1)]);
+        set(gca, 'FontSize', fontsize)
+
+        saveas(gcf,['frame_correlation_mode_1_' num2str(k) '.pdf'])
+        savefig(gcf,['frame_correlation_mode_1_' num2str(k) '.fig'])
+    end
+end
+
+for k=1:size(pl_mode2_cor,2)
+    if pl_mode2_cor(k)<0.3
+        figure;
+        subplot(2, 1, 1);
+        fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes2(:,k) ),0.1,"elem nums",topOptSecondOrder.allx(:,k)>=0.5,"nodes",false);
+        title(['Mode 2, vol_{fr}=' num2str(topOptSecondOrder.plVol(k)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(2,k),4) ' [Hz]' ], [ 'MAC=' num2str(pl_mode2_cor(k),3) ', iter:' num2str(k)]);
+        set(gca, 'FontSize', fontsize)
+        
+        subplot(2, 1, 2);
+        fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes2(:,k+1) ),0.1,"elem nums",topOptSecondOrder.allx(:,k+1)>=0.5,"nodes",false);
+        title(['Mode 2, vol_{fr}=' num2str(topOptSecondOrder.plVol(k+1)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(2,k+1),4) ' [Hz]' ', iter' num2str(k+1)]);
+        set(gca, 'FontSize', fontsize)
+        saveas(gcf,['frame_correlation_mode_2_' num2str(k) '.pdf'])
+        savefig(gcf,['frame_correlation_mode_2_' num2str(k) '.fig'])
+    end
+end
+
+for k=1:size(pl_mode3_cor,2)
+    if pl_mode3_cor(k)<0.3
+        figure;
+        subplot(2, 1, 1);
+        fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes3(:,k) ),0.1,"elem nums",topOptSecondOrder.allx(:,k)>=0.5,"nodes",false);
+        title(['Mode 3, vol_{fr}=' num2str(topOptSecondOrder.plVol(k)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(3,k),4) ' [Hz]' ],[ 'MAC=' num2str(pl_mode3_cor(k),3) ', iter:' num2str(k)]);
+        set(gca, 'FontSize', fontsize)
+        
+        subplot(2, 1, 2);
+        fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes3(:,k+1) ),0.1,"elem nums",topOptSecondOrder.allx(:,k+1)>=0.5,"nodes",false);
+        title(['Mode 3, vol_{fr}=' num2str(topOptSecondOrder.plVol(k+1)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(3,k+1),4) ' [Hz]' ', iter' num2str(k+1)]);
+        set(gca, 'FontSize', fontsize)
+        saveas(gcf,['frame_correlation_mode_3_' num2str(k) '.pdf'])
+        savefig(gcf,['frame_correlation_mode_3_' num2str(k) '.fig'])
+    end
+end
+
+for k=1:size(pl_mode4_cor,2)
+    if pl_mode4_cor(k)<0.3
+        figure;
+        subplot(2, 1, 1);
+        fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes4(:,k) ),0.1,"elem nums",topOptSecondOrder.allx(:,k)>=0.5,"nodes",false);
+        title(['Mode 4, vol_{fr}=' num2str(topOptSecondOrder.plVol(k)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(4,k),4) ' [Hz]'],[ 'MAC=' num2str(pl_mode4_cor(k),3) ', iter:' num2str(k)]);
+        set(gca, 'FontSize', fontsize)
+        
+        subplot(2, 1, 2);
+        fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes3(:,k+1) ),0.1,"elem nums",topOptSecondOrder.allx(:,k+1)>=0.5,"nodes",false);
+        title(['Mode 4, vol_{fr}=' num2str(topOptSecondOrder.plVol(k+1)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(4,k+1),4) ' [Hz]' ', iter' num2str(k+1)]);
+        set(gca, 'FontSize', fontsize)
+        saveas(gcf,['frame_correlation_mode_4_' num2str(k) '.pdf'])
+        savefig(gcf,['frame_correlation_mode_4_' num2str(k) '.fig'])
+    end
+end
+
+for k=1:size(pl_mode5_cor,2)
+    if pl_mode5_cor(k)<0.3
+        figure;
+        subplot(2, 1, 1);
+        fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes5(:,k) ),0.1,"elem nums",topOptSecondOrder.allx(:,k)>=0.5,"nodes",false);
+        title(['Mode 5, vol_{fr}=' num2str(topOptSecondOrder.plVol(k)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(5,k),4) ' [Hz]' ],[ 'MAC=' num2str(pl_mode3_cor(k),3) ', iter:' num2str(k)]);
+        set(gca, 'FontSize', fontsize)
+        
+        subplot(2, 1, 2);
+        fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes5(:,k+1) ),0.1,"elem nums",topOptSecondOrder.allx(:,k+1)>=0.5,"nodes",false);
+        title(['Mode 5, vol_{fr}=' num2str(topOptSecondOrder.plVol(k+1)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(5,k+1),4) ' [Hz]' ', iter' num2str(k+1)]);
+        set(gca, 'FontSize', fontsize)
+        saveas(gcf,['frame_correlation_mode_5_' num2str(k) '.pdf'])
+        savefig(gcf,['frame_correlation_mode_5_' num2str(k) '.fig'])
+    end
+end
 
 % figure, hold on
 % p2=plot(topOptBuckling.plVol,topOptBuckling.plOmegas,'r','LineWidth', 3);

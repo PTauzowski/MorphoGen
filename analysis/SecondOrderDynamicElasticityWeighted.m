@@ -1,7 +1,7 @@
 classdef SecondOrderDynamicElasticityWeighted < FEAnalysis
    
    properties
-        isConst,lambda, omegas, lambdac, modes1, modes2, modes3, modes4, modes5, mode1_cor, mode2_cor;
+        isConst,lambda, omegas, lambdac, modes1, modes2, modes3, modes4, modes5;
    end
    
    methods       
@@ -15,8 +15,7 @@ classdef SecondOrderDynamicElasticityWeighted < FEAnalysis
             obj.modes3=[];
             obj.modes4=[];
             obj.modes5=[];
-            mode1_cor=[];
-            mode2_cor=[];
+
        end
        function K = globalMatrixAggregationWeighted(obj, fname, x)
             K = [];
@@ -66,7 +65,7 @@ classdef SecondOrderDynamicElasticityWeighted < FEAnalysis
        function [plCor] = getModesCorrelation(obj,mode)
            plCor=[];
            for k=2:size(mode,2)
-               plCor = [plCor abs(mode(:,k-1)'*mode(:,k)) ]; %/ norm(mode(:,k-1))/norm(mode(:,k))];
+               plCor = [plCor abs(mode(:,k-1)'*mode(:,k))/norm(mode(:,k-1))/norm(mode(:,k))];
            end
        end
 

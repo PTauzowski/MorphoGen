@@ -13,10 +13,12 @@ classdef PlaneElem < FiniteElement
             np = size(points,1);
             N = zeros( nd, nd*nnodes, np );
             Nsf = obj.sf.computeValue(points);
-            for k=1:np
-                N(1,1:2:nd*nnodes-1,k) = Nsf(k,:);
-                N(2,2:2:nd*nnodes,k) = Nsf(k,:);
-            end
+            N(1,1:2:nd*nnodes-1,:) = Nsf;
+            N(2,2:2:nd*nnodes,:) = Nsf;
+            % for k=1:np
+            %     N(1,1:2:nd*nnodes-1,k) = Nsf(k,:);
+            %     N(2,2:2:nd*nnodes,k) = Nsf;
+            % end
         end
         function [J, J1, detJ] = computeJacobian(obj,nodes,dN)
             nelems = size(obj.elems,1);
@@ -58,7 +60,6 @@ classdef PlaneElem < FiniteElement
             integrator = obj.sf.createIntegrator();
             nip = size(integrator.points,1);
             dN = permute(repmat(obj.sf.computeGradient( integrator.points ),[1,1,1,nelems]),[2,1,4,3]);
-            nnd = size(dN,nip);
             if ( nargin == 3 )
                 x=varargin{1};
             else
@@ -72,49 +73,7 @@ classdef PlaneElem < FiniteElement
             Ke = obj.computeElementMatrices(h .* x, integrator.weights, detJ, B, obj.mat.D);
             K=Ke(:);
         end
-        function K = computeStifnessMatrixOld(obj, nodes, varargin)
-            nelems = size(obj.elems,1);
-            nnodes = size(obj.elems,2);
-            ndofs = size( obj.ndofs,2);
-            dim = nnodes * ndofs;
-            integrator = obj.sf.createIntegrator();
-            nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
-            nnd = size(dN,1); 
-            dNtr = permute(dN,[2,1,3]);
-            dNtrc = cell(size(dNtr,3),1);
-            if ( nargin == 3 )
-                x=varargin{1};
-            else
-                x=ones(nelems,1);
-            end
-            for i=1:nip
-                dNtrc{i}=dNtr(:,:,i);
-            end
-            K = zeros( dim , dim, nelems );
-            B = zeros(3,dim);
-            weights = integrator.weights;
-            D = obj.mat.D;
-            h = obj.props.h;
-            for k=1:nelems
-                elemX = nodes(obj.elems(k,:),:);
-                Ke = zeros( dim , dim );
-                for i=1:nip
-                    J = dNtrc{i}*elemX;
-                    detJ = J(1,1) * J(2,2) - J(1,2) * J(2,1);
-                    dNx = (1 / detJ * [ J(2,2) -J(1,2); -J(2,1)  J(1,1) ]) * dNtrc{i};
-                    for j = 1:nnd
-                      B(1, 2*j-1) = dNx(1,j);
-                      B(2, 2*j)   = dNx(2,j);
-                      B(3, 2*j-1) = dNx(2,j);
-                      B(3, 2*j)   = dNx(1,j);
-                    end
-                    Ke = Ke + abs(detJ) * weights(i) * h * B'*D*B;
-                end
-                K(:,:,k) = x(k)*Ke;
-            end
-            K=K(:);
-        end
+        
         function K = computeGeometricStifnessMatrix(obj, nodes, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
@@ -144,57 +103,7 @@ classdef PlaneElem < FiniteElement
             Ke(2:2:dim,2:2:dim,:) = So;
             K=Ke(:);
         end
-        function K = computeGeometricStifnessMatrixOld(obj, nodes, varargin)
-            nelems = size(obj.elems,1);
-            nnodes = size(obj.elems,2);
-            ndofs = size( obj.ndofs,2);
-            dim = nnodes * ndofs;
-            integrator = obj.sf.createIntegrator();
-            nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
-            dNtr = permute(dN,[2,1,3]);
-            dNtrc = cell(size(dNtr,3),1);
-            if ( nargin == 3 )
-                x=varargin{1};
-            else
-                x=ones(nelems,1);
-            end
-            for i=1:nip
-                dNtrc{i}=dNtr(:,:,i);
-            end
-            K = zeros( dim , dim, nelems );
-            Sg = zeros(2,nnodes);
-            weights = integrator.weights;
-            s = zeros(2,2);
-            h = obj.props.h;
-            for k=1:nelems
-                elemX = nodes(obj.elems(k,:),:);
-                So=zeros(nnodes,nnodes);
-                %Kg = zeros( dim , dim );
-                for i=1:nip
-                    J = dNtrc{i}*elemX;
-                    detJ = J(1,1) * J(2,2) - J(1,2) * J(2,1);
-                    dNx = (1 / detJ * [ J(2,2) -J(1,2); -J(2,1)  J(1,1) ]) * dNtrc{i};
-                    
-                    s(1,1)=obj.results.gp.stress(1,k,i);
-                    s(2,2)=obj.results.gp.stress(2,k,i);
-                    s(2,1)=obj.results.gp.stress(3,k,i);
-                    s(1,2)=obj.results.gp.stress(3,k,i);
-                    for j = 1:nnodes
-                       Sg(1,j) = dNx(1,j);
-                       Sg(2,j) = dNx(2,j);  
-                    end
-                    So = So + abs(detJ) * integrator.weights(i) * Sg'*s*Sg;
-                    %Kg=Kg+abs(detJ) * integrator.weights(i) * Sg'*s*Sg;
-                end
-                %K(1:nnodes,1:nnodes,k) = x(k)*h*So;
-                %K(nnodes+1:2*nnodes,nnodes+1:2*nnodes,k) = x(k)*h*So;
-                %K(:,:,k) = x(k)*h*Kg;
-                K(1:2:dim,1:2:dim,k) = x(k)*So;
-                K(2:2:dim,2:2:dim,k) = x(k)*So;
-            end
-            K=K(:);
-        end
+        
         function M = computeMassMatrix(obj, nodes, varargin)
             nelems = size(obj.elems,1);
             integrator = obj.sf.createIntegrator();
@@ -213,41 +122,7 @@ classdef PlaneElem < FiniteElement
             Me = obj.computeElementMatrices(h .* x, integrator.weights, detJ, N, [obj.mat.rho 0; 0 obj.mat.rho]);
             M = Me(:);
         end
-        function M = computeMassMatrixOld(obj, nodes, varargin)
-            nelems = size(obj.elems,1);
-            nnodes = size(obj.elems,2);
-            ndofs = size( obj.ndofs,2);
-            dim = nnodes * ndofs;
-            integrator = obj.sf.createIntegrator();
-            nip = size(integrator.points,1);
-            N = obj.shapeMatrix( integrator.points );
-            dN = obj.sf.computeGradient( integrator.points );
-            dNtr = permute(dN,[2,1,3]);
-            dNtrc = cell(size(dNtr,3),1);
-            if ( nargin == 3 )
-                x=varargin{1};
-            else
-                x=ones(nelems,1);
-            end
-            for i=1:nip
-                dNtrc{i}=dNtr(:,:,i);
-            end
-            M = zeros( dim , dim, nelems );
-            weights = integrator.weights;
-            rho=obj.mat.rho;
-            h = obj.props.h;
-            for k=1:nelems
-                elemX = nodes(obj.elems(k,:),:);
-                Me = zeros( dim , dim );
-                for i=1:nip
-                    J = dNtrc{i}*elemX;
-                    detJ = J(1,1) * J(2,2) - J(1,2) * J(2,1);
-                    Me = Me + abs(detJ) * weights(i)  * N(:,:,i)' * N(:,:,i);
-                end
-                M(:,:,k) = x(k) * h * rho * Me;
-            end
-            M=M(:);
-        end
+        
         function dK = computeStifnessMatrixGradMat(obj, nodes, q, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);

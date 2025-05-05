@@ -34,11 +34,11 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
             fprintf('omega(3)=%5.3g ', obj.FEAnalysis.omegas(3));
             fprintf('omega(4)=%5.3g ', obj.FEAnalysis.omegas(4));
             fprintf('\n');
-            if abs(obj.FEAnalysis.omegas(1))>10000
+            %if abs(obj.FEAnalysis.omegas(1))>10000
                 obj.plLambda = [ obj.plLambda abs( obj.FEAnalysis.lambda) ];
                 obj.plOmegas = [ obj.plOmegas abs( obj.FEAnalysis.omegas) ];
                 obj.plVol = [ obj.plVol round(sum( obj.x )/obj.V0*1000)/10 ];
-            end
+            %end
             
             if abs(obj.FEAnalysis.lambda)>=1
                 obj.lastStableFrame=obj.iteration;

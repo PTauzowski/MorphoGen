@@ -16,28 +16,63 @@ classdef SolidElasticElem < FiniteElement
             obj.props.D = D;
             obj.props.M = M;
         end
-        function B = strainDerivMatrix( ~, dNx )
-            ndofs = 3 * size(dNx,3); 
-            nip = size(dNx,3); 
-            nnd = size(dNx,2); 
-            B = cell(nip,1);
-            Bn = zeros(6,ndofs);
-            for i=1:nip
-                for j = 1:nnd
-                  Bn(1, 3*j-2) = dNx(1,j,i);
-                  Bn(2, 3*j-1) = dNx(2,j,i);
-                  Bn(3, 3*j)   = dNx(3,j,i);
+        function [J, J1, detJ] = computeJacobian(obj,nodes,dN)
+            nelems = size(obj.elems,1);
+            nnodes = size(obj.elems,2);
+            nip=size(dN,4);
+            elem_nodes = nodes(obj.elems',:); 
 
-                  Bn(4, 3*j-2) = dNx(2,j,i);
-                  Bn(5, 3*j-1) = dNx(3,j,i);
-                  Bn(6, 3*j-2) = dNx(3,j,i);
+            elemX = reshape(elem_nodes, nnodes, nelems, 3);
+            elemX = repmat( elemX, [1, 1, 1, 4]);  % then align for pagemtimes
+            elemX = permute(elemX, [1, 3, 2, 4]); % final shape: nnodes × 2 × nelems × 4
 
-                  Bn(4, 3*j-1) = dNx(1,j,i);
-                  Bn(5, 3*j)   = dNx(2,j,i);
-                  Bn(6, 3*j)   = dNx(1,j,i);
-                end
-                B{i}=Bn;
-            end
+            J=pagemtimes(dN,elemX); 
+            
+            % Compute determinants and inverse Jacobians
+            detJ = J(1,1,:,:).*J(2,2,:,:).*J(3,3,:,:) ...
+                 - J(1,2,:,:).*J(2,1,:,:).*J(3,3,:,:) ...
+                 - J(1,1,:,:).*J(2,3,:,:).*J(3,2,:,:) ...
+                 + J(1,3,:,:).*J(2,1,:,:).*J(3,2,:,:) ...
+                 + J(1,2,:,:).*J(2,3,:,:).*J(3,1,:,:) ...
+                 - J(1,3,:,:).*J(2,2,:,:).*J(3,1,:,:); % Shape: (1,1,nelems,nip)
+
+            J1 = zeros(3,3,nelems,nip);
+            J1(1,1,:,:) =  (J(2,2,:,:).*J(3,3,:,:) - J(2,3,:,:).*J(3,2,:,:)) ./ detJ;
+            J1(1,2,:,:) = -(J(1,2,:,:).*J(3,3,:,:) - J(1,3,:,:).*J(3,2,:,:)) ./ detJ;
+            J1(1,3,:,:) =  (J(1,2,:,:).*J(2,3,:,:) - J(1,3,:,:).*J(2,2,:,:)) ./ detJ;
+            
+            J1(2,1,:,:) = -(J(2,1,:,:).*J(3,3,:,:) - J(2,3,:,:).*J(3,1,:,:)) ./ detJ;
+            J1(2,2,:,:) =  (J(1,1,:,:).*J(3,3,:,:) - J(1,3,:,:).*J(3,1,:,:)) ./ detJ;
+            J1(2,3,:,:) = -(J(1,1,:,:).*J(2,3,:,:) - J(1,3,:,:).*J(2,1,:,:)) ./ detJ;
+            
+            J1(3,1,:,:) =  (J(2,1,:,:).*J(3,2,:,:) - J(2,2,:,:).*J(3,1,:,:)) ./ detJ;
+            J1(3,2,:,:) = -(J(1,1,:,:).*J(3,2,:,:) - J(1,2,:,:).*J(3,1,:,:)) ./ detJ;
+            J1(3,3,:,:) =  (J(1,1,:,:).*J(2,2,:,:) - J(1,2,:,:).*J(2,1,:,:)) ./ detJ;
+        end
+        function B = computeStrainDerivativesMatrix(obj,dNx,nip)
+            nelems = size(obj.elems,1);
+            nnodes = size(obj.elems,2);
+            ndofs = size( obj.ndofs,2);
+            dim = nnodes * ndofs;
+            B = zeros(6,dim,nelems,nip);    
+            
+            idx = 1:nnodes;
+            cols1 = 3*idx - 2;
+            cols2 = 3*idx - 1;
+            cols3 = 3*idx;
+            
+            B(1, cols1, :, :) = dNx(1, idx, :, :);
+            B(2, cols2, :, :) = dNx(2, idx, :, :);
+            B(3, cols3, :, :) = dNx(3, idx, :, :);
+            
+            B(4, cols2, :, :) = dNx(3, idx, :, :);
+            B(4, cols3, :, :) = dNx(2, idx, :, :);
+            
+            B(5, cols1, :, :) = dNx(3, idx, :, :);
+            B(5, cols3, :, :) = dNx(1, idx, :, :);
+            
+            B(6, cols1, :, :) = dNx(2, idx, :, :);
+            B(6, cols2, :, :) = dNx(1, idx, :, :);
         end
         function N = shapeMatrix( obj, points )
             nnodes = size(obj.elems, 2 );
