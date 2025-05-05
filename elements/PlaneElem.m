@@ -15,10 +15,6 @@ classdef PlaneElem < FiniteElement
             Nsf = obj.sf.computeValue(points);
             N(1,1:2:nd*nnodes-1,:) = Nsf;
             N(2,2:2:nd*nnodes,:) = Nsf;
-            % for k=1:np
-            %     N(1,1:2:nd*nnodes-1,k) = Nsf(k,:);
-            %     N(2,2:2:nd*nnodes,k) = Nsf;
-            % end
         end
         function [J, J1, detJ] = computeJacobian(obj,nodes,dN)
             nelems = size(obj.elems,1);

@@ -115,7 +115,7 @@ toc
 % [objF, xopt]  = topOptBuckling.solve();
 % toc
 
-load('Cantilever2DDynamicBuckling.mat');
+save('Cantilever2DDynamicBuckling.mat');
 
 figure, hold on
 p1=plot(topOptSecondOrder.plVol,topOptSecondOrder.plLambda,'b','LineWidth', 3);
