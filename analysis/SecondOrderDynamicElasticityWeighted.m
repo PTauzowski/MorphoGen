@@ -22,7 +22,7 @@ classdef SecondOrderDynamicElasticityWeighted < FEAnalysis
             ei = getElemIndices(obj);
             for k=1:size(obj.felems,2)
                 if ismethod(obj.felems{k},fname)
-                    K = [ K; obj.felems{k}.(fname)(obj.mesh.nodes,x(ei{k})) ];
+                    K = [ K; obj.felems{k}.(fname)(obj.mesh.nodes, x(ei{k})) ];
                 else
                     error("Class " + class(obj.felems{k}) + " or its predecessors not implements function :"+fname);
                 end
