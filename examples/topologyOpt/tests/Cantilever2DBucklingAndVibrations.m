@@ -40,6 +40,11 @@ material.setMassIzoMatrix(7850);
 % Assigning material to finite element
 fe.setMaterial( material );
 
+% Ke = fe.computeStifnessMatrix(mesh.nodes,1,1);
+% Me = fe.computeMassMatrix(mesh.nodes,1,1);
+% 
+%  [q, l] = eigs( Ke(:,:,1),Me(:,:,1), 8, 'smallestabs');
+
 % Creating linear elastic finite element analysis object with weighted matrix feature, weighted by element density.
 analysisLinear      = LinearElasticityWeighted( fe, mesh, false );
 analysisSecondOrder = SecondOrderDynamicElasticityWeighted(fe, mesh, 0, false);

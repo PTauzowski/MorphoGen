@@ -81,17 +81,28 @@ classdef (Abstract) FEAnalysis < handle
         function F = fromFEMVector( obj, Fe )
             F=reshape(Fe,size(obj.ndofs,2),size(obj.mesh.nodes,1))';
         end
-        function K = globalMatrixAggregation(obj, fname)
+        function K = assemblyGlobalMatrix(obj, fname, x, is_const)
             K = [];
-            for k=1:max(size(obj.felems))
+            ei = obj.getElemIndices();
+            for k=1:numel(obj.felems)
+                ne = numel(ei{k});
                 if ismethod(obj.felems{k},fname)
-                    K = [ K obj.felems{k}.(fname)(obj.mesh.nodes) ];
+                    if (is_const)
+                        Ke = obj.felems{k}.(fname)(obj.mesh.nodes, 1 );
+                        Ke=repmat(Ke,1,1,ne);
+                    else
+                        Ke = obj.felems{k}.(fname)(obj.mesh.nodes, [] );
+                    end
+                    if (numel(x)==ne)
+                        Ke = reshape(x,1,1,ne) .* Ke;
+                    end
+                    K = [ K;  Ke(:) ];
                 else
-                    error("Class " + class(fe) + " or its predecessors not implements function :"+fname);
+                    error("Class " + class(obj.felems{k}) + " or its predecessors not implements element matrix function named:"+fname);
                 end
             end
         end
-        function K = globalSolutionDependendMatrixAggregation(obj, fname )
+        function K = assemblyNonlinearGlobalMatix(obj, fname, q )
             K = [];
             for k=1:max(size(obj.felems))
                 if ismethod(obj.felems{k},fname)
@@ -215,7 +226,7 @@ classdef (Abstract) FEAnalysis < handle
             if ( nargin == 2 )
                 x=varargin{1};
                 for k=1:size(obj.felems,2)
-                    obj.felems{k}.computeResults( obj.mesh.nodes, obj.qnodal,x(ei{k}));
+                    obj.felems{k}.computeResults( obj.mesh.nodes, obj.qnodal,x(ei{k}),[]);
                 end
             else
                 cellfun(@(x) x.computeResults( obj.mesh.nodes,obj.qnodal ),obj.felems);

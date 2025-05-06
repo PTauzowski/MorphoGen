@@ -58,6 +58,44 @@ classdef (Abstract) FiniteElement < handle
             J = alldofs(1:nelems,iy(:));
             V = alldofs;
         end
+
+        function K = computeElementMatrices(obj, scale, weights, detJ,B,D)
+            Ke =  reshape( scale , 1, 1, [], 1) .* reshape( weights , 1, 1, 1, []) .* detJ .* pagemtimes(pagemtimes(B,'transpose',D,'none'),B);
+            K=sum(Ke,4);
+        end
+
+        function K = computeStifnessMatrix(obj, nodes, el_idx)
+            nelems = size(obj.elems,1);
+            if (~isempty(el_idx))
+                nelems=numel(el_idx);
+            end
+            nnodes = size(obj.elems,2);
+            ndofs = size( obj.ndofs,2);
+            dim = nnodes * ndofs;
+            integrator = obj.sf.createIntegrator();
+            nip = size(integrator.points,1);
+            dN = permute(repmat(obj.sf.computeGradient( integrator.points ),[1,1,1,nelems]),[2,1,4,3]);
+            [~, J1, detJ] = obj.computeJacobian(nodes,dN,el_idx);
+            dNx = pagemtimes(J1,dN);            
+            B = obj.computeStrainDerivativesMatrix(dNx,nip,el_idx);
+            h = repelem(obj.props.h,nelems,1);
+            K = obj.computeElementMatrices(h, integrator.weights, detJ, B, obj.mat.D);
+        end
+
+         function M = computeMassMatrix(obj, nodes, el_idx)
+            nelems = size(obj.elems,1);
+             if (~isempty(el_idx))
+                nelems=numel(el_idx);
+            end
+            integrator = obj.sf.createIntegrator();
+            nip = size(integrator.points,1);
+            dN = permute(repmat(obj.sf.computeGradient( integrator.points ),[1,1,1,nelems]),[2,1,4,3]);
+
+            [~, ~, detJ] = obj.computeJacobian(nodes,dN,el_idx);
+            N = permute(repmat(obj.shapeMatrix( integrator.points ),[1,1,1,nelems]),[1,2,4,3]);
+            h = repelem(obj.props.h,nelems,1);
+            M = obj.computeElementMatrices(h, integrator.weights, detJ, N, [obj.mat.rho 0; 0 obj.mat.rho]);
+        end
         
         function fromGPToNodal(obj,nnodes)
               GPresults = permute( obj.results.GPvalues,[3,1,2]);
