@@ -16,14 +16,19 @@ classdef SolidElasticElem < FiniteElement
             obj.props.D = D;
             obj.props.M = M;
         end
-        function [J, J1, detJ] = computeJacobian(obj,nodes,dN)
+        function [J, J1, detJ] = computeJacobian(obj,nodes,dN,el_idx)
             nelems = size(obj.elems,1);
+            if (~isempty(el_idx))
+                nelems=numel(el_idx);
+                elem_nodes = nodes(obj.elems(el_idx,:)',:);
+            else
+                elem_nodes = nodes(obj.elems',:);
+            end
             nnodes = size(obj.elems,2);
             nip=size(dN,4);
-            elem_nodes = nodes(obj.elems',:); 
 
             elemX = reshape(elem_nodes, nnodes, nelems, 3);
-            elemX = repmat( elemX, [1, 1, 1, 4]);  % then align for pagemtimes
+            elemX = repmat( elemX, [1, 1, 1, nip]);  % then align for pagemtimes
             elemX = permute(elemX, [1, 3, 2, 4]); % final shape: nnodes × 2 × nelems × 4
 
             J=pagemtimes(dN,elemX); 
@@ -49,8 +54,11 @@ classdef SolidElasticElem < FiniteElement
             J1(3,2,:,:) = -(J(1,1,:,:).*J(3,2,:,:) - J(1,2,:,:).*J(3,1,:,:)) ./ detJ;
             J1(3,3,:,:) =  (J(1,1,:,:).*J(2,2,:,:) - J(1,2,:,:).*J(2,1,:,:)) ./ detJ;
         end
-        function B = computeStrainDerivativesMatrix(obj,dNx,nip)
+        function B = computeStrainDerivativesMatrix(obj,dNx,nip,el_idx)
             nelems = size(obj.elems,1);
+            if (~isempty(el_idx))
+                nelems=numel(el_idx);
+            end
             nnodes = size(obj.elems,2);
             ndofs = size( obj.ndofs,2);
             dim = nnodes * ndofs;
@@ -86,140 +94,7 @@ classdef SolidElasticElem < FiniteElement
                 N(3,3:3:nd*nnodes,k)   = Nsf(k,:);
             end
         end
-        function K = computeStifnessMatrix(obj, nodes, varargin)
-            nelems = size(obj.elems, 1);
-            nnodes = size(obj.elems, 2);
-            ndofs = size(obj.ndofs, 2);
-            dim = nnodes * ndofs;
-            
-            integrator = obj.sf.createIntegrator();
-            nip = size(integrator.points, 1);
-            dN = obj.sf.computeGradient(integrator.points);
-            nnd = size(dN, 1); 
         
-            if nargin == 3
-                x = varargin{1};
-            else
-                x = ones(nelems, 1);
-            end
-            
-            D = obj.mat.D; % Stiffness matrix, same for all elements
-            
-            % Precompute the transposed shape function gradients for all integration points
-            dNtr = permute(dN, [2,1,3]); % Shape (nnodes, dim, nip)
-        
-            % Allocate output stiffness matrix
-            K = zeros(dim, dim, nelems);
-        
-            % Compute Jacobians for all elements and integration points
-            elemX = reshape(nodes(obj.elems, :)', 3, nnodes, nelems); % Shape: (3, nnodes, nelems)
-            J = pagemtimes(dNtr, elemX);  % Shape: (3,3,nip,nelems)
-            
-            % Compute determinants and inverse Jacobians
-            detJ = J(1,1,:,:).*J(2,2,:,:).*J(3,3,:,:) ...
-                 - J(1,2,:,:).*J(2,1,:,:).*J(3,3,:,:) ...
-                 - J(1,1,:,:).*J(2,3,:,:).*J(3,2,:,:) ...
-                 + J(1,3,:,:).*J(2,1,:,:).*J(3,2,:,:) ...
-                 + J(1,2,:,:).*J(2,3,:,:).*J(3,1,:,:) ...
-                 - J(1,3,:,:).*J(2,2,:,:).*J(3,1,:,:); % Shape: (1,1,nip,nelems)
-            
-            invJ = zeros(3,3,nip,nelems);
-            invJ(1,1,:,:) =  (J(2,2,:,:).*J(3,3,:,:) - J(2,3,:,:).*J(3,2,:,:)) ./ detJ;
-            invJ(1,2,:,:) = -(J(1,2,:,:).*J(3,3,:,:) - J(1,3,:,:).*J(3,2,:,:)) ./ detJ;
-            invJ(1,3,:,:) =  (J(1,2,:,:).*J(2,3,:,:) - J(1,3,:,:).*J(2,2,:,:)) ./ detJ;
-            
-            invJ(2,1,:,:) = -(J(2,1,:,:).*J(3,3,:,:) - J(2,3,:,:).*J(3,1,:,:)) ./ detJ;
-            invJ(2,2,:,:) =  (J(1,1,:,:).*J(3,3,:,:) - J(1,3,:,:).*J(3,1,:,:)) ./ detJ;
-            invJ(2,3,:,:) = -(J(1,1,:,:).*J(2,3,:,:) - J(1,3,:,:).*J(2,1,:,:)) ./ detJ;
-            
-            invJ(3,1,:,:) =  (J(2,1,:,:).*J(3,2,:,:) - J(2,2,:,:).*J(3,1,:,:)) ./ detJ;
-            invJ(3,2,:,:) = -(J(1,1,:,:).*J(3,2,:,:) - J(1,2,:,:).*J(3,1,:,:)) ./ detJ;
-            invJ(3,3,:,:) =  (J(1,1,:,:).*J(2,2,:,:) - J(1,2,:,:).*J(2,1,:,:)) ./ detJ;
-        
-            % Compute gradients in the physical space
-            dNx = pagemtimes(invJ, dNtr); % Shape: (3,nnodes,nip,nelems)
-        
-            % Construct strain-displacement matrix B
-            B = zeros(6, dim, nip, nelems);
-            for j = 1:nnd
-                B(1, 3*j-2, :, :) = dNx(1,j,:,:);
-                B(2, 3*j-1, :, :) = dNx(2,j,:,:);
-                B(3, 3*j,   :, :) = dNx(3,j,:,:);
-                B(4, 3*j-1, :, :) = dNx(3,j,:,:);
-                B(4, 3*j,   :, :) = dNx(2,j,:,:);
-                B(5, 3*j-2, :, :) = dNx(3,j,:,:);
-                B(5, 3*j,   :, :) = dNx(1,j,:,:);
-                B(6, 3*j-2, :, :) = dNx(2,j,:,:);
-                B(6, 3*j-1, :, :) = dNx(1,j,:,:);
-            end
-            
-            % Compute Ke using vectorized multiplication
-            BDB = pagemtimes(pagemtimes(B, 'transpose', D, 'none'), B, 'none', 'none'); % Shape: (dim, dim, nip, nelems)
-            
-            % Weighting by integration point
-            weights = permute(integrator.weights, [3, 1, 2, 4]); % Shape: (1, nip, 1, 1)
-            Ke = sum(abs(detJ) .* weights .* BDB, 3); % Sum over integration points
-        
-            % Scale by element-wise factors
-            K = x .* Ke;
-            
-            % Flatten output for compatibility
-            K = K(:);
-        end
-        function K = computeStifnessMatrixOld(obj, nodes, varargin)
-            nelems = size(obj.elems,1);
-            nnodes = size(obj.elems,2);
-            ndofs = size( obj.ndofs,2);
-            dim = nnodes * ndofs;
-            integrator = obj.sf.createIntegrator();
-            nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
-            nnd = size(dN,1); 
-            dNtr = permute(dN,[2,1,3]);
-            dNtrc = cell(size(dNtr,3),1);
-            if ( nargin == 3 )
-                x=varargin{1};
-            else
-                x=ones(nelems,1);
-            end
-            for i=1:nip
-                dNtrc{i}=dNtr(:,:,i);
-            end
-            %dNx = zeros(size(dN,2),size(dN,1), nip );
-            K = zeros( dim , dim, nelems );
-            B = zeros(6,dim);
-            D = obj.mat.D;
-            for k=1:nelems
-                elemX = nodes(obj.elems(k,:),:);
-                Ke = zeros( dim , dim );
-                for i=1:nip
-                    J = dNtrc{i}*elemX;
-                    detJ = J(1,1)*J(2,2)*J(3,3)-J(1,2)*J(2,1)*J(3,3)-J(1,1)*J(2,3)*J(3,2)+J(1,3)*J(2,1)*J(3,2)+J(1,2)*J(2,3)*J(3,1)-J(1,3)*J(2,2)*J(3,1);
-                    invJ   = [ (J(2,2)*J(3,3)-J(2,3)*J(3,2))	-(J(1,2)*J(3,3)-J(1,3)*J(3,2))  (J(1,2)*J(2,3)-J(1,3)*J(2,2) ); ...
-              		          -(J(2,1)*J(3,3)-J(2,3)*J(3,1))	 (J(1,1)*J(3,3)-J(1,3)*J(3,1)) -(J(1,1)*J(2,3)-J(1,3)*J(2,1) ); ...
-              		           (J(2,1)*J(3,2)-J(2,2)*J(3,1))	-(J(1,1)*J(3,2)-J(1,2)*J(3,1))  (J(1,1)*J(2,2)-J(1,2)*J(2,1) ) ]/detJ;
-                    dNx = invJ * dNtr(:,:,i);
-                    for j = 1:nnd
-                          B(1, 3*j-2) = dNx(1,j);
-                          B(2, 3*j-1) = dNx(2,j);
-                          B(3, 3*j)   = dNx(3,j);
-
-                          B(4, 3*j-1) = dNx(3,j);
-                          B(4, 3*j) = dNx(2,j);
-                          
-                          B(5, 3*j-2) = dNx(3,j);
-                          B(5, 3*j) = dNx(1,j);
-                          
-                          B(6, 3*j-2) = dNx(2,j);
-                          B(6, 3*j-1) = dNx(1,j);
-
-                    end                   
-                    Ke = Ke + abs(detJ) * integrator.weights(i) * B'*D*B;
-                end
-                K(:,:,k) = x(k)*Ke;
-            end
-            K=K(:);
-        end
         function K = computeGeometricStifnessMatrix(obj, nodes, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
@@ -281,41 +156,7 @@ classdef SolidElasticElem < FiniteElement
             end
             K=K(:);
         end
-        function M = computeMassMatrix(obj, nodes, varargin)
-            nelems = size(obj.elems,1);
-            nnodes = size(obj.elems,2);
-            ndofs = size( obj.ndofs,2);
-            dim = nnodes * ndofs;
-            integrator = obj.sf.createIntegrator();
-            nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
-            N = obj.shapeMatrix( integrator.points );
-            nnd = size(dN,1); 
-            dNtr = permute(dN,[2,1,3]);
-            dNtrc = cell(size(dNtr,3),1);
-            if ( nargin == 3 )
-                x=varargin{1};
-            else
-                x=ones(nelems,1);
-            end
-            for i=1:nip
-                dNtrc{i}=dNtr(:,:,i);
-            end
-            %dNx = zeros(size(dN,2),size(dN,1), nip );
-            M = zeros( dim , dim, nelems );
-            rho = obj.mat.rho;
-            for k=1:nelems
-                elemX = nodes(obj.elems(k,:),:);
-                Me = zeros( dim , dim );
-                for i=1:nip
-                    J = dNtrc{i}*elemX;
-                    detJ = J(1,1)*J(2,2)*J(3,3)-J(1,2)*J(2,1)*J(3,3)-J(1,1)*J(2,3)*J(3,2)+J(1,3)*J(2,1)*J(3,2)+J(1,2)*J(2,3)*J(3,1)-J(1,3)*J(2,2)*J(3,1);                
-                    Me = Me + abs(detJ) * integrator.weights(i) * N(:,:,i)' * N(:,:,i);
-                end
-                M(:,:,k) = x(k)*rho*Me;
-            end
-            M=M(:);
-        end
+        
         function Pnodal = thermalLoad(obj, nodes, Telems, Pnodal, alpha, varargin)
             nelems = size(Telems,1);
             nnodes = size(obj.elems,2);

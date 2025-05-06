@@ -27,23 +27,21 @@ classdef PlaneStressElem < PlaneElem
             obj.results.gp.stress = zeros(3,nelems,nip);
             obj.results.gp.all = zeros(size(obj.results.names,2),nelems,nip);
         end
-        function computeResults(obj,nodes, q, varargin)
+        function computeResults(obj,nodes, q, x, el_idx)
             nelems = size(obj.elems,1);
+            if (~isempty(el_idx))
+                nelems=numel(el_idx);
+            end
             nnodes = size(obj.elems,2);
             ndofs = size( obj.ndofs,2);
             integrator = obj.sf.createIntegrator();
             nip = size(integrator.points,1);
             dN = permute(repmat(obj.sf.computeGradient( integrator.points ),[1,1,1,nelems]),[2,1,4,3]);
-            
-            if ( nargin == 4 )
-                x=varargin{1};
-            else
-                x=ones(nelems,1);
-            end
+           
 
-            [~, J1, ~] = obj.computeJacobian(nodes,dN);
+            [~, J1, ~] = obj.computeJacobian(nodes,dN,el_idx);
             dNx = pagemtimes(J1,dN);            
-            B = obj.computeStrainDerivativesMatrix(dNx,nip);
+            B = obj.computeStrainDerivativesMatrix(dNx,nip,el_idx);
 
             qelems = reshape( q( obj.elems',:)', nnodes * ndofs, 1 , nelems, 1 );
             qelems = repmat(qelems,[1,1,1,4]);
