@@ -1,4 +1,7 @@
 clear;
+clear classes
+clear all
+rehash
 close all;
 
 % Cantilever topology optimization elastic task.

@@ -4,7 +4,7 @@ close all;
 % Cantilever topology optimization elastic task.
 
 % Resolution of shortest (vertical) edge
-res = 80;
+res = 60;
 
 % height of the cantilever
 h = 1;
@@ -13,7 +13,7 @@ h = 1;
 aspect=2;
 
 % Filtering radius
-Rfilter = 4*h/res;
+Rfilter = 2*h/res;
 
 %Removal intensity threshold
 cutTreshold = 0.005;
@@ -102,7 +102,7 @@ analysisWithBuckling.Pnodal=stability.Pnodal;
 analysisWithBuckling.Pfem=stability.Pfem;
 analysisWithBuckling.supports=stability.supports;
 
-harmonicVivrations = ElasticHarmonicVibrations(fe, mesh, 2*pi*1.0E4, true);
+harmonicVivrations = ElasticHarmonicVibrations(fe, mesh, 2*pi*174, true);
 harmonicVivrations.Pnodal=stability.Pnodal;
 harmonicVivrations.Pfem=stability.Pfem;
 harmonicVivrations.supports=stability.supports;
@@ -113,17 +113,17 @@ harmonicVivrations.supports=stability.supports;
 % [objF, xopt]  = topOptLinear.solve();
 % toc
 
-% figure;
-% tic
-% topOptHarmonicVivrations = StressIntensityTopologyOptimizationVol( Rfilter, harmonicVivrations, cutTreshold, penal, 0.4, true );
-% [objF, xopt]  = topOptHarmonicVivrations.solve();
-% toc
-
 figure;
 tic
-topOptSecondOrder = StressIntensityTopologyOptimizationDynamicBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.30, true );
-[objF, xopt]  = topOptSecondOrder.solve();
+topOptHarmonicVivrations = StressIntensityTopologyOptimizationVol( Rfilter, harmonicVivrations, cutTreshold, penal, 0.3, true );
+[objF, xopt]  = topOptHarmonicVivrations.solve();
 toc
+
+% figure;
+% tic
+% topOptSecondOrder = StressIntensityTopologyOptimizationDynamicBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.30, true );
+% [objF, xopt]  = topOptSecondOrder.solve();
+% toc
 
 % figure;
 % tic
@@ -131,7 +131,7 @@ toc
 % [objF, xopt]  = topOptBuckling.solve();
 % toc
 
-save('Cantilever2DDynamicBuckling.mat');
+load('Cantilever2DDynamicBuckling.mat');
 
 figure, hold on
 p1=plot(topOptSecondOrder.plVol,topOptSecondOrder.plLambda,'b','LineWidth', 3);

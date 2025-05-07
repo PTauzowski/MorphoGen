@@ -6,7 +6,7 @@ classdef StressIntensityTopologyOptimizationVol < StressIntensityTopologyOptimiz
     
     methods
         function obj = StressIntensityTopologyOptimizationVol(Rmin,linearElasticProblem,maxais,penal,Vend,is_const)
-            obj=obj@StressIntensityTopologyOptimization(1,Rmin,linearElasticProblem,maxais,penal,is_const)
+            obj=obj@StressIntensityTopologyOptimization(1,Rmin,linearElasticProblem,maxais,penal,is_const);
             obj.Vend=Vend;
         end
                            
