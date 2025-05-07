@@ -24,7 +24,7 @@ classdef LinearStability < FEAnalysis
            K = obj.assemblyGlobalMatrix('computeStifnessMatrix',1,false);
            obj.qfem = solver.solve(K, obj.Pfem );
            obj.qnodal = obj.fromFEMVector( obj.qfem );
-           obj.computeElementResults();
+           obj.computeElementResults(1);
            Kg = obj.assemblyGlobalMatrix('computeGeometricStifnessMatrix',1,false);
            [obj.qforms, obj.lambdas]=solver.solveEigenproblem(K,Kg,num_eigenvalues);
        end
@@ -48,10 +48,10 @@ classdef LinearStability < FEAnalysis
        end
 
        function setForm(obj,i)
-           obj.qfem =0*obj.Pfem;
-           obj.qfem(obj.freedofs)= obj.qforms(:,i);
+           obj.qfem = 0*obj.Pfem;
+           obj.qfem = obj.qforms(:,i);
            obj.qnodal = obj.fromFEMVector( obj.qfem );
-           obj.computeElementResults();
+           obj.computeElementResults(1);
        end
    end
 end

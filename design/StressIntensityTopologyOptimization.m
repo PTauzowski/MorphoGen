@@ -77,7 +77,7 @@ classdef (Abstract) StressIntensityTopologyOptimization < TopologyOptimization
         end
 
         function ais = computeAverageIntensities(obj)
-            obj.qnodal = obj.FEAnalysis.solveWeighted((obj.x).^obj.penal);
+            obj.qnodal = obj.FEAnalysis.solve((obj.x).^obj.penal);
             obj.FEAnalysis.computeElementResults(obj.x.^obj.penal);
             ais = zeros(obj.FEAnalysis.getTotalElemsNumber(),1);
             for i=1:size(obj.FEAnalysis.felems,2)

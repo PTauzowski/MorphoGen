@@ -102,10 +102,21 @@ analysisWithBuckling.Pnodal=stability.Pnodal;
 analysisWithBuckling.Pfem=stability.Pfem;
 analysisWithBuckling.supports=stability.supports;
 
+harmonicVivrations = ElasticHarmonicVibrations(fe, mesh, 2*pi*1.0E4, true);
+harmonicVivrations.Pnodal=stability.Pnodal;
+harmonicVivrations.Pfem=stability.Pfem;
+harmonicVivrations.supports=stability.supports;
+
 % figure;
 % tic
 % topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.4, true );
 % [objF, xopt]  = topOptLinear.solve();
+% toc
+
+% figure;
+% tic
+% topOptHarmonicVivrations = StressIntensityTopologyOptimizationVol( Rfilter, harmonicVivrations, cutTreshold, penal, 0.4, true );
+% [objF, xopt]  = topOptHarmonicVivrations.solve();
 % toc
 
 figure;

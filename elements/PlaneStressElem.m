@@ -44,7 +44,7 @@ classdef PlaneStressElem < PlaneElem
             B = obj.computeStrainDerivativesMatrix(dNx,nip,el_idx);
 
             qelems = reshape( q( obj.elems',:)', nnodes * ndofs, 1 , nelems, 1 );
-            qelems = repmat(qelems,[1,1,1,4]);
+            qelems = repmat(qelems,[1,1,1,nip]);
             e = pagemtimes(B,qelems);
             s = reshape(x,1,1,[],1) .* pagemtimes(obj.mat.D,e);
             
