@@ -1,6 +1,6 @@
 clear;
 close all;
-res = 20;
+res = 25;
 l = 3;
 
 % Filtering radius
@@ -31,8 +31,8 @@ analysis.fixNodes( symmetrySelector, ["uy"] );
 
 analysis.printProblemInfo();
 fe.plot(mesh.nodes);
-analysis.plotCurrentLoad();
-analysis.plotSupport();
+%analysis.plotCurrentLoad();
+%analysis.plotSupport();
 
 nEigenForms=10;
 stability = LinearStability( analysis.felems, mesh);

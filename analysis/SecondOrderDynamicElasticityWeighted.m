@@ -18,7 +18,7 @@ classdef SecondOrderDynamicElasticityWeighted < FEAnalysis
 
        end
        
-       function qfem = solveWeighted(obj, x)
+       function qfem = solve(obj, x)
            [I,J,~] = obj.globalMatrixIndices();
            obj.prepareRHSVectors();
             if size(obj.rotations,1)== 0 
@@ -37,7 +37,8 @@ classdef SecondOrderDynamicElasticityWeighted < FEAnalysis
            Kg = obj.assemblyGlobalMatrix('computeGeometricStifnessMatrix',x,false);
            M  = obj.assemblyGlobalMatrix('computeMassMatrix',x,false);
            [eigenvectors, lambdas] = solver.solveEigenproblem(K,Kg,10);
-           [mode, omegas] = solver.solveEigenproblem(K,M,10);
+           [mode, omegas1] = solver.solveEigenproblem(K,M,10);
+           omegas = sqrt(omegas1) / 2 / pi;
            obj.modes1=[ obj.modes1 mode(:,1) ];
            obj.modes2=[ obj.modes2 mode(:,2) ];
            obj.modes3=[ obj.modes3 mode(:,3) ];

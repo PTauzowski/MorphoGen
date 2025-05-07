@@ -10,17 +10,17 @@ classdef LinearElasticityWeighted < FEAnalysis
             obj.isConst=isConst;
             obj.rotations=[];
        end
-       function K = globalMatrixAggregationWeighted(obj, fname, x)
-            K = [];
-            ei = getElemIndices(obj);
-            for k=1:size(obj.felems,2)
-                if ismethod(obj.felems{k},fname)
-                    K = [ K; obj.felems{k}.(fname)(obj.mesh.nodes,x(ei{k})) ];
-                else
-                    error("Class " + class(obj.felems{k}) + " or its predecessors not implements function :"+fname);
-                end
-            end
-        end
+       % function K = globalMatrixAggregationWeighted(obj, fname, x)
+       %      K = [];
+       %      ei = getElemIndices(obj);
+       %      for k=1:size(obj.felems,2)
+       %          if ismethod(obj.felems{k},fname)
+       %              K = [ K; obj.felems{k}.(fname)(obj.mesh.nodes,x(ei{k})), [] ];
+       %          else
+       %              error("Class " + class(obj.felems{k}) + " or its predecessors not implements function :"+fname);
+       %          end
+       %      end
+       %  end
        function qfem = solveWeighted(obj, x)
            [I,J,~] = obj.globalMatrixIndices();
            obj.prepareRHSVectors();
@@ -30,9 +30,9 @@ classdef LinearElasticityWeighted < FEAnalysis
                solver = LinearEquationsSystemTr2D(I, J, obj.toFEMVector(obj.supports),obj.rotations);
            end
            if obj.isConst
-                obj.qfem = solver.solve(obj.globalMatrixAggregationWeighted('computeStifnessMatrixConst',x), obj.Pfem);
+                obj.qfem = solver.solve(obj.assemblyGlobalMatrix('computeStifnessMatrixConst',x,true), obj.Pfem);
            else
-                obj.qfem = solver.solve(obj.globalMatrixAggregationWeighted('computeStifnessMatrix',x), obj.Pfem);
+                obj.qfem = solver.solve(obj.assemblyGlobalMatrix('computeStifnessMatrix',x,false), obj.Pfem);
            end
            qfem=obj.qfem;
            obj.qnodal=obj.fromFEMVector(qfem(:,1));

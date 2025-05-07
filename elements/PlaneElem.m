@@ -53,34 +53,21 @@ classdef PlaneElem < FiniteElement
             B(3, cols,   :, :) = dNx(2, :, :, :);
             B(3, cols2,  :, :) = dNx(1, :, :, :);
         end
-        
-        
-        function K = computeGeometricStifnessMatrix(obj, nodes, el_idx)
-            nelems = size(obj.elems,1);
-            if (~isempty(el_idx))
-                nelems=numel(el_idx);
-            end
-            nnodes = size(obj.elems,2);
-            ndofs = size( obj.ndofs,2);
-            dim = nnodes * ndofs;
-            integrator = obj.sf.createIntegrator();
-            nip = size(integrator.points,1);
-            dN = permute(repmat(obj.sf.computeGradient( integrator.points ),[1,1,1,nelems]),[2,1,4,3]);
-            nnd = size(dN,nip);
 
-            [~, J1, detJ] = obj.computeJacobian(nodes,dN,el_idx);
-            dNx = pagemtimes(J1,dN);            
-            s = zeros(2,2,nelems,nip);
+        function s=computeGeometricStressMatrix(obj,nip)
+            s = zeros(2,2,size(obj.elems,1),nip);
             s(1,1,:,:)=obj.results.gp.stress(1,:,:);
             s(2,2,:,:)=obj.results.gp.stress(2,:,:);
             s(2,1,:,:)=obj.results.gp.stress(3,:,:);
             s(1,2,:,:)=obj.results.gp.stress(3,:,:);
-            h = repelem(obj.props.h,nelems,1);
-            K = zeros( dim , dim, nelems );
-            So = obj.computeElementMatrices( h, integrator.weights, detJ, dNx, s);
-            K(1:2:dim,1:2:dim,:) = So;
-            K(2:2:dim,2:2:dim,:) = So;
         end
+
+        function K=composeGeometricStifnessMatrix(obj,K,So)
+             dim=size(K,1);
+             K(1:2:dim,1:2:dim,:) = So;
+             K(2:2:dim,2:2:dim,:) = So;
+        end
+        
         
         function dK = computeStifnessMatrixGradMat(obj, nodes, q, varargin)
             nelems = size(obj.elems,1);

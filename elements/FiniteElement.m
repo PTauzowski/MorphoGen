@@ -95,6 +95,63 @@ classdef (Abstract) FiniteElement < handle
             N = permute(repmat(obj.shapeMatrix( integrator.points ),[1,1,1,nelems]),[1,2,4,3]);
             h = repelem(obj.props.h,nelems,1);
             M = obj.computeElementMatrices(h, integrator.weights, detJ, N, [obj.mat.rho 0; 0 obj.mat.rho]);
+         end
+
+         function K = computeGeometricStifnessMatrix(obj, nodes, el_idx)
+            nelems = size(obj.elems,1);
+            if (~isempty(el_idx))
+                nelems=numel(el_idx);
+            end
+            nnodes = size(obj.elems,2);
+            ndofs = size( obj.ndofs,2);
+            dim = nnodes * ndofs;
+            integrator = obj.sf.createIntegrator();
+            nip = size(integrator.points,1);
+            dN = permute(repmat(obj.sf.computeGradient( integrator.points ),[1,1,1,nelems]),[2,1,4,3]);
+
+            [~, J1, detJ] = obj.computeJacobian(nodes,dN,el_idx);
+            dNx = pagemtimes(J1,dN);            
+            
+            K = zeros( dim , dim, nelems );
+            So = obj.computeElementMatrices( 1, integrator.weights, detJ, dNx, obj.computeGeometricStressMatrix(nip) );
+            K = obj.composeGeometricStifnessMatrix(K,So);
+         end
+
+         function K = computeGeometricStifnessMatrixOld(obj, nodes, el_idx)
+            nelems = size(obj.elems,1);
+            if (~isempty(el_idx))
+                nelems=numel(el_idx);
+            end
+            nnodes = size(obj.elems,2);
+            ndofs = size( obj.ndofs,2);
+            dim = nnodes * ndofs;
+            integrator = obj.sf.createIntegrator();
+            nip = size(integrator.points,1);
+            dN = permute(repmat(obj.sf.computeGradient( integrator.points ),[1,1,1,nelems]),[2,1,4,3]);
+
+            [~, J1, ~] = obj.computeJacobian(nodes,dN,el_idx);
+            dNx = pagemtimes(J1,dN);
+
+            s=computeBucklingStressMatrix();
+
+            s = zeros(3,3,nelems,nip);
+            s(1,1,:,:)=obj.results.gp.stress(1,:,:);
+            s(1,1,:,:)=obj.results.gp.stress(1,:,:);
+            s(2,2,:,:)=obj.results.gp.stress(2,:,:);
+            s(3,3,:,:)=obj.results.gp.stress(3,:,:);
+            s(2,3,:,:)=obj.results.gp.stress(4,:,:);
+            s(1,3,:,:)=obj.results.gp.stress(5,:,:);
+            s(1,2,:,:)=obj.results.gp.stress(6,:,:);
+            s(3,2,:,:)=obj.results.gp.stress(4,:,:);
+            s(3,1,:,:)=obj.results.gp.stress(5,:,:);
+            s(2,1,:,:)=obj.results.gp.stress(6,:,:);
+            K = zeros( dim , dim, nelems );
+            So = obj.computeElementMatrices( h, integrator.weights, detJ, dNx, s);
+            K=obj.composeGeometricStifnessMatrix(So)
+            K(1:3:dim,1:3:dim,k) = x(k)*So;
+            K(2:3:dim,2:3:dim,k) = x(k)*So;
+            K(3:3:dim,3:3:dim,k) = x(k)*So;
+
         end
         
         function fromGPToNodal(obj,nnodes)
