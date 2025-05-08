@@ -1,7 +1,7 @@
 classdef LinearNaturalVibration < FEAnalysis
 
     properties
-        lambdas, qforms, freedofs, fixeddofs;
+        omegas, qforms, freedofs, fixeddofs;
     end
 
    methods
@@ -38,7 +38,7 @@ classdef LinearNaturalVibration < FEAnalysis
            %obj.qnodal = obj.fromFEMVector( obj.qfem );
            %obj.computeElementResults();
            M = obj.globalMatrixAggregation('computeMassMatrix');
-           [obj.qforms, obj.lambdas]=solver.solveEigenproblem(K,M,num_eigenvalues);
+           [obj.qforms, obj.omegas]=solver.solveEigenproblem(K,M,num_eigenvalues);
        end
 
        function solveWeighted(obj, x, num_eigenvalues)
@@ -56,7 +56,7 @@ classdef LinearNaturalVibration < FEAnalysis
            %obj.qnodal = obj.fromFEMVector( obj.qfem );
            %obj.computeElementResults(x);
            M = obj.globalMatrixAggregationWeighted('computeMassMatrix',x);
-           [obj.qforms,obj.lambdas]=solver.solveEigenproblem(K,M,num_eigenvalues);
+           [obj.qforms,obj.omegas]=solver.solveEigenproblem(K,M,num_eigenvalues);
        end
 
        function setForm(obj,i)

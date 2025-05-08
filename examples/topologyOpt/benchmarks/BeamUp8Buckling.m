@@ -21,7 +21,7 @@ material = PlaneStressMaterial('mat1');
 material.setElasticIzo(1, 0.3);
 fe.setMaterial( material );
 fe.props.h=1;
-P=0.00020;
+P=0.00025;
 
 % Creating linear elastic finite element analysis object with weighted matrix feature, weighted by element density.
 analysisLinear = LinearElasticityWeighted( fe, mesh, false );
@@ -82,11 +82,11 @@ analysisSecondOrder.supports=stability.supports;
 % [objF, xopt]  = topOptLinear.solve();
 % toc
 
-% figure;
-% tic
-% topOptSecondOrder = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.4, true );
-% [objF, xopt]  = topOptSecondOrder.solve();
-% toc
+figure;
+tic
+topOptSecondOrder = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.4, true );
+[objF, xopt]  = topOptSecondOrder.solve();
+toc
 
 figure;
 tic

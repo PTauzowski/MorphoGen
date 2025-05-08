@@ -81,17 +81,28 @@ classdef (Abstract) FEAnalysis < handle
         function F = fromFEMVector( obj, Fe )
             F=reshape(Fe,size(obj.ndofs,2),size(obj.mesh.nodes,1))';
         end
-        function K = globalMatrixAggregation(obj, fname)
+        function K = assemblyGlobalMatrix(obj, fname, x, is_const)
             K = [];
-            for k=1:max(size(obj.felems))
+            ei = obj.getElemIndices();
+            for k=1:numel(obj.felems)
+                ne = numel(ei{k});
                 if ismethod(obj.felems{k},fname)
-                    K = [ K obj.felems{k}.(fname)(obj.mesh.nodes) ];
+                    if (is_const)
+                        Ke = obj.felems{k}.(fname)(obj.mesh.nodes, 1 );
+                        Ke=repmat(Ke,1,1,ne);
+                    else
+                        Ke = obj.felems{k}.(fname)(obj.mesh.nodes, [] );
+                    end
+                    if (numel(x)==ne)
+                        Ke = reshape(x,1,1,ne) .* Ke;
+                    end
+                    K = [ K;  Ke(:) ];
                 else
-                    error("Class " + class(fe) + " or its predecessors not implements function :"+fname);
+                    error("Class " + class(obj.felems{k}) + " or its predecessors not implements element matrix function named:"+fname);
                 end
             end
         end
-        function K = globalSolutionDependendMatrixAggregation(obj, fname )
+        function K = assemblyNonlinearGlobalMatix(obj, fname, q )
             K = [];
             for k=1:max(size(obj.felems))
                 if ismethod(obj.felems{k},fname)
@@ -207,18 +218,16 @@ classdef (Abstract) FEAnalysis < handle
         function initializeResults(obj)
             cellfun(@(x) x.initializeResults(),obj.felems);
         end
-        function computeElementResults(obj,varargin)
+        function computeElementResults(obj,x)
             resnumber=0;
             nnodes=size(obj.mesh.nodes, 1);
             ei = obj.getElemIndices();
-            
-            if ( nargin == 2 )
-                x=varargin{1};
+            if (numel(x)>1)
                 for k=1:size(obj.felems,2)
-                    obj.felems{k}.computeResults( obj.mesh.nodes, obj.qnodal,x(ei{k}));
+                    obj.felems{k}.computeResults( obj.mesh.nodes, obj.qnodal, x(ei{k}), []);
                 end
             else
-                cellfun(@(x) x.computeResults( obj.mesh.nodes,obj.qnodal ),obj.felems);
+                cellfun(@(x) x.computeResults( obj.mesh.nodes,obj.qnodal, 1, [] ),obj.felems);
             end
             resnumber = max(cellfun( @(x) size(x.results.gp.all,1), obj.felems),1);
             nres = zeros( nnodes, resnumber(1) );
@@ -278,7 +287,7 @@ classdef (Abstract) FEAnalysis < handle
               dim    = size(obj.mesh.nodes,2);
               dg     = norm( max(obj.mesh.nodes) - min(obj.mesh.nodes) );
               maxs = max( abs(min(min(obj.Pnodal))), abs(max(max(obj.Pnodal)) ) );
-              xp = obj.mesh.nodes - obj.Pnodal ./ maxs * dg * 0.05;
+              xp = obj.mesh.nodes - obj.Pnodal(:,1:3) ./ maxs * dg * 0.05;
 
               if dim == 2
                 X = [xp(:,1) obj.mesh.nodes(:,1)]';
@@ -300,7 +309,7 @@ classdef (Abstract) FEAnalysis < handle
 
               irots = find(obj.rotations);
 
-              xp = xps - obj.supports * dg * 0.02;
+              xp = xps - obj.supports(:,1:3) * dg * 0.02;
               
               for k=1:length(irots(:))
                   alpha = obj.rotations(irots(k));

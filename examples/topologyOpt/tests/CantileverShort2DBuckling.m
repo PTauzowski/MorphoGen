@@ -4,13 +4,13 @@ close all;
 % Cantilever topology optimization elastic task.
 
 % Resolution of shortest (vertical) edge
-res = 80;
+res = 200;
 
 % height of the cantilever
 h = 1;
 
 % Aspect ratio length/height
-aspect=2;
+aspect=0.5;
 
 % Filtering radius
 Rfilter = 4*h/res;
@@ -36,7 +36,7 @@ fe=PlaneStressElem( sfL4, mesh.elems );
 % Create isotropic material object
 material = PlaneStressMaterial('mat1');
 material.setElasticIzo(205E9, 0.3);
-material.setMassIzoMatrix(7850)
+
 % Assigning material to finite element
 fe.setMaterial( material );
 
@@ -48,14 +48,19 @@ analysisSecondOrder = SecondOrderElasticityWeighted(fe, mesh, 0, false);
 fixedEdgeSelector = Selector( @(x)( abs(x(:,1)) < 0.0005 ) );
 
 % Fixing structure according to above defined node selector object
-analysisLinear.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
-analysisSecondOrder.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
+%analysisLinear.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
+analysisLinear.fixClosestNode([0 0], ["ux" "uy"], [0 0] );
+analysisLinear.fixClosestNode([0 h], ["ux" "uy"], [0 0] );
+
+%analysisSecondOrder.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
+analysisSecondOrder.fixClosestNode([0 0], ["ux" "uy"], [0 0] );
+analysisSecondOrder.fixClosestNode([0 h], ["ux" "uy"], [0 0] );
 
 % Creating load vector with one node loaded at the middle of right edge
-P=-2.0E8; x%100;
+P=-2.0E8; %100;
 %P=-1.5E8; %150;
 
-hp=0;
+hp=h/2;
 analysisLinear.loadClosestNode([aspect*h, hp ], ["ux" "uy"], [0 P] );
 analysisSecondOrder.loadClosestNode([aspect*h, hp ], ["ux" "uy"], [0 P] );
 
@@ -67,6 +72,7 @@ stability.supports = analysisLinear.supports;
 stability.solve( nEigenForms);
 lambdas = diag(stability.lambdas)
 for k=1:min(10,nEigenForms)
+    %figure;
     subplot(5, 2, k);
     stability.setForm(k);
     fe.plotWired(mesh.nodes,stability.qnodal,0.2);
@@ -76,39 +82,40 @@ for k=1:min(10,nEigenForms)
 end
 
 
-analysisWithBuckling = SecondOrderElasticityWeighted( fe, mesh, 0.90, false );
+analysisWithBuckling = SecondOrderElasticityWeighted( fe, mesh, 0.99, false );
 analysisWithBuckling.Pnodal=stability.Pnodal;
 analysisWithBuckling.Pfem=stability.Pfem;
 analysisWithBuckling.supports=stability.supports;
 
-figure;
-tic
-topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.4, true );
-[objF, xopt]  = topOptLinear.solve();
-toc
+% figure;
+% tic
+% topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.3, true );
+% [objF, xopt]  = topOptLinear.solve();
+% toc
+% 
+
+% figure;
+% tic
+% topOptSecondOrder = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.1, true );
+% [objF, xopt]  = topOptSecondOrder.solve();
+% toc
 
 figure;
 tic
-topOptSecondOrder = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisSecondOrder, cutTreshold, penal, 0.38, true );
-[objF, xopt]  = topOptSecondOrder.solve();
-toc
-
-figure;
-tic
-topOptBuckling = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisWithBuckling, cutTreshold, penal, 0.38, true );
+topOptBuckling = StressIntensityTopologyOptimizationBuckling( Rfilter, analysisWithBuckling, cutTreshold, penal, 0.1, true );
 [objF, xopt]  = topOptBuckling.solve();
 toc
 
-%load('Cantilever2DBucklingDown80.mat');
+%load('CantileverShortC2DBucklingDown160.mat');
 
-figure, hold on
-p1=plot(topOptSecondOrder.plVol,topOptSecondOrder.plLambda,'b','LineWidth', 3);
-set(gca, 'XDir', 'reverse');
-title('Critical force coefficient evolution without buckling');
-xlabel('Volume fracion [%]');
-ylabel('Critical force coefficient [%]');
-xlim([37 57]);
-set(gca, 'FontSize', 24)
+% figure, hold on
+% p1=plot(topOptSecondOrder.plVol,topOptSecondOrder.plLambda,'b','LineWidth', 3);
+% set(gca, 'XDir', 'reverse');
+% title('Critical force coefficient evolution without buckling');
+% xlabel('Volume fracion [%]');
+% ylabel('Critical force coefficient [%]');
+% xlim([37 57]);
+% set(gca, 'FontSize', 24)
 
 figure, hold on
 p2=plot(topOptBuckling.plVol,topOptBuckling.plLambda,'r','LineWidth', 3);
@@ -116,19 +123,19 @@ set(gca, 'XDir', 'reverse');
 title('Critical force coefficient evolution with buckling');
 xlabel('Volume fracion [%]');
 ylabel('Critical force coefficient [%]');
-xlim([37 57]);
+xlim([5 57]);
 set(gca, 'FontSize', 24)
 
-figure, hold on
-p1=plot(topOptSecondOrder.plVol,topOptSecondOrder.plLambda,'b','LineWidth', 3);
-p2=plot(topOptBuckling.plVol,topOptBuckling.plLambda,'r','LineWidth', 3);
-legend([p1, p2], {'Without buckling', 'With buckling'});
-set(gca, 'XDir', 'reverse');
-title('Comparison of critical force evolution coefficient');
-xlabel('Volume fracion [%]');
-ylabel('Critical force coefficient [%]');
-xlim([37 57]);
-set(gca, 'FontSize', 24)
+% figure, hold on
+% p1=plot(topOptSecondOrder.plVol,topOptSecondOrder.plLambda,'b','LineWidth', 3);
+% p2=plot(topOptBuckling.plVol,topOptBuckling.plLambda,'r','LineWidth', 3);
+% legend([p1, p2], {'Without buckling', 'With buckling'});
+% set(gca, 'XDir', 'reverse');
+% title('Comparison of critical force evolution coefficient');
+% xlabel('Volume fracion [%]');
+% ylabel('Critical force coefficient [%]');
+% xlim([37 57]);
+% set(gca, 'FontSize', 24)
 
 % figure;
 % tic
@@ -136,5 +143,5 @@ set(gca, 'FontSize', 24)
 % [objF, xopt]  = topOpt.solve();
 % toc
 
-%save('Cantilever2DBucklingDown80.mat');
+save('Cantilever2DBucklingDown80.mat');
 

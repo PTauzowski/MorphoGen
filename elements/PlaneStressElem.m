@@ -27,54 +27,37 @@ classdef PlaneStressElem < PlaneElem
             obj.results.gp.stress = zeros(3,nelems,nip);
             obj.results.gp.all = zeros(size(obj.results.names,2),nelems,nip);
         end
-        function computeResults(obj,nodes, q, varargin)
+        function computeResults(obj,nodes, q, x, el_idx)
             nelems = size(obj.elems,1);
+            if (~isempty(el_idx))
+                nelems=numel(el_idx);
+            end
             nnodes = size(obj.elems,2);
             ndofs = size( obj.ndofs,2);
-            dim = nnodes * ndofs;
             integrator = obj.sf.createIntegrator();
             nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
-            nnd = size(dN,1); 
-            dNtr = permute(dN,[2,1,3]);
-            dNtrc = cell(size(dNtr,3),1);
-            if ( nargin == 4 )
-                x=varargin{1};
-            else
-                x=ones(nelems,1);
-            end
-            for i=1:nip
-                dNtrc{i}=dNtr(:,:,i);
-            end
-            B = zeros(3,dim);
-            D = obj.mat.D;
-            qelems = reshape( q( obj.elems',:)', nnodes * ndofs, nelems );
-            for k=1:nelems
-                elemX = nodes(obj.elems(k,:),:);
-                for i=1:nip
-                    J = dNtrc{i}*elemX;
-                    detJ = J(1,1) * J(2,2) - J(1,2) * J(2,1);
-                    dNx = (1 / detJ * [ J(2,2) -J(1,2); -J(2,1)  J(1,1) ]) * dNtrc{i};
-                    for j = 1:nnd
-                      B(1, 2*j-1) = dNx(1,j);
-                      B(2, 2*j)   = dNx(2,j);
-                      B(3, 2*j-1) = dNx(2,j);
-                      B(3, 2*j)   = dNx(1,j);
-                    end
-                    e = B*qelems(:,k); %reshape( q(obj.elems(k,:),:)', nnodes * ndofs,1 );
-                    s = x(k)*D*e;
-                    obj.results.gp.strain(:,k,i) = e;
-                    obj.results.gp.stress(:,k,i) = s;
-                end
-            end
-            %obj.results.gp.strain = permute(strain,[2,3,1]);
-            %obj.results.gp.stress = permute(stress,[2,3,1]);
-            exx = obj.results.gp.strain(1,:,:);
-            eyy = obj.results.gp.strain(2,:,:);
-            exy = obj.results.gp.strain(3,:,:);
-            sxx = obj.results.gp.stress(1,:,:);
-            syy = obj.results.gp.stress(2,:,:);
-            sxy = obj.results.gp.stress(3,:,:);
+            dN = permute(repmat(obj.sf.computeGradient( integrator.points ),[1,1,1,nelems]),[2,1,4,3]);
+           
+
+            [~, J1, ~] = obj.computeJacobian(nodes,dN,el_idx);
+            dNx = pagemtimes(J1,dN);            
+            B = obj.computeStrainDerivativesMatrix(dNx,nip,el_idx);
+
+            qelems = reshape( q( obj.elems',:)', nnodes * ndofs, 1 , nelems, 1 );
+            qelems = repmat(qelems,[1,1,1,nip]);
+            e = pagemtimes(B,qelems);
+            s = reshape(x,1,1,[],1) .* pagemtimes(obj.mat.D,e);
+            
+            obj.results.gp.strain=squeeze(e(:,1,:,:));
+            obj.results.gp.stress=squeeze(s(:,1,:,:));
+    
+            exx = squeeze(obj.results.gp.strain(1,:,:));
+            eyy = squeeze(obj.results.gp.strain(2,:,:));
+            exy = squeeze(obj.results.gp.strain(3,:,:));
+            sxx = squeeze(obj.results.gp.stress(1,:,:));
+            syy = squeeze(obj.results.gp.stress(2,:,:));
+            sxy = squeeze(obj.results.gp.stress(3,:,:));
+
             e1 =  ( exx + eyy ) ./ 2.0 + sqrt( ( (exx - eyy) ./ 2.0 ) .* ( (exx - eyy) ./ 2.0 ) + ( exy .* exy )  );
             e2 =  ( exx + eyy ) ./ 2.0 - sqrt( ( (exx - eyy) ./ 2.0 ) .* ( (exx - eyy) ./ 2.0 ) + ( exy .* exy )  );
             maxt = ( e1 - e2 ) ./ 2.0;
@@ -87,25 +70,27 @@ classdef PlaneStressElem < PlaneElem
             stheta = 2 .* atan( sxy ./ (sxx - syy) );
             sHM = sqrt(  s1 .* s1 - s1 .* s2 + s2 .* s2 );
            
-            obj.results.gp.all(1,:,:) = exx(1,:,:);
-            obj.results.gp.all(2,:,:) = eyy(1,:,:);
-            obj.results.gp.all(3,:,:) = exy(1,:,:);
-            obj.results.gp.all(4,:,:) = sxx(1,:,:);
-            obj.results.gp.all(5,:,:) = syy(1,:,:);
-            obj.results.gp.all(6,:,:) = sxy(1,:,:);
-            obj.results.gp.all(7,:,:) = e1(1,:,:); 
-            obj.results.gp.all(8,:,:) = e2(1,:,:);
-            obj.results.gp.all(9,:,:) = maxt(1,:,:);
-            obj.results.gp.all(10,:,:) = etheta(1,:,:);
-            obj.results.gp.all(11,:,:) = etr(1,:,:);
-            obj.results.gp.all(12,:,:) = vol(1,:,:);
-            obj.results.gp.all(13,:,:) = s1(1,:,:);
-            obj.results.gp.all(14,:,:) = s2(1,:,:);
-            obj.results.gp.all(15,:,:) = maxs(1,:,:);
-            obj.results.gp.all(16,:,:) = stheta(1,:,:);
-            obj.results.gp.all(17,:,:) = sHM(1,:,:);
+            obj.results.gp.all(1,:,:) = exx(:,:);
+            obj.results.gp.all(2,:,:) = eyy(:,:);
+            obj.results.gp.all(3,:,:) = exy(:,:);
+            obj.results.gp.all(4,:,:) = sxx(:,:);
+            obj.results.gp.all(5,:,:) = syy(:,:);
+            obj.results.gp.all(6,:,:) = sxy(:,:);
+            obj.results.gp.all(7,:,:) = e1(:,:); 
+            obj.results.gp.all(8,:,:) = e2(:,:);
+            obj.results.gp.all(9,:,:) = maxt(:,:);
+            obj.results.gp.all(10,:,:) = etheta(:,:);
+            obj.results.gp.all(11,:,:) = etr(:,:);
+            obj.results.gp.all(12,:,:) = vol(:,:);
+            obj.results.gp.all(13,:,:) = s1(:,:);
+            obj.results.gp.all(14,:,:) = s2(:,:);
+            obj.results.gp.all(15,:,:) = maxs(:,:);
+            obj.results.gp.all(16,:,:) = stheta(:,:);
+            obj.results.gp.all(17,:,:) = sHM(:,:);
             obj.results.gp.all(18,:,:) = repmat(x,1,nip);
         end
+        
+        
         function [HMs, dHMs] = computeHMstress(obj,nodes, nelem, q, ddq, penalty, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);

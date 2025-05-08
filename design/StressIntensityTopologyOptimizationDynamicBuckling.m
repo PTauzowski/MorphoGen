@@ -1,0 +1,167 @@
+classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTopologyOptimization
+    
+    properties
+         Vend, plLambda, plVol, plOmegas, lastStableFrame, bucklingForms, vibrationForms;
+    end
+    
+    methods
+        function obj = StressIntensityTopologyOptimizationDynamicBuckling(Rmin,linearElasticProblem,maxais,penal,Vend,is_const)
+            obj=obj@StressIntensityTopologyOptimization(1,Rmin,linearElasticProblem,maxais,penal,is_const)
+            obj.Vend=Vend;
+            obj.plLambda=[];
+            obj.plVol=[];
+            obj.plOmegas=[];
+        end
+                           
+        function of = computeObjectiveFunction(obj)
+            of = sum( obj.x );
+            obj.FobjValue=of;
+        end
+
+        function dc = computeInequalityConstraints(obj,x)
+            dc = sum( x )/obj.V0 - obj.Vend;
+        end
+
+        function dc = computeEqualityConstraints(obj)
+        end
+        
+        function printIterationInfo(obj)
+            fprintf('%5i ',obj.iteration);
+            fprintf('Vrel=%2.1f ',round(sum( obj.x )/obj.V0*1000)/10);
+            fprintf('lambda=%5.3g ', obj.FEAnalysis.lambda);
+            fprintf('omega(1)=%5.3g ', obj.FEAnalysis.omegas(1));
+            fprintf('omega(2)=%5.3g ', obj.FEAnalysis.omegas(2));
+            fprintf('omega(3)=%5.3g ', obj.FEAnalysis.omegas(3));
+            fprintf('omega(4)=%5.3g ', obj.FEAnalysis.omegas(4));
+            fprintf('\n');
+            obj.plLambda = [ obj.plLambda abs( obj.FEAnalysis.lambda) ];
+            obj.plOmegas = [ obj.plOmegas abs( obj.FEAnalysis.omegas) ];
+            obj.plVol = [ obj.plVol round(sum( obj.x )/obj.V0*1000)/10 ];
+            
+            if abs(obj.FEAnalysis.lambda)>=1
+                obj.lastStableFrame=obj.iteration;
+            end
+        end
+
+        function [plCor] = getModesCorrelation(obj, mode)
+           plCor=[];
+           for k=2:size(mode,2)
+               plCor = [plCor abs(mode(:,k-1)'*mode(:,k))/norm(mode(:,k-1))/norm(mode(:,k))];
+           end
+        end
+
+        function plot_frequencies(obj,nmodes)
+            for l=1:nmodes
+                figure, hold on
+                p2=plot(obj.plVol,obj.plOmegas(l,:)','LineWidth', 3);
+                set(gca, 'XDir', 'reverse');
+                title(['Mode '   num2str(l)  ' evolution']);
+                %% 
+                xlabel('Volume fracion [%]');
+                ylabel('Frequency [Hz]');
+                %xlim([37 57]);
+                set(gca, 'FontSize', 18)
+                saveas(gcf,['Mode_'  num2str(l)  '.png'])
+                savefig(gcf,['Mode_'  num2str(l)  '.fig'])
+            end
+        end
+
+        function plot_forms(obj, nmodes, frame)
+            fontsize=16;
+            figure
+            for i=1:nmodes
+                figure;
+                subplot(nmodes, 1, i);
+                fe.plotWithSettings(mesh.nodes,"deformed",obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.modes1(:,i,frame) ),0.2,"elem nums",obj.allx(:,frame)>=0.5);
+                title(['Mode 1, vol_{fr}=' num2str(obj.plVol(frame)) ', Frq. =' num2str(obj.plOmegas(1,frame),4) ' [Hz]'  ', iter:' num2str(frame)]);
+                set(gca, 'FontSize', fontsize)
+            end
+            saveas(gcf,['frame_' num2str(frame) '.pdf'])
+            savefig(gcf,['frame_' num2str(frame) '.fig'])
+        end
+
+        function plot_subsequent_forms(obj, mode1, mode2, frame)
+            fontsize=16;
+
+            figure;
+            subplot(2, 1, 1);
+            fe.plotWithSettings(mesh.nodes,"deformed",obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.modes(:,mode1,frame) ),0.2,"elem nums",obj.allx(:,frame)>=0.5);
+            title(['Mode ' num2str(mode1) ', vol_{fr}=' num2str(topOptSecondOrder.plVol(frame)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(mode1,frame),4) ' [Hz]'  ', iter:' num2str(frame)]);
+            set(gca, 'FontSize', fontsize)
+            
+            subplot(2, 1, 2);
+            fe.plotWithSettings(mesh.nodes,"deformed",obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.modes(:,mode2,frame) ),0.2,"elem nums",obj.allx(:,frame)>=0.5);
+            title(['Mode ' num2str(mode2) ', vol_{fr}=' num2str(topOptSecondOrder.plVol(frame)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(mode2,frame),4) ' [Hz]' ', iter' num2str(frame)]);
+            set(gca, 'FontSize', fontsize)
+            saveas(gcf,['corrframes_' num2str(frame) '.pdf'])
+            savefig(gcf,['corrframes_' num2str(frame) '.fig'])
+
+        end
+
+        function plot_correlation_map(obj,mode, frame)
+            figure;
+            U1 = normalize(obj.FEAnalysis.modes(:,mode1,frame-1), 1); 
+            U2 = normalize(obj.FEAnalysis.modes(:,mode1,frame), 1);
+            C = abs(U1' * U2);
+            imagesc(C);
+            colormap(flipud(hot));
+            colorbar;
+            axis equal tight;
+            xlabel(['Mode number' num2str(mode)]);
+            ylabel(['Frame ' num2str(frame)]);
+            title('Correlation matrix of eigenmode 1');
+        end
+
+        function plot_correlation_curve(obj)
+            figure;
+            for k=1:5
+                kstr=num2str(k);
+                plCorr = obj.getModesCorrelation(obj.FEAnalysis.modes(:,k,:));
+                figure, hold on
+                p2=plot(obj.plVol(1:end-1), plCorr(k,1:end)','LineWidth', 2);
+                set(gca, 'XDir', 'reverse');
+                title(['Correlations of mode ' kstr]);
+                xlabel('Volume fracion [%]');
+                ylabel('Correlation');
+                %xlim([37 57]);
+                set(gca, 'FontSize', 18)
+                saveas(gcf,['correlation_' kstr '.png'])
+                savefig(gcf,['correlation_' kstr '.fig'])
+            end
+        end
+
+        function plot_uncorrelated_frames(obj)
+            for mode=1:5
+                kstr=num2str(k);
+                plCorr = obj.getModesCorrelation(obj.FEAnalysis.modes(:,mode,:));
+                for k=1:size(plCorr,2)
+                    if plCorr(k)<0.3
+                        figure;
+                
+                        subplot(2, 1, 1);
+                        fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( obj.FEAnalysis.modes(:,mode,k) ),0.1,"elem nums",topOptSecondOrder.allx(:,k)>=0.5,"nodes",false);
+                        title(['Mode ' kstr ', vol_{fr}=' num2str(topOptSecondOrder.plVol(k)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(1,k-1),4) ' [Hz]'], [ 'MAC=' num2str(pl_mode1_cor(k),3) ', iter:' num2str(k)]);
+                        set(gca, 'FontSize', fontsize)
+                        
+                        subplot(2, 1, 2);
+                        fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes1(:,mode,k+1) ),0.1,"elem nums",topOptSecondOrder.allx(:,k+1)>=0.5,"nodes",false);
+                        title(['Mode ' kstr ', vol_{fr}=' num2str(topOptSecondOrder.plVol(k+1)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(1,k+1),4) ' [Hz]' ', iter' num2str(k+1)]);
+                        set(gca, 'FontSize', fontsize)
+                
+                        saveas(gcf,['frame_correlation_mode_1_' num2str(k) '.pdf'])
+                        savefig(gcf,['frame_correlation_mode_1_' num2str(k) '.fig'])
+                    end
+                end
+            end
+        end
+
+        function prepareOutputImages(obj,nmodes)
+            obj.plot_frequencies(nmodes);
+            obj.plot_forms(5, 1);
+            obj.plot_correlation_curve();
+            obj.plot_uncorrelated_frames();
+        end
+        
+    end
+end
+
