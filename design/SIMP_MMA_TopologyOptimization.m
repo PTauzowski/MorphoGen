@@ -48,6 +48,7 @@ classdef SIMP_MMA_TopologyOptimization < GradientBasedTopologyOptimization
             end
             obj.xold1=obj.x;
             obj.x=xmma;
+            obj.x(obj.const_elems) = 1;
             obj.change = max(max(abs(obj.x-obj.xold1)));      
         end
         

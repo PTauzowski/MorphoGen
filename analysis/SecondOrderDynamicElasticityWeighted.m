@@ -1,7 +1,7 @@
 classdef SecondOrderDynamicElasticityWeighted < FEAnalysis
    
    properties
-        isConst,lambda, omegas, lambdac, modes1, modes2, modes3, modes4, modes5;
+        isConst, lambda, omegas, lambdac, modes;
    end
    
    methods       
@@ -10,11 +10,7 @@ classdef SecondOrderDynamicElasticityWeighted < FEAnalysis
             obj.lambdac = lambdac;
             obj.isConst=isConst;
             obj.rotations=[];
-            obj.modes1=[];
-            obj.modes2=[];
-            obj.modes3=[];
-            obj.modes4=[];
-            obj.modes5=[];
+            obj.modes=[];
 
        end
        
@@ -39,11 +35,7 @@ classdef SecondOrderDynamicElasticityWeighted < FEAnalysis
            [eigenvectors, lambdas] = solver.solveEigenproblem(K,Kg,10);
            [mode, omegas1] = solver.solveEigenproblem(K,M,10);
            omegas = sqrt(omegas1) / 2 / pi;
-           obj.modes1=[ obj.modes1 mode(:,1) ];
-           obj.modes2=[ obj.modes2 mode(:,2) ];
-           obj.modes3=[ obj.modes3 mode(:,3) ];
-           obj.modes4=[ obj.modes4 mode(:,4) ];
-           obj.modes5=[ obj.modes5 mode(:,5) ];
+           obj.modes = cat(3, obj.modes, mode);  
            obj.lambda=lambdas(1);
            obj.omegas=diag(omegas(1:5,1:5));
            obj.qfem=0*obj.Pfem;
@@ -54,13 +46,7 @@ classdef SecondOrderDynamicElasticityWeighted < FEAnalysis
 
        end
 
-       function [plCor] = getModesCorrelation(obj,mode)
-           plCor=[];
-           for k=2:size(mode,2)
-               plCor = [plCor abs(mode(:,k-1)'*mode(:,k))/norm(mode(:,k-1))/norm(mode(:,k))];
-           end
-       end
-
+       
        
    end
 end

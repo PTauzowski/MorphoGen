@@ -48,6 +48,7 @@ classdef SIMP_MMA_TopologyOptimizationElasticCompliance < SIMP_MMA_TopologyOptim
             end
             obj.FobjValue = c;
             obj.gradFobjValue = dc;
+            obj.gradFobjValue(obj.const_elems) = 0;
         end
 
         function computeConstraintsAndGradient( obj, x)
