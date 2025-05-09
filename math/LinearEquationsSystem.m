@@ -35,21 +35,25 @@ classdef LinearEquationsSystem < handle
              end
              q = K11 \ P;
         end
+        function Ks = createSparseMatrix(obj,K)
+            dimfree  = size( obj.freedofs, 1 );
+            Ks = sparse(obj.newdofs(obj.I(obj.iK11)),obj.newdofs(obj.J(obj.iK11)),K(obj.iK11),dimfree,dimfree);
+        end
         function q = solve(obj,K,P)
              q=P;
              q(:)=0;
              dimfree  = size( obj.freedofs, 1 );
-             q( obj.freedofs,:) =  sparse(obj.newdofs(obj.I(obj.iK11)),obj.newdofs(obj.J(obj.iK11)),K(obj.iK11),dimfree,dimfree) \ P( obj.freedofs,:);
+             q( obj.freedofs,:) = sparse(obj.newdofs(obj.I(obj.iK11)),obj.newdofs(obj.J(obj.iK11)),K(obj.iK11),dimfree,dimfree) \ P( obj.freedofs,:);
         end
+
         function [qforms, lambdas] = solveEigenproblem(obj,K,Kg,num_eigenvalues)             
              dimfree  = size( obj.freedofs, 1 );
-             [q, l] = eigs( sparse(obj.newdofs(obj.I(obj.iK11)),obj.newdofs(obj.J(obj.iK11)),K( obj.iK11),dimfree,dimfree),...
-                            sparse(obj.newdofs(obj.I(obj.iK11)),obj.newdofs(obj.J(obj.iK11)),Kg(obj.iK11),dimfree,dimfree),...
-                                     num_eigenvalues, 'smallestabs');
+             [q, l] = eigs( obj.createSparseMatrix(K), obj.createSparseMatrix(Kg), num_eigenvalues, 'smallestabs');
              qforms=zeros(obj.dim,num_eigenvalues);
              qforms(obj.freedofs,:)=real(q);
              lambdas=real(l);
         end
+        
         function [q, R, error] = solveR(obj,K,P)
             q=P;
             q(:)=0;
@@ -63,6 +67,7 @@ classdef LinearEquationsSystem < handle
             R( obj.supdofs,:) = K21 * q( obj.freedofs,:);
             error = [ K11 * q(obj.freedofs) - P(obj.freedofs); K21 * q(obj.freedofs) - R ];
         end
+
         function q = solvePq(obj,K,P,q0)
              q=P;
              dimfree  = size( obj.freedofs, 1 );
@@ -71,6 +76,7 @@ classdef LinearEquationsSystem < handle
              K12=sparse(obj.newdofs(obj.I(obj.iK12)),obj.newdofs(obj.J(obj.iK12)),K(obj.iK12),dimfree,dimfixed);
              q( obj.freedofs,:) = K11\(P( obj.freedofs,:)-K12*q0( obj.supdofs,:));
         end
+
         function [q, R, error] = solvePRq(obj,K,P,q0)
             q=P;
             q(:)=0;

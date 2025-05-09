@@ -67,13 +67,14 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
         end
 
         function plot_forms(obj, nmodes, frame)
-            fontsize=16;
-            figure
+            fontsize=10;
+            figure, hold on;
+            fe=obj.FEAnalysis.felems{1};
+            mesh=obj.FEAnalysis.mesh;
             for i=1:nmodes
-                figure;
                 subplot(nmodes, 1, i);
-                fe.plotWithSettings(mesh.nodes,"deformed",obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.modes1(:,i,frame) ),0.2,"elem nums",obj.allx(:,frame)>=0.5);
-                title(['Mode 1, vol_{fr}=' num2str(obj.plVol(frame)) ', Frq. =' num2str(obj.plOmegas(1,frame),4) ' [Hz]'  ', iter:' num2str(frame)]);
+                fe.plotWithSettings(mesh.nodes,"deformed",obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.modes(:,i,frame) ),0.2,"elem nums",obj.allx(:,frame)>=0.5);
+                title(['Mode ' num2str(i) ', vol_{fr}=' num2str(obj.plVol(frame)) ', Frq. =' num2str(obj.plOmegas(1,frame),4) ' [Hz]'  ', iter:' num2str(frame)]);
                 set(gca, 'FontSize', fontsize)
             end
             saveas(gcf,['frame_' num2str(frame) '.pdf'])
@@ -116,9 +117,9 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
             figure;
             for k=1:5
                 kstr=num2str(k);
-                plCorr = obj.getModesCorrelation(obj.FEAnalysis.modes(:,k,:));
+                plCorr = obj.getModesCorrelation(squeeze(obj.FEAnalysis.modes(:,k,:)));
                 figure, hold on
-                p2=plot(obj.plVol(1:end-1), plCorr(k,1:end)','LineWidth', 2);
+                p2=plot(obj.plVol(1:end-1), plCorr(1,1:end)','LineWidth', 2);
                 set(gca, 'XDir', 'reverse');
                 title(['Correlations of mode ' kstr]);
                 xlabel('Volume fracion [%]');
@@ -132,7 +133,7 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
 
         function plot_uncorrelated_frames(obj)
             for mode=1:5
-                kstr=num2str(k);
+                kstr=num2str(mode);
                 plCorr = obj.getModesCorrelation(obj.FEAnalysis.modes(:,mode,:));
                 for k=1:size(plCorr,2)
                     if plCorr(k)<0.3
@@ -158,6 +159,7 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
         function prepareOutputImages(obj,nmodes)
             obj.plot_frequencies(nmodes);
             obj.plot_forms(5, 1);
+            obj.plot_forms(5, size(obj.allx,2));
             obj.plot_correlation_curve();
             obj.plot_uncorrelated_frames();
         end
