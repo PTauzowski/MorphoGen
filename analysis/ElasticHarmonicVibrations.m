@@ -23,7 +23,9 @@ classdef ElasticHarmonicVibrations < FEAnalysis
            end
            K  = obj.assemblyGlobalMatrix('computeStifnessMatrix', x, obj.isConst);
            M  = obj.assemblyGlobalMatrix('computeMassMatrix', x, obj.isConst);
-           obj.qfem = solver.solve(K-obj.p^2*M, obj.Pfem);
+           [mode, lambdas] = solver.solveEigenproblem(K,M,10);
+           lambdas = diag(lambdas(1:5,1:5));
+           obj.qfem = solver.solve(K-(lambdas(3)+lambdas(4))/2*M, obj.Pfem);
            obj.qnodal=obj.fromFEMVector(obj.qfem(:,1));
            qfem=obj.qfem;
        end
