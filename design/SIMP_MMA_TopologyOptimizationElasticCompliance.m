@@ -37,7 +37,7 @@ classdef SIMP_MMA_TopologyOptimizationElasticCompliance < SIMP_MMA_TopologyOptim
                ndofs = size( obj.FEAnalysis.felems{i}.ndofs,2);
                dim = nnodes*ndofs;
                K = reshape(obj.FEAnalysis.felems{i}.(fsName)(obj.FEAnalysis.mesh.nodes,x_ones),dim,dim,nelems);
-               obj.qnodal = obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.solveWeighted((obj.x).^obj.penal));
+               obj.qnodal = obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.solve((obj.x).^obj.penal));
                obj.FEAnalysis.computeElementResults((obj.x).^obj.penal);
                qelems = obj.FEAnalysis.felems{i}.createElemSolutionVectors(obj.qnodal);
                for j=1:nelems
