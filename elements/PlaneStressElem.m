@@ -29,8 +29,12 @@ classdef PlaneStressElem < PlaneElem
         end
         function computeResults(obj,nodes, q, x, el_idx)
             nelems = size(obj.elems,1);
+            xrows=nelems;
             if (~isempty(el_idx))
                 nelems=numel(el_idx);
+            end
+            if numel(x) == nelems
+                xrows=1;
             end
             nnodes = size(obj.elems,2);
             ndofs = size( obj.ndofs,2);
@@ -87,7 +91,7 @@ classdef PlaneStressElem < PlaneElem
             obj.results.gp.all(15,:,:) = maxs(:,:);
             obj.results.gp.all(16,:,:) = stheta(:,:);
             obj.results.gp.all(17,:,:) = sHM(:,:);
-            obj.results.gp.all(18,:,:) = repmat(x,1,nip);
+            obj.results.gp.all(18,:,:) = repmat(x,xrows,nip);
         end
         
         

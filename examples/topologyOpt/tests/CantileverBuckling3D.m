@@ -1,6 +1,6 @@
 clear;
 close all;
-res = 25;
+res = 15;
 l = 3;
 
 % Filtering radius
@@ -58,7 +58,7 @@ analysis.supports=stability.supports;
 
 figure;
 tic
-topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.2, true );
+topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.9, true );
 [objF, xopt]  = topOpt.solve();
 toc
 

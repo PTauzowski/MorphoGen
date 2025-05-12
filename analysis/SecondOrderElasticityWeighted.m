@@ -22,7 +22,7 @@ classdef SecondOrderElasticityWeighted < FEAnalysis
                 end
             end
         end
-       function qfem = solveWeighted(obj, x)
+       function qfem = solve(obj, x)
            [I,J,~] = obj.globalMatrixIndices();
            obj.prepareRHSVectors();
             if size(obj.rotations,1)== 0 
