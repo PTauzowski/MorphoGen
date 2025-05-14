@@ -34,13 +34,13 @@ classdef SecondOrderDynamicElasticityWeighted < FEAnalysis
            M  = obj.assemblyGlobalMatrix('computeMassMatrix',x,false);
            [eigenvectors, lambdas] = solver.solveEigenproblem(K,Kg,10);
            [mode, omegas1] = solver.solveEigenproblem(K,M,10);
-           omegas = sqrt(omegas1) / 2 / pi;
+           omegas = sqrt(omegas1);
            obj.modes = cat(3, obj.modes, mode);  
            obj.lambda=lambdas(1);
            obj.omegas=diag(omegas(1:5,1:5));
            obj.qfem=0*obj.Pfem;
            %obj.qfem(solver.freedofs)=eigenvectors(:,1);
-           obj.qfem = solver.solve(K-obj.lambdac*abs(lambdas(1))*Kg, obj.Pfem);
+           obj.qfem = solver.solve(K-abs(omegas(1))*Kg, obj.Pfem);
            obj.qnodal=obj.fromFEMVector(obj.qfem(:,1));
            qfem=obj.qfem;
 

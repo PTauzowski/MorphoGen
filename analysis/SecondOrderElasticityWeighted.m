@@ -16,13 +16,13 @@ classdef SecondOrderElasticityWeighted < FEAnalysis
             ei = getElemIndices(obj);
             for k=1:size(obj.felems,2)
                 if ismethod(obj.felems{k},fname)
-                    K = [ K; obj.felems{k}.(fname)(obj.mesh.nodes,x(ei{k})) ];
+                    K = [ K; obj.felems{k}.(fname)(obj.mesh.nodes,x(ei{k}) ) ];
                 else
                     error("Class " + class(obj.felems{k}) + " or its predecessors not implements function :"+fname);
                 end
             end
         end
-       function qfem = solveWeighted(obj, x)
+       function qfem = solve(obj, x)
            [I,J,~] = obj.globalMatrixIndices();
            obj.prepareRHSVectors();
             if size(obj.rotations,1)== 0 
@@ -30,15 +30,11 @@ classdef SecondOrderElasticityWeighted < FEAnalysis
            else
                solver = LinearEquationsSystemTr2D(I, J, obj.toFEMVector(obj.supports),obj.rotations);
            end
-           if obj.isConst
-               K = obj.globalMatrixAggregationWeighted('computeStifnessMatrixConst',x);
-           else
-               K = obj.globalMatrixAggregationWeighted('computeStifnessMatrix',x);
-           end
+           K = obj.assemblyGlobalMatrix('computeStifnessMatrix',x,obj.isConst);
            obj.qfem = solver.solve(K, obj.Pfem);
            obj.qnodal = obj.fromFEMVector( obj.qfem );
            obj.computeElementResults(x);
-           Kg = obj.globalMatrixAggregationWeighted('computeGeometricStifnessMatrix',x);
+           Kg = obj.assemblyGlobalMatrix('computeGeometricStifnessMatrix',x,obj.isConst);
            [eigenvectors, lambdas] = solver.solveEigenproblem(K,Kg,10);
            obj.lambda=lambdas(1);
            obj.qfem=0*obj.Pfem;

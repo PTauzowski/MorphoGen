@@ -1,6 +1,6 @@
 clear;
 close all;
-res = 50;
+res = 15;
 l = 3;
 
 % Filtering radius
@@ -56,16 +56,16 @@ analysis.Pnodal=stability.Pnodal;
 analysis.Pfem=stability.Pfem;
 analysis.supports=stability.supports;
 
-% figure;
-% tic
-% topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.2, true );
-% [objF, xopt]  = topOpt.solve();
-% toc
-
 figure;
 tic
-topOpt = SIMP_MMA_TopologyOptimizationElasticCompliance(Rfilter, analysis, penal, 0.1, true);
+topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.9, true );
 [objF, xopt]  = topOpt.solve();
 toc
+
+% figure;
+% tic
+% topOpt = SIMP_MMA_TopologyOptimizationElasticCompliance(Rfilter, analysis, penal, 0.2, true);
+% [objF, xopt]  = topOpt.solve();
+% toc
 
 
