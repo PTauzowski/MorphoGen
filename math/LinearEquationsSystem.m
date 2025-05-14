@@ -51,7 +51,7 @@ classdef LinearEquationsSystem < handle
              [q, l] = eigs( obj.createSparseMatrix(K), obj.createSparseMatrix(Kg), num_eigenvalues, 'smallestabs');
              qforms=zeros(obj.dim,num_eigenvalues);
              qforms(obj.freedofs,:)=real(q);
-             lambdas=real(l);
+             lambdas=abs(l);
         end
         
         function [q, R, error] = solveR(obj,K,P)

@@ -53,7 +53,6 @@ fe.setMaterial( material );
 
 % Creating linear elastic finite element analysis object with weighted matrix feature, weighted by element density.
 analysisLinear      = LinearElasticityWeighted( fe, mesh, false );
-analysisSecondOrder = SecondOrderDynamicElasticityWeighted(fe, mesh, 0, false);
 
 % Creating node selector object to select fixed edge (left)
 loadEdgeSelector = Selector( @(x)( abs(x(:,2) -h ) < 0.0005 ) );
@@ -62,8 +61,6 @@ fixedEdgeSelector2 = Selector( @(x)( abs(x(:,1)-l) < 0.0005 ) );
 
 % Fixing structure according to above defined node selector object
 analysisLinear.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
-analysisSecondOrder.fixNodes( fixedEdgeSelector2, ["ux"] );
-analysisSecondOrder.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
 
 % Creating load vector with one node loaded at the middle of right edge
 P=-2.0E9; %100;
@@ -71,8 +68,6 @@ P=-2.0E9; %100;
 
 hp=h/2;
 analysisLinear.loadClosestNode([aspect*h, hp ], ["ux" "uy"], [0 P] );
-%analysisSecondOrder.loadClosestNode([aspect*h, hp ], ["ux" "uy"], [0 P] );
-analysisSecondOrder.elementLoadLineIntegral( "global", loadEdgeSelector,  ["ux" "uy"], @(x)( x*0 + [0 P/l] ));
 
 
 const_rows=3;
@@ -100,27 +95,22 @@ vibrations = LinearNaturalVibration( analysisLinear.felems, mesh );
 vibrations.Pnodal = analysisLinear.Pnodal;
 vibrations.Pfem = analysisLinear.Pfem;
 vibrations.supports = analysisLinear.supports;
-% vibrations.solve( nEigenForms);
-% omegas = diag(vibrations.omegas)
+vibrations.solve( nEigenForms);
+omegas = diag(vibrations.omegas)/2/pi;
 % for k=1:min(10,nEigenForms)
 %     %subplot(5, 2, k);
 %     figure
-%     vibrations.setForm(k);
+%     vibrations.setForm(1,k);
 %     fe.plotWithSettings(mesh.nodes,"deformed",vibrations.qnodal,0.2);
 %     %axis on, xlabel('x-axis'), ylabel('y-axis'), view(3)
 %     omega_str = sprintf('%.4g', omegas(k));
 %     title(['Form:' num2str(k), ' \omega=' omega_str]);
 % end
 
-analysisWithBuckling = SecondOrderDynamicElasticityWeighted( fe, mesh, 0.30, false );
-analysisWithBuckling.Pnodal=stability.Pnodal;
-analysisWithBuckling.Pfem=stability.Pfem;
-analysisWithBuckling.supports=stability.supports;
-
-harmonicVivrations = ElasticHarmonicVibrations(fe, mesh, 2*pi*20, true);
-harmonicVivrations.Pnodal=analysisSecondOrder.Pnodal;
-harmonicVivrations.Pfem=analysisSecondOrder.Pfem;
-harmonicVivrations.supports=analysisSecondOrder.supports;
+harmonicVivrations = ElasticHarmonicVibrations(fe, mesh, 2*pi*20, false);
+harmonicVivrations.Pnodal=analysisLinear.Pnodal;
+harmonicVivrations.Pfem=analysisLinear.Pfem;
+harmonicVivrations.supports=analysisLinear.supports;
 
 
 % figure;
@@ -131,7 +121,7 @@ harmonicVivrations.supports=analysisSecondOrder.supports;
 
 figure;
 tic
-topOptHarmonicVivrations = StressIntensityTopologyOptimizationVol( Rfilter, harmonicVivrations, cutTreshold, penal, 0.4, true );
+topOptHarmonicVivrations = StressIntensityTopologyOptimizationVol( Rfilter, harmonicVivrations, cutTreshold, penal, 0.4, false );
 topOptHarmonicVivrations.setConstElems(const_elems);
 [objF, xopt]  = topOptHarmonicVivrations.solve();
 toc

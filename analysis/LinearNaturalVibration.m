@@ -33,12 +33,13 @@ classdef LinearNaturalVibration < FEAnalysis
            end
            obj.freedofs=solver.freedofs;
            obj.fixeddofs=solver.supdofs;
-           K = obj.globalMatrixAggregation('computeStifnessMatrix');
+           K = obj.assemblyGlobalMatrix('computeStifnessMatrix',1,false);
            %obj.qfem = solver.solve(K, obj.Pfem );
            %obj.qnodal = obj.fromFEMVector( obj.qfem );
            %obj.computeElementResults();
-           M = obj.globalMatrixAggregation('computeMassMatrix');
-           [obj.qforms, obj.omegas]=solver.solveEigenproblem(K,M,num_eigenvalues);
+           M = obj.assemblyGlobalMatrix('computeMassMatrix',1,false);
+           [obj.qforms, lambdas]=solver.solveEigenproblem(K,M,num_eigenvalues);
+           obj.omegas=sqrt(lambdas);
        end
 
        function solveWeighted(obj, x, num_eigenvalues)
@@ -56,14 +57,15 @@ classdef LinearNaturalVibration < FEAnalysis
            %obj.qnodal = obj.fromFEMVector( obj.qfem );
            %obj.computeElementResults(x);
            M = obj.globalMatrixAggregationWeighted('computeMassMatrix',x);
-           [obj.qforms,obj.omegas]=solver.solveEigenproblem(K,M,num_eigenvalues);
+           [obj.qforms, lambdas]=solver.solveEigenproblem(K,M,num_eigenvalues);
+           obj.omegas=sqrt(lambdas);
        end
 
-       function setForm(obj,i)
+       function setForm(obj,x,i)
            obj.qfem =0*obj.Pfem;
-           obj.qfem(obj.freedofs)= obj.qforms(:,i);
+           obj.qfem= obj.qforms(:,i);
            obj.qnodal = obj.fromFEMVector( obj.qfem );
-           obj.computeElementResults();
+           obj.computeElementResults(x);
        end
    end
 end
