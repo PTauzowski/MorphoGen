@@ -24,7 +24,7 @@ classdef StressIntensityTopologyOptimizationVol < StressIntensityTopologyOptimiz
         
         function printIterationInfo(obj)
             fprintf('%5i ',obj.iteration);
-            fprintf('Vrel=%2.1f ',round(sum( obj.x )/obj.V0*1000)/10);
+            fprintf('Vrel=%2.1f ',round(sum( obj.x>0.5 )/size(obj.x,1)*1000)/10);
             fprintf('\n');
         end
         
