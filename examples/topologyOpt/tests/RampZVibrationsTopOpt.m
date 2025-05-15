@@ -19,10 +19,10 @@ aspect=6;
 l=aspect*h;
 
 % Filtering radius
-Rfilter = 2*h/res;
+Rfilter = 10*h/res;
 
 %Removal intensity threshold
-cutTreshold = 0.005;
+cutTreshold = 0.0002;
 
 %penalty factor
 penal = 3;
@@ -157,7 +157,7 @@ alphas = [0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6];
 
 figure;
 tic
-topOptHarmonicVivrations = StressIntensityTopologyOptimizationVol( Rfilter, harmonicVivrations, cutTreshold, penal, 0.4, false );
+topOptHarmonicVivrations = StressIntensityTopologyOptimizationVol( Rfilter, harmonicVivrations, cutTreshold, penal, 0.5, false );
 topOptHarmonicVivrations.setConstElems(const_elems);
 [objF, xopt]  = topOptHarmonicVivrations.solve();
 toc
