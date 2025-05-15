@@ -52,7 +52,7 @@ fe.setMaterial( material );
 %  [q, l] = eigs( Ke(:,:,1),Me(:,:,1), 8, 'smallestabs');
 
 % Creating linear elastic finite element analysis object with weighted matrix feature, weighted by element density.
-analysisLinear      = LinearElasticityWeighted( fe, mesh, false );
+analysisLinear = LinearElasticityWeighted( fe, mesh, false );
 
 % Creating node selector object to select fixed edge (left)
 loadEdgeSelector = Selector( @(x)( abs(x(:,2) -h ) < 0.0005 ) );
@@ -61,18 +61,21 @@ fixedEdgeSelector2 = Selector( @(x)( abs(x(:,1)-l) < 0.0005 ) );
 
 % Fixing structure according to above defined node selector object
 analysisLinear.fixNodes( fixedEdgeSelector, ["ux" "uy"] );
+analysisLinear.fixNodes( fixedEdgeSelector2,  "ux" );
 
 % Creating load vector with one node loaded at the middle of right edge
 P=-2.0E9; %100;
 %P=-1.5E8; %150;
 
-hp=h/2;
-analysisLinear.loadClosestNode([aspect*h, hp ], ["ux" "uy"], [0 P] );
+hp=h;
+%analysisLinear.loadClosestNode([ l, hp ], ["ux" "uy"], [0 P] );
+analysisLinear.elementLoadLineIntegral( "global",loadEdgeSelector, ["ux" "uy"], @(x)( x*0 + [0 P/l] ));
 
 
 const_rows=3;
 ncel=round(const_rows*res*l);
 const_elems=[1:ncel size(mesh.elems,1):-1:size(mesh.elems,1)-ncel ];
+
 
 nEigenForms=10;
 stability = LinearStability( analysisLinear.felems, mesh);
@@ -112,12 +115,45 @@ harmonicVivrations.Pnodal=analysisLinear.Pnodal;
 harmonicVivrations.Pfem=analysisLinear.Pfem;
 harmonicVivrations.supports=analysisLinear.supports;
 
+alphas = [0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6];
+
+% conds1 = harmonicVivrations.tabMatrixCondition(alphas,1);
+% conds2 = harmonicVivrations.tabMatrixCondition(alphas,2);
+% conds3 = harmonicVivrations.tabMatrixCondition(alphas,3);
+
+% load('matrixConditions.mat');
+% 
+% figure, hold on
+% p1=plot(alphas,conds1,'b','LineWidth', 3);
+% title('Matrix K-\alpha\omega_1^2*M condition ');
+% xlabel('\alpha');
+% ylabel('rcond(K-\alpha\omega_1^2*M )');
+% %xlim([37 57]);
+% set(gca, 'FontSize', 16)
+% 
+% figure, hold on
+% p1=plot(alphas,conds2,'b','LineWidth', 3);
+% title('Matrix K-\alpha\omega_2^2*M condition ');
+% xlabel('\alpha');
+% ylabel('rcond(K-\alpha\omega_2^2*M )');
+% %xlim([37 57]);
+% set(gca, 'FontSize', 16)
+% 
+% figure, hold on
+% p1=plot(alphas,conds3,'b','LineWidth', 3);
+% title('Matrix K-\alpha\omega_3^2*M condition ');
+% xlabel('\alpha');
+% ylabel('rcond(K-\alpha\omega_3^2*M )');
+% %xlim([37 57]);
+% set(gca, 'FontSize', 16)
 
 % figure;
 % tic
 % topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.4, true );
+% topOptLinear.setConstElems(const_elems);
 % [objF, xopt]  = topOptLinear.solve();
 % toc
+
 
 figure;
 tic
@@ -125,6 +161,11 @@ topOptHarmonicVivrations = StressIntensityTopologyOptimizationVol( Rfilter, harm
 topOptHarmonicVivrations.setConstElems(const_elems);
 [objF, xopt]  = topOptHarmonicVivrations.solve();
 toc
+
+
+% [K, M] = harmonicVivrations.computeMatrices(xopt);
+% 
+% save KM_matrices.mat K M
 
 % figure;
 % tic
@@ -139,7 +180,7 @@ toc
 % [objF, xopt]  = topOptBuckling.solve();
 % toc
 
-save('RampZVibrations.mat');
+
 
 figure, hold on
 p1=plot(topOptSecondOrder.plVol,topOptSecondOrder.plLambda,'b','LineWidth', 3);
