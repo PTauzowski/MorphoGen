@@ -19,10 +19,10 @@ aspect=6;
 l=aspect*h;
 
 % Filtering radius
-Rfilter = 2*h/res;
+Rfilter = 10*h/res;
 
 %Removal intensity threshold
-cutTreshold = 0.005;
+cutTreshold = 0.0002;
 
 %penalty factor
 penal = 3;
@@ -114,12 +114,6 @@ harmonicVivrations = ElasticHarmonicVibrations(fe, mesh, 2*pi*20, false);
 harmonicVivrations.Pnodal=analysisLinear.Pnodal;
 harmonicVivrations.Pfem=analysisLinear.Pfem;
 harmonicVivrations.supports=analysisLinear.supports;
-harmonicVivrations.solve(1);
-harmonicVivrations.computeElementResults(1);
-harmonicVivrations.plotMaps(["uy" "ux" "sxx" "sxy" "syy" "sHM"],0.1);
-%fe.plotWired(mesh.nodes,harmonicVivrations.qnodal,0.1);
-
-
 
 alphas = [0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6];
 
@@ -161,12 +155,12 @@ alphas = [0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6];
 % toc
 
 
-% figure;
-% tic
-% topOptHarmonicVivrations = StressIntensityTopologyOptimizationVol( Rfilter, harmonicVivrations, cutTreshold, penal, 0.4, false );
-% topOptHarmonicVivrations.setConstElems(const_elems);
-% [objF, xopt]  = topOptHarmonicVivrations.solve();
-% toc
+figure;
+tic
+topOptHarmonicVivrations = StressIntensityTopologyOptimizationVol( Rfilter, harmonicVivrations, cutTreshold, penal, 0.5, false );
+topOptHarmonicVivrations.setConstElems(const_elems);
+[objF, xopt]  = topOptHarmonicVivrations.solve();
+toc
 
 
 % [K, M] = harmonicVivrations.computeMatrices(xopt);
