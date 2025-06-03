@@ -7,7 +7,7 @@ close all;
 % Cantilever topology optimization elastic task.
 
 % Resolution of shortest (vertical) edge
-res = 40;
+res = 80;
 
 % height of the cantilever
 h = 1;
@@ -19,10 +19,10 @@ aspect=6;
 l=aspect*h;
 
 % Filtering radius
-Rfilter = 10*h/res;
+Rfilter = 4*h/res;
 
 %Removal intensity threshold
-cutTreshold = 0.0002;
+cutTreshold = 0.005;
 
 %penalty factor
 penal = 3;
@@ -68,8 +68,8 @@ P=-2.0E9; %100;
 %P=-1.5E8; %150;
 
 hp=h;
-%analysisLinear.loadClosestNode([ l, hp ], ["ux" "uy"], [0 P] );
-analysisLinear.elementLoadLineIntegral( "global",loadEdgeSelector, ["ux" "uy"], @(x)( x*0 + [0 P/l] ));
+analysisLinear.loadClosestNode([ l, hp ], ["ux" "uy"], [0 P] );
+%analysisLinear.elementLoadLineIntegral( "global",loadEdgeSelector, ["ux" "uy"], @(x)( x*0 + [0 P/l] ));
 
 
 const_rows=3;
@@ -101,14 +101,23 @@ vibrations.supports = analysisLinear.supports;
 vibrations.solve( nEigenForms);
 omegas = diag(vibrations.omegas)/2/pi;
 % for k=1:min(10,nEigenForms)
-%     %subplot(5, 2, k);
-%     figure
+%     subplot(5, 2, k);
+%     %figure
 %     vibrations.setForm(1,k);
-%     fe.plotWithSettings(mesh.nodes,"deformed",vibrations.qnodal,0.2);
+%     fe.plotWithSettings(mesh.nodes,"deformed",vibrations.qnodal,0.1);
 %     %axis on, xlabel('x-axis'), ylabel('y-axis'), view(3)
 %     omega_str = sprintf('%.4g', omegas(k));
 %     title(['Form:' num2str(k), ' \omega=' omega_str]);
 % end
+
+Pin1 = omegas(1)^2*vibrations.fromFEMVector(vibrations.qforms(:,1));
+Pin2 = omegas(2)^2*vibrations.fromFEMVector(vibrations.qforms(:,2));
+Pin3 = omegas(3)^2*vibrations.fromFEMVector(vibrations.qforms(:,3));
+Pin5 = omegas(5)^2*vibrations.fromFEMVector(vibrations.qforms(:,5));
+Pin7 = omegas(7)^2*vibrations.fromFEMVector(vibrations.qforms(:,7));
+Pin9 = omegas(9)^2*vibrations.fromFEMVector(vibrations.qforms(:,9));
+Pin10 = omegas(10)^2*vibrations.fromFEMVector(vibrations.qforms(:,10));
+
 
 harmonicVivrations = ElasticHarmonicVibrations(fe, mesh, 2*pi*20, false);
 harmonicVivrations.Pnodal=analysisLinear.Pnodal;
@@ -147,20 +156,89 @@ alphas = [0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6];
 % %xlim([37 57]);
 % set(gca, 'FontSize', 16)
 
+figure;
+tic
+topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.5, true );
+topOptLinear.setConstElems(const_elems);
+[objF, xopt]  = topOptLinear.solve();
+toc
+
+analysisLinear.Pnodal = Pin1;
+analysisLinear.Pfem=analysisLinear.toFEMVector(Pin1);
+
+figure;
+tic
+topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.5, true );
+topOptLinear.setConstElems(const_elems);
+[objF, xopt]  = topOptLinear.solve();
+toc
+
+analysisLinear.Pnodal = Pin2;
+analysisLinear.Pfem=analysisLinear.toFEMVector(Pin2);
+
+figure;
+tic
+topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.5, true );
+topOptLinear.setConstElems(const_elems);
+[objF, xopt]  = topOptLinear.solve();
+toc
+
+analysisLinear.Pnodal = Pin3;
+analysisLinear.Pfem=analysisLinear.toFEMVector(Pin3);
+
+figure;
+tic
+topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.5, true );
+topOptLinear.setConstElems(const_elems);
+[objF, xopt]  = topOptLinear.solve();
+toc
+
+analysisLinear.Pnodal = Pin5;
+analysisLinear.Pfem=analysisLinear.toFEMVector(Pin5);
+
+figure;
+tic
+topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.5, true );
+topOptLinear.setConstElems(const_elems);
+[objF, xopt]  = topOptLinear.solve();
+toc
+
+analysisLinear.Pnodal = Pin7;
+analysisLinear.Pfem=analysisLinear.toFEMVector(Pin7);
+
+figure;
+tic
+topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.5, true );
+topOptLinear.setConstElems(const_elems);
+[objF, xopt]  = topOptLinear.solve();
+toc
+
+% analysisLinear.Pnodal = Pin9;
+% analysisLinear.Pfem=analysisLinear.toFEMVector(Pin9);
+% 
 % figure;
 % tic
-% topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.4, true );
+% topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.5, true );
+% topOptLinear.setConstElems(const_elems);
+% [objF, xopt]  = topOptLinear.solve();
+% toc
+% 
+% analysisLinear.Pnodal = Pin10;
+% analysisLinear.Pfem=analysisLinear.toFEMVector(Pin10);
+% 
+% figure;
+% tic
+% topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.5, true );
 % topOptLinear.setConstElems(const_elems);
 % [objF, xopt]  = topOptLinear.solve();
 % toc
 
-
-figure;
-tic
-topOptHarmonicVivrations = StressIntensityTopologyOptimizationVol( Rfilter, harmonicVivrations, cutTreshold, penal, 0.5, false );
-topOptHarmonicVivrations.setConstElems(const_elems);
-[objF, xopt]  = topOptHarmonicVivrations.solve();
-toc
+% figure;
+% tic
+% topOptHarmonicVivrations = StressIntensityTopologyOptimizationVol( Rfilter, harmonicVivrations, cutTreshold, penal, 0.5, false );
+% topOptHarmonicVivrations.setConstElems(const_elems);
+% [objF, xopt]  = topOptHarmonicVivrations.solve();
+% toc
 
 
 % [K, M] = harmonicVivrations.computeMatrices(xopt);
