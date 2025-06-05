@@ -7,7 +7,7 @@ close all;
 % Cantilever topology optimization elastic task.
 
 % Resolution of shortest (vertical) edge
-res = 80;
+res = 40;
 
 % height of the cantilever
 h = 1;
@@ -119,7 +119,7 @@ Pin9 = omegas(9)^2*vibrations.fromFEMVector(vibrations.qforms(:,9));
 Pin10 = omegas(10)^2*vibrations.fromFEMVector(vibrations.qforms(:,10));
 
 
-harmonicVivrations = ElasticHarmonicVibrations(fe, mesh, 2*pi*20, false);
+harmonicVivrations = ElasticHarmonicVibrations(fe, mesh, 1, false, true);
 harmonicVivrations.Pnodal=analysisLinear.Pnodal;
 harmonicVivrations.Pfem=analysisLinear.Pfem;
 harmonicVivrations.supports=analysisLinear.supports;
@@ -156,62 +156,62 @@ alphas = [0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6];
 % %xlim([37 57]);
 % set(gca, 'FontSize', 16)
 
-figure;
-tic
-topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.5, true );
-topOptLinear.setConstElems(const_elems);
-[objF, xopt]  = topOptLinear.solve();
-toc
-
-analysisLinear.Pnodal = Pin1;
-analysisLinear.Pfem=analysisLinear.toFEMVector(Pin1);
-
-figure;
-tic
-topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.5, true );
-topOptLinear.setConstElems(const_elems);
-[objF, xopt]  = topOptLinear.solve();
-toc
-
-analysisLinear.Pnodal = Pin2;
-analysisLinear.Pfem=analysisLinear.toFEMVector(Pin2);
-
-figure;
-tic
-topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.5, true );
-topOptLinear.setConstElems(const_elems);
-[objF, xopt]  = topOptLinear.solve();
-toc
-
-analysisLinear.Pnodal = Pin3;
-analysisLinear.Pfem=analysisLinear.toFEMVector(Pin3);
-
-figure;
-tic
-topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.5, true );
-topOptLinear.setConstElems(const_elems);
-[objF, xopt]  = topOptLinear.solve();
-toc
-
-analysisLinear.Pnodal = Pin5;
-analysisLinear.Pfem=analysisLinear.toFEMVector(Pin5);
-
-figure;
-tic
-topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.5, true );
-topOptLinear.setConstElems(const_elems);
-[objF, xopt]  = topOptLinear.solve();
-toc
-
-analysisLinear.Pnodal = Pin7;
-analysisLinear.Pfem=analysisLinear.toFEMVector(Pin7);
-
-figure;
-tic
-topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.5, true );
-topOptLinear.setConstElems(const_elems);
-[objF, xopt]  = topOptLinear.solve();
-toc
+% figure;
+% tic
+% topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.5, true );
+% topOptLinear.setConstElems(const_elems);
+% [objF, xopt]  = topOptLinear.solve();
+% toc
+% 
+% analysisLinear.Pnodal = Pin1;
+% analysisLinear.Pfem=analysisLinear.toFEMVector(Pin1);
+% 
+% figure;
+% tic
+% topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.5, true );
+% topOptLinear.setConstElems(const_elems);
+% [objF, xopt]  = topOptLinear.solve();
+% toc
+% 
+% analysisLinear.Pnodal = Pin2;
+% analysisLinear.Pfem=analysisLinear.toFEMVector(Pin2);
+% 
+% figure;
+% tic
+% topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.5, true );
+% topOptLinear.setConstElems(const_elems);
+% [objF, xopt]  = topOptLinear.solve();
+% toc
+% 
+% analysisLinear.Pnodal = Pin3;
+% analysisLinear.Pfem=analysisLinear.toFEMVector(Pin3);
+% 
+% figure;
+% tic
+% topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.5, true );
+% topOptLinear.setConstElems(const_elems);
+% [objF, xopt]  = topOptLinear.solve();
+% toc
+% 
+% analysisLinear.Pnodal = Pin5;
+% analysisLinear.Pfem=analysisLinear.toFEMVector(Pin5);
+% 
+% figure;
+% tic
+% topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.5, true );
+% topOptLinear.setConstElems(const_elems);
+% [objF, xopt]  = topOptLinear.solve();
+% toc
+% 
+% analysisLinear.Pnodal = Pin7;
+% analysisLinear.Pfem=analysisLinear.toFEMVector(Pin7);
+% 
+% figure;
+% tic
+% topOptLinear = StressIntensityTopologyOptimizationVol( Rfilter, analysisLinear, cutTreshold, penal, 0.5, true );
+% topOptLinear.setConstElems(const_elems);
+% [objF, xopt]  = topOptLinear.solve();
+% toc
 
 % analysisLinear.Pnodal = Pin9;
 % analysisLinear.Pfem=analysisLinear.toFEMVector(Pin9);
@@ -233,13 +233,34 @@ toc
 % [objF, xopt]  = topOptLinear.solve();
 % toc
 
-% figure;
-% tic
-% topOptHarmonicVivrations = StressIntensityTopologyOptimizationVol( Rfilter, harmonicVivrations, cutTreshold, penal, 0.5, false );
-% topOptHarmonicVivrations.setConstElems(const_elems);
-% [objF, xopt]  = topOptHarmonicVivrations.solve();
-% toc
 
+figure;
+tic
+topOptHarmonicVivrations = StressIntensityTopologyOptimizationDynamicBuckling( Rfilter, harmonicVivrations, cutTreshold, penal, 0.45, false );
+topOptHarmonicVivrations.setConstElems(const_elems);
+toc
+
+basename='Const_load';
+for k=1:5
+    harmonicVivrations.count=0;
+    harmonicVivrations.mode=k;
+    [objF, xopt]  = topOptHarmonicVivrations.solve();
+    topOptHarmonicVivrations.plot_frequencies(basename, 5)
+    topOptHarmonicVivrations.plot_forms(basename, 5, topOptHarmonicVivrations.iteration-1)
+    topOptHarmonicVivrations.resetAnalysis();
+end
+
+harmonicVivrations.isLoadConst=false;
+
+basename='Var_load';
+for k=1:5
+    harmonicVivrations.count=0;
+    harmonicVivrations.mode=k;
+    [objF, xopt]  = topOptHarmonicVivrations.solve();
+    topOptHarmonicVivrations.plot_frequencies(basename, 5)
+    topOptHarmonicVivrations.plot_forms(basename, 5, topOptHarmonicVivrations.iteration-1)
+    topOptHarmonicVivrations.resetAnalysis();
+end
 
 % [K, M] = harmonicVivrations.computeMatrices(xopt);
 % 
@@ -260,57 +281,8 @@ toc
 
 
 
-figure, hold on
-p1=plot(topOptSecondOrder.plVol,topOptSecondOrder.plLambda,'b','LineWidth', 3);
-set(gca, 'XDir', 'reverse');
-title('Critical force coefficient evolution without buckling');
-xlabel('Volume fracion [%]');
-ylabel('Critical force coefficient [%]');
-%xlim([37 57]);
-set(gca, 'FontSize', 18)
-
-figure, hold on
-p2=plot(topOptSecondOrder.plVol,topOptSecondOrder.plLambda,'r','LineWidth', 3);
-set(gca, 'XDir', 'reverse');
-title('Critical force coefficient evolution with buckling');
-xlabel('Volume fracion [%]');
-ylabel('Critical force coefficient [%]');
-%xlim([37 57]);
-set(gca, 'FontSize', 24)
 
 
-legend_modes={'Mode 1', 'Mode 2', 'Mode 3', 'Mode 4', 'Mode 5'};
-for l=1:5
-    figure, hold on
-    p2=plot(topOptSecondOrder.plVol,topOptSecondOrder.plOmegas(l,:)','LineWidth', 3);
-    set(gca, 'XDir', 'reverse');
-    title(['Mode '   num2str(l)  ' evolution']);
-    %% 
-    xlabel('Volume fracion [%]');
-    ylabel('Frequency [Hz]');
-    %xlim([37 57]);
-    set(gca, 'FontSize', 18)
-    saveas(gcf,['Mode_'  num2str(l)  '.png'])
-    savefig(gcf,['Mode_'  num2str(l)  '.fig'])
-end
-
-
-fontsize=16;
-iters=[1 100 250 350  450 size(topOptSecondOrder.allx,2)-2];
-for i=iters(1):size(iters,2)
-    figure;
-    subplot(2, 1, 1);
-    fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes1(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
-    title(['Mode 1, vol_{fr}=' num2str(topOptSecondOrder.plVol(i)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(1,i),4) ' [Hz]'  ', iter:' num2str(i)]);
-    set(gca, 'FontSize', fontsize)
-    
-    subplot(2, 1, 2);
-    fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes2(:,i) ),0.2,"elem nums",topOptSecondOrder.allx(:,i)>=0.5);
-    title(['Mode 2, vol_{fr}=' num2str(topOptSecondOrder.plVol(i)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(2,i),4) ' [Hz]' ', iter' num2str(i)]);
-    set(gca, 'FontSize', fontsize)
-    saveas(gcf,['frame_' num2str(i) '.pdf'])
-    savefig(gcf,['frame_' num2str(i) '.fig'])
-end
 
 % figure;
 % U = normalize(analysisSecondOrder.modes2, 1); 

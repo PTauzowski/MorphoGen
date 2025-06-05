@@ -50,7 +50,7 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
            end
         end
 
-        function plot_frequencies(obj,nmodes)
+        function plot_frequencies(obj, basename, nmodes)
             for l=1:nmodes
                 figure, hold on
                 p2=plot(obj.plVol,obj.plOmegas(l,:)','LineWidth', 3);
@@ -61,12 +61,12 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
                 ylabel('Frequency [Hz]');
                 %xlim([37 57]);
                 set(gca, 'FontSize', 18)
-                saveas(gcf,['Mode_'  num2str(l)  '.png'])
-                savefig(gcf,['Mode_'  num2str(l)  '.fig'])
+                saveas(gcf,[basename '_Mode_'  num2str(l)  '.png'])
+                savefig(gcf,[basename '_Mode_'  num2str(l)  '.fig'])
             end
         end
 
-        function plot_forms(obj, nmodes, frame)
+        function plot_forms(obj, basename, nmodes, frame)
             fontsize=10;
             figure, hold on;
             fe=obj.FEAnalysis.felems{1};
@@ -77,8 +77,8 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
                 title(['Mode ' num2str(i) ', vol_{fr}=' num2str(obj.plVol(frame)) ', Frq. =' num2str(obj.plOmegas(1,frame),4) ' [Hz]'  ', iter:' num2str(frame)]);
                 set(gca, 'FontSize', fontsize)
             end
-            saveas(gcf,['frame_' num2str(frame) '.pdf'])
-            savefig(gcf,['frame_' num2str(frame) '.fig'])
+            saveas(gcf,[basename '_frame_' num2str(frame) '.pdf'])
+            savefig(gcf,[basename '_frame_' num2str(frame) '.fig'])
         end
 
         function plot_subsequent_forms(obj, mode1, mode2, frame)
