@@ -63,6 +63,13 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
                 set(gca, 'FontSize', 18)
                 saveas(gcf,[basename '_Mode_'  num2str(l)  '.png'])
                 savefig(gcf,[basename '_Mode_'  num2str(l)  '.fig'])
+                
+                A = (1:4)';  % Column vector
+                filename = 'Results.xlsx';
+                sheetname = basename;
+                range = 'A2';  % Start writing in column C, row 1
+                writematrix(A, filename, 'Sheet', sheetname, 'Range', range);
+
             end
         end
 
@@ -73,7 +80,7 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
             mesh=obj.FEAnalysis.mesh;
             for i=1:nmodes
                 subplot(nmodes, 1, i);
-                fe.plotWithSettings(mesh.nodes,"deformed",obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.modes(:,i,frame) ),0.2,"elem nums",obj.allx(:,frame)>=0.5);
+                fe.plotWithSettings(mesh.nodes,"deformed",obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.modes(:,i,frame) ),0.1,"elem nums",obj.allx(:,frame)>=0.5);
                 title(['Mode ' num2str(i) ', vol_{fr}=' num2str(obj.plVol(frame)) ', Frq. =' num2str(obj.plOmegas(1,frame),4) ' [Hz]'  ', iter:' num2str(frame)]);
                 set(gca, 'FontSize', fontsize)
             end
@@ -81,7 +88,7 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
             savefig(gcf,[basename '_frame_' num2str(frame) '.fig'])
         end
 
-        function plot_subsequent_forms(obj, mode1, mode2, frame)
+        function plot_subsequent_forms(obj, basename, mode1, mode2, frame)
             fontsize=16;
 
             figure;
@@ -94,12 +101,12 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
             fe.plotWithSettings(mesh.nodes,"deformed",obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.modes(:,mode2,frame) ),0.2,"elem nums",obj.allx(:,frame)>=0.5);
             title(['Mode ' num2str(mode2) ', vol_{fr}=' num2str(topOptSecondOrder.plVol(frame)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(mode2,frame),4) ' [Hz]' ', iter' num2str(frame)]);
             set(gca, 'FontSize', fontsize)
-            saveas(gcf,['corrframes_' num2str(frame) '.pdf'])
-            savefig(gcf,['corrframes_' num2str(frame) '.fig'])
+            saveas(gcf,[ basename '_corrframes_' num2str(frame) '.pdf'])
+            savefig(gcf,[ basename '_corrframes_' num2str(frame) '.fig'])
 
         end
 
-        function plot_correlation_map(obj,mode, frame)
+        function plot_correlation_map(obj, basename, mode, frame)
             figure;
             U1 = normalize(obj.FEAnalysis.modes(:,mode1,frame-1), 1); 
             U2 = normalize(obj.FEAnalysis.modes(:,mode1,frame), 1);
@@ -111,11 +118,13 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
             xlabel(['Mode number' num2str(mode)]);
             ylabel(['Frame ' num2str(frame)]);
             title('Correlation matrix of eigenmode 1');
+            saveas(gcf,[ basename '_corr_map_' num2str(frame) '.pdf'])
+            savefig(gcf,[ basename '_corrf_map_' num2str(frame) '.fig'])
         end
 
-        function plot_correlation_curve(obj)
+        function plot_correlation_curve(obj, basename, nforms)
             figure;
-            for k=1:5
+            for k=1:nforms
                 kstr=num2str(k);
                 plCorr = obj.getModesCorrelation(squeeze(obj.FEAnalysis.modes(:,k,:)));
                 figure, hold on
@@ -126,12 +135,12 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
                 ylabel('Correlation');
                 %xlim([37 57]);
                 set(gca, 'FontSize', 18)
-                saveas(gcf,['correlation_' kstr '.png'])
-                savefig(gcf,['correlation_' kstr '.fig'])
+                saveas(gcf,[basename '_correlation_' kstr '.png'])
+                savefig(gcf,[basename '_correlation_' kstr '.fig'])
             end
         end
 
-        function plot_uncorrelated_frames(obj)
+        function plot_uncorrelated_frames(obj, basename)
             for mode=1:5
                 kstr=num2str(mode);
                 plCorr = obj.getModesCorrelation(obj.FEAnalysis.modes(:,mode,:));
@@ -149,8 +158,8 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
                         title(['Mode ' kstr ', vol_{fr}=' num2str(topOptSecondOrder.plVol(k+1)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(1,k+1),4) ' [Hz]' ', iter' num2str(k+1)]);
                         set(gca, 'FontSize', fontsize)
                 
-                        saveas(gcf,['frame_correlation_mode_1_' num2str(k) '.pdf'])
-                        savefig(gcf,['frame_correlation_mode_1_' num2str(k) '.fig'])
+                        saveas(gcf,[basename '_frame_correlation_mode_1_' num2str(k) '.pdf'])
+                        savefig(gcf,[basename '_frame_correlation_mode_1_' num2str(k) '.fig'])
                     end
                 end
             end
