@@ -63,12 +63,6 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
                 set(gca, 'FontSize', 18)
                 saveas(gcf,[basename '_Mode_'  num2str(l)  '.png'])
                 savefig(gcf,[basename '_Mode_'  num2str(l)  '.fig'])
-                
-                A = (1:4)';  % Column vector
-                filename = 'Results.xlsx';
-                sheetname = basename;
-                range = 'A2';  % Start writing in column C, row 1
-                writematrix(A, filename, 'Sheet', sheetname, 'Range', range);
 
             end
         end
@@ -81,7 +75,7 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
             for i=1:nmodes
                 subplot(nmodes, 1, i);
                 fe.plotWithSettings(mesh.nodes,"deformed",obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.modes(:,i,frame) ),0.1,"elem nums",obj.allx(:,frame)>=0.5);
-                title(['Mode ' num2str(i) ', vol_{fr}=' num2str(obj.plVol(frame)) ', Frq. =' num2str(obj.plOmegas(1,frame),4) ' [Hz]'  ', iter:' num2str(frame)]);
+                title(['Mode ' num2str(i) ', vol_{fr}=' num2str(obj.plVol(frame)) ', Frq. =' num2str(obj.plOmegas(i,frame),4) ' [Hz]'  ', iter:' num2str(frame)]);
                 set(gca, 'FontSize', fontsize)
             end
             saveas(gcf,[basename '_frame_' num2str(frame) '.pdf'])
