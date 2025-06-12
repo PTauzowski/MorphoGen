@@ -7,7 +7,7 @@ close all;
 % Cantilever topology optimization elastic task.
 
 % Resolution of shortest (vertical) edge
-res = 40;
+res = 50;
 
 % height of the cantilever
 h = 1;
@@ -76,8 +76,8 @@ const_rows=3;
 ncel=round(const_rows*res*l);
 const_elems=[1:ncel size(mesh.elems,1):-1:size(mesh.elems,1)-ncel ];
 
-topOpt=FreeVibrationsTopologyOpt(analysisLinear,mesh,'FreeVib');
-topOpt.solve()
+% topOpt=FreeVibrationsTopologyOpt(analysisLinear,mesh,'FreeVib');
+% topOpt.solve()
 
 nEigenForms=10;
 vibrations = LinearNaturalVibration( analysisLinear.felems, mesh );
@@ -91,24 +91,28 @@ harmonicVivrations.Pnodal = analysisLinear.Pnodal;
 harmonicVivrations.Pfem = analysisLinear.Pfem;
 harmonicVivrations.supports = analysisLinear.supports;
 
-basename='Const_load';
 nforms=3;
+
+basename='const_load';
+
+scales = [0.05 0.05 0.05; 0.05 0.05 0.05; 0.05 0.05 0.05];
 for k=1:nforms
     harmonicVivrations.count=0;
     harmonicVivrations.mode=k;
     topOptHarmonicVivrations = StressIntensityTopologyOptimizationDynamicBuckling( Rfilter, harmonicVivrations, cutTreshold, penal, 0.45, false );
     topOptHarmonicVivrations.setConstElems(const_elems);
     [objF, xopt]  = topOptHarmonicVivrations.solve();
+    save([basename '_' num2str(k) '.mat'], '-v7.3');
     topOptHarmonicVivrations.plot_frequencies(basename, nforms)
-    topOptHarmonicVivrations.plot_forms(basename, nforms, topOptHarmonicVivrations.iteration-1)
+    topOptHarmonicVivrations.plot_forms(basename, nforms, topOptHarmonicVivrations.iteration-1, scales(k,:) );
     topOptHarmonicVivrations.plot_correlation_curve( basename, nforms)
-    topOptHarmonicVivrations.plot_uncorrelated_frames( basename)
+    topOptHarmonicVivrations.plot_uncorrelated_frames( basename )
     topOptHarmonicVivrations.resetAnalysis();
     harmonicVivrations.modes=[];
 end
 
-harmonicVivrations.isLoadConst=false;
-
+% harmonicVivrations.isLoadConst=false;
+% 
 % basename='Var_load';
 % for k=1:nforms
 %     harmonicVivrations.count=0;

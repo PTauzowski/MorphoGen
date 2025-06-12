@@ -67,14 +67,14 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
             end
         end
 
-        function plot_forms(obj, basename, nmodes, frame)
+        function plot_forms(obj, basename, nmodes, frame, scales)
             fontsize=10;
-            figure, hold on;
             fe=obj.FEAnalysis.felems{1};
             mesh=obj.FEAnalysis.mesh;
             for i=1:nmodes
-                subplot(nmodes, 1, i);
-                fe.plotWithSettings(mesh.nodes,"deformed",obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.modes(:,i,frame) ),0.1,"elem nums",obj.allx(:,frame)>=0.5);
+                figure, hold on;
+                %subplot(nmodes, 1, i);
+                fe.plotWithSettings(mesh.nodes,"deformed",obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.modes(:,i,frame) ),scales(i),"elem nums",obj.allx(:,frame)>=0.5);
                 title(['Mode ' num2str(i) ', vol_{fr}=' num2str(obj.plVol(frame)) ', Frq. =' num2str(obj.plOmegas(i,frame),4) ' [Hz]'  ', iter:' num2str(frame)]);
                 set(gca, 'FontSize', fontsize)
             end
