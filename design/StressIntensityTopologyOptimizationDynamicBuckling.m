@@ -67,7 +67,7 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
             end
         end
 
-        function plot_forms(obj, basename, nmodes, frame, scales)
+        function plot_forms(obj, basename, nmodes, frame, load_mode, scales)
             fontsize=10;
             fe=obj.FEAnalysis.felems{1};
             mesh=obj.FEAnalysis.mesh;
@@ -75,11 +75,12 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
                 figure, hold on;
                 %subplot(nmodes, 1, i);
                 fe.plotWithSettings(mesh.nodes,"deformed",obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.modes(:,i,frame) ),scales(i),"elem nums",obj.allx(:,frame)>=0.5);
-                title(['Mode ' num2str(i) ', vol_{fr}=' num2str(obj.plVol(frame)) ', Frq. =' num2str(obj.plOmegas(i,frame),4) ' [Hz]'  ', iter:' num2str(frame)]);
+                title(['Load mode ' num2str(load_mode) ', Eigen mode ' num2str(i) ', vol_{fr}=' num2str(obj.plVol(frame)) ', Frq. =' num2str(obj.plOmegas(i,frame),4) ' [Hz]'  ', iter:' num2str(frame)]);
                 set(gca, 'FontSize', fontsize)
+                saveas(gcf,[basename '_loadmode_' num2str(load_mode) '_mode_' num2str(i)  '_iters_' num2str(frame) '.pdf'])
+                savefig(gcf,[basename '_loadmode_' num2str(load_mode) '_mode_' num2str(i)  '_iters_' num2str(frame) '.fig'])
             end
-            saveas(gcf,[basename '_frame_' num2str(frame) '.pdf'])
-            savefig(gcf,[basename '_frame_' num2str(frame) '.fig'])
+           
         end
 
         function plot_subsequent_forms(obj, basename, mode1, mode2, frame)
@@ -118,8 +119,10 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
 
         function plot_correlation_curve(obj, basename, nforms)
             figure;
+            tol=1.0E3;
             for k=1:nforms
                 kstr=num2str(k);
+                %plCorr = round(obj.getModesCorrelation(squeeze(obj.FEAnalysis.modes(:,k,:)))/tol)*tol;
                 plCorr = obj.getModesCorrelation(squeeze(obj.FEAnalysis.modes(:,k,:)));
                 figure, hold on
                 p2=plot(obj.plVol(1:end-1), plCorr(1,1:end)','LineWidth', 2);
