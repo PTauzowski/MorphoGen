@@ -1,7 +1,7 @@
 classdef ElasticHarmonicVibrations < FEAnalysis
    
    properties
-        isMeshConst, isLoadConst, lambda, omegas, mode, modes, count, P0;
+        isMeshConst, isLoadConst, lambda, omegas, mode, modes, count, P0, nmodes, correlation_matrix;
    end
    
    methods       
@@ -14,6 +14,8 @@ classdef ElasticHarmonicVibrations < FEAnalysis
             obj.rotations=[];
             obj.count=0;
             obj.modes=[];
+            obj.nmodes=30;
+            obj.correlation_matrix=zeros(obj.nmodes,obj.nmodes);
        end
 
        function [K, M] = computeMatrices(obj,x)
@@ -51,12 +53,16 @@ classdef ElasticHarmonicVibrations < FEAnalysis
            else
                solver = LinearEquationsSystemTr2D(I, J, obj.toFEMVector(obj.supports),obj.rotations);
            end
-           K  = obj.assemblyGlobalMatrix('computeStifnessMatrix', x, obj.isMeshConst);
-           M  = obj.assemblyGlobalMatrix('computeMassMatrix', x, obj.isMeshConst);
+           vK  = obj.assemblyGlobalMatrix('computeStifnessMatrix', x, obj.isMeshConst);
+           vM  = obj.assemblyGlobalMatrix('computeMassMatrix', x, obj.isMeshConst);
 
-           [modes, lambdas] = solver.solveEigenproblem(K,M,10);
+           K = solver.createSparseMatrix(vK);
+           M = solver.createSparseMatrix(vM);
+           save("LoadForce.mat",  "K", "M", "x");
+
+           [modes, lambdas] = solver.solveEigenproblem(vK,vM,obj.nmodes);
            obj.modes = cat(3, obj.modes, modes);
-           lambdas = diag(lambdas(1:5,1:5));
+           lambdas = diag(lambdas(1:obj.nmodes,1:obj.nmodes));
            obj.omegas=sqrt(lambdas/2/pi);
            obj.Pfem=0*obj.Pfem;
            %obj.qfem = solver.solve(K-(lambdas(3)+lambdas(4))/2*M, obj.Pfem);
@@ -65,9 +71,9 @@ classdef ElasticHarmonicVibrations < FEAnalysis
                obj.P0=obj.Pfem;
            end
            if obj.isLoadConst
-                obj.qfem = solver.solve(K, obj.P0);
+                obj.qfem = solver.solve(vK, obj.P0);
            else
-                obj.qfem = solver.solve(K, obj.Pfem);
+                obj.qfem = solver.solve(vK, obj.Pfem);
            end
            obj.qnodal=obj.fromFEMVector(obj.qfem(:,1));
            qfem=obj.qfem;
@@ -94,13 +100,21 @@ classdef ElasticHarmonicVibrations < FEAnalysis
            end
        end
         
-       % function corr=computeCorrelations(nmodes)
-       %     corr=zeros(1,nmodes);
-       %     for k=1:nmodes
-       %          corr(k)=abs(mode(:,k-1)'*mode(:,k))/norm(mode(:,k-1))/norm(mode(:,k))
-       %     end
-       % end
-       % 
+       function computeCorrelationMatrix(obj)
+           for k=1:obj.nmodes
+               for l=1:obj.nmodes
+                    obj.correlation_matrix(k,l)=abs(obj.modes(:,k)'*obj.modes(:,l))/norm(obj.modes(:,k))/norm(obj.modes(:,l));
+               end
+           end
+       end
+
+       function cv = computeCorrelationVector(obj,test_mode)
+           cv=zeros(1,obj.nmodes);
+           for k=1:obj.nmodes
+                    cv(k)=abs(test_mode'*obj.modes(:,k,end))/norm(test_mode)/norm(obj.modes(:,k,end));
+           end
+       end
+
    end
 end
 

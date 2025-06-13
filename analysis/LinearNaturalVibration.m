@@ -33,20 +33,20 @@ classdef LinearNaturalVibration < FEAnalysis
            end
            obj.freedofs=solver.freedofs;
            obj.fixeddofs=solver.supdofs;
-           K = obj.assemblyGlobalMatrix('computeStifnessMatrix',1,false);
+           vK = obj.assemblyGlobalMatrix('computeStifnessMatrix',1,false);
            %obj.qfem = solver.solve(K, obj.Pfem );
            %obj.qnodal = obj.fromFEMVector( obj.qfem );
            %obj.computeElementResults();
-           M = obj.assemblyGlobalMatrix('computeMassMatrix',1,false);
+           vM = obj.assemblyGlobalMatrix('computeMassMatrix',1,false);
 
-           % K = solver.createSparseMatrix(K);
-           % M = solver.createSparseMatrix(M);
-           % nodes=obj.mesh.nodes;
-           % elems=obj.felems{1}.elems;
-           % supports = solver.supports(:);
-           % save("DesignDomain.mat", "nodes", "elems", "K", "M", "supports");
+           K = solver.createSparseMatrix(vK);
+           M = solver.createSparseMatrix(vM);
+           nodes=obj.mesh.nodes;
+           elems=obj.felems{1}.elems;
+           supports = solver.supports(:);
+           save("DesignDomain.mat", "nodes", "elems", "K", "M", "supports" ,"-append");
 
-           [obj.qforms, lambdas]=solver.solveEigenproblem(K,M,num_eigenvalues);
+           [obj.qforms, lambdas]=solver.solveEigenproblem(vK,vM,num_eigenvalues);
            obj.omegas=sqrt(lambdas);
        end
 

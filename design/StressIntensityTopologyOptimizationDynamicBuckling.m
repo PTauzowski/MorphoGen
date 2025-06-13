@@ -50,7 +50,7 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
            end
         end
 
-        function plot_frequencies(obj, basename, nmodes)
+        function plot_frequencies(obj, basename, load_mode, nmodes)
             for l=1:nmodes
                 figure, hold on
                 p2=plot(obj.plVol,obj.plOmegas(l,:)','LineWidth', 3);
@@ -61,8 +61,8 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
                 ylabel('Frequency [Hz]');
                 %xlim([37 57]);
                 set(gca, 'FontSize', 18)
-                saveas(gcf,[basename '_Mode_'  num2str(l)  '.png'])
-                savefig(gcf,[basename '_Mode_'  num2str(l)  '.fig'])
+                saveas(gcf,[basename '_frequency_loadmode_' num2str(load_mode) '_mode_'  num2str(l)  '.png'])
+                savefig(gcf,[basename '_frequency_loadmode_' num2str(load_mode) '_mode_'  num2str(l)  '.fig'])
 
             end
         end
@@ -117,7 +117,7 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
             savefig(gcf,[ basename '_corrf_map_' num2str(frame) '.fig'])
         end
 
-        function plot_correlation_curve(obj, basename, nforms)
+        function plot_correlation_curve(obj, basename, load_mode, nforms)
             figure;
             tol=1.0E3;
             for k=1:nforms
@@ -126,14 +126,15 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
                 plCorr = obj.getModesCorrelation(squeeze(obj.FEAnalysis.modes(:,k,:)));
                 figure, hold on
                 p2=plot(obj.plVol(1:end-1), plCorr(1,1:end)','LineWidth', 2);
+                ylim([0 1])
                 set(gca, 'XDir', 'reverse');
-                title(['Correlations of mode ' kstr]);
+                title(['Self correlations of mode ' kstr ' for load form' num2str(load_mode)]);
                 xlabel('Volume fracion [%]');
                 ylabel('Correlation');
                 %xlim([37 57]);
                 set(gca, 'FontSize', 18)
-                saveas(gcf,[basename '_correlation_' kstr '.png'])
-                savefig(gcf,[basename '_correlation_' kstr '.fig'])
+                saveas(gcf,[basename '_loadmode_' num2str(load_mode) '_correlation_' kstr '.png'])
+                savefig(gcf,[basename '_loadmode_' num2str(load_mode) '_correlation_' kstr '.fig'])
             end
         end
 
