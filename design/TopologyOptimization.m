@@ -158,15 +158,15 @@ classdef TopologyOptimization < handle
         end
         function plotCurrentFrame(obj)
                 obj.plotMeshTopology( obj.x, obj.elem_inds )
-                title(['Iteration :',num2str(obj.iteration), 'vol =' num2str(obj.computeVolumeFraction)]);
+                title(['Iteration :',num2str(obj.iteration), 'vol =' num2str(obj.computeVolumeFraction())]);
         end
         function plotMeshTopology( obj, x, elem_inds )
             clf;
             hold on;
             %colorbar();
             daspect([1 1 1]);
-            %colormap(gray);
-            colormap("jet");
+            colormap(gray);
+            %colormap("jet");
             if  size(obj.FEAnalysis.mesh.nodes,2) == 3
                 view(45, 45);
                 %view(135, 25);
@@ -188,8 +188,8 @@ classdef TopologyOptimization < handle
                     %faces = 1:length(elem_inds{i});
                     %patch('Vertices', problem.nodes, 'Faces', problem.felems{i}.elems(faces,problem.felems{i}.sf.contour),'FaceColor','none','EdgeColor','k');
                     %patch('Vertices', problem.nodes, 'Faces', problem.felems{i}.elems(faces,problem.felems{i}.sf.contour),'FaceColor',[0.8 0.8 0.8],'EdgeColor','none');
-                    %C = 1-obj.FEAnalysis.felems{i}.results.nodal.all(:,18);
-                    C = obj.FEAnalysis.felems{i}.results.nodal.all(:,17);
+                    C = 1-obj.FEAnalysis.felems{i}.results.nodal.all(:,18);
+                    %C = obj.FEAnalysis.felems{i}.results.nodal.all(:,17);
                     patch('Vertices', obj.FEAnalysis.mesh.nodes, 'Faces', obj.FEAnalysis.felems{i}.elems(faces,obj.FEAnalysis.felems{i}.sf.contour), 'FaceVertexCData',C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
                    % patch('Vertices', [100-obj.FEproblem.mesh.nodes(:,1) obj.FEproblem.mesh.nodes(:,2:3)], 'Faces', obj.FEproblem.felems{i}.elems(faces,obj.FEproblem.felems{i}.sf.contour), 'FaceVertexCData',C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
                 %title(obj.results.descriptions(valueIndex));
@@ -235,7 +235,7 @@ classdef TopologyOptimization < handle
         end
         
         function [volfr, activeVolFr, constVolFr] = computeVolumeFraction(obj)
-            volfr = sum(obj.x(obj.x>0.5));
+            volfr = sum(obj.x)/numel(obj.x);
             constVolFr = sum(obj.x(obj.const_elems))/size(obj.x,1);
             activeVolFr = volfr - constVolFr;
         end

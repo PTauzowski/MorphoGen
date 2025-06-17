@@ -225,6 +225,7 @@ classdef PlaneElem < FiniteElement
             plotWired=false;
             plotNodes=false;
             elem_color=[0.8 0.8 0.8];
+            edge_color='k';
             nodes_color='r';
             elem_num=1:size(obj.elems,1);
             for k=1:nargin-2
@@ -237,9 +238,8 @@ classdef PlaneElem < FiniteElement
                     if varargin{k}=="map"
                         C=varargin{k+1};
                     end
-                    if varargin{k}=="wired"
-                        plotWired=varargin{k+1};
-                        elem_color='r';
+                    if varargin{k}=="edge color"
+                        edge_color=varargin{k+1};
                     end
                     if varargin{k}=="elem color"
                         elem_color=varargin{k+1};
@@ -262,12 +262,7 @@ classdef PlaneElem < FiniteElement
                 colorbar;
                 patch('Vertices', nodesplot, 'Faces', obj.elems(elem_num,obj.sf.contour), 'FaceVertexCData', C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
             else 
-                if plotWired
-                    patch('Vertices', nodesplot, 'Faces', obj.elems(elem_num,obj.sf.contour),'FaceColor','none','EdgeColor',elem_color);
-                else
-                    patch('Vertices', nodesplot, 'Faces', obj.elems(elem_num,obj.sf.contour),'FaceColor','none','EdgeColor','k');
-                    patch('Vertices', nodesplot, 'Faces', obj.elems(elem_num,obj.sf.contour),'FaceColor',elem_color);
-                end
+                patch('Vertices', nodesplot, 'Faces', obj.elems(elem_num,obj.sf.contour),'FaceColor',elem_color,'EdgeColor',edge_color);
             end
             if plotNodes
                 scatter(nodesplot(:,1),nodesplot(:,2),".")

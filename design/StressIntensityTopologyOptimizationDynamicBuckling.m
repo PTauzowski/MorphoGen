@@ -55,7 +55,7 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
                 figure, hold on
                 p2=plot(obj.plVol,obj.plOmegas(l,:)','LineWidth', 3);
                 set(gca, 'XDir', 'reverse');
-                title(['Mode '   num2str(l)  ' evolution']);
+                title(['Load mode '  num2str(load_mode)  ', Eigen mode '  num2str(l)  ' evolution']);
                 %% 
                 xlabel('Volume fracion [%]');
                 ylabel('Frequency [Hz]');
@@ -74,7 +74,7 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
             for i=1:nmodes
                 figure, hold on;
                 %subplot(nmodes, 1, i);
-                fe.plotWithSettings(mesh.nodes,"deformed",obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.modes(:,i,frame) ),scales(i),"elem nums",obj.allx(:,frame)>=0.5);
+                fe.plotWithSettings(mesh.nodes,"deformed",obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.modes(:,i,frame) ),scales(i),"elem nums",obj.allx(:,frame)>=0.5,"edge color", "k");
                 title(['Load mode ' num2str(load_mode) ', Eigen mode ' num2str(i) ', vol_{fr}=' num2str(obj.plVol(frame)) ', Frq. =' num2str(obj.plOmegas(i,frame),4) ' [Hz]'  ', iter:' num2str(frame)]);
                 set(gca, 'FontSize', fontsize)
                 saveas(gcf,[basename '_loadmode_' num2str(load_mode) '_mode_' num2str(i)  '_iters_' num2str(frame) '.pdf'])
