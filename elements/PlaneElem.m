@@ -262,7 +262,7 @@ classdef PlaneElem < FiniteElement
                 colorbar;
                 patch('Vertices', nodesplot, 'Faces', obj.elems(elem_num,obj.sf.contour), 'FaceVertexCData', C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
             else 
-                patch('Vertices', nodesplot, 'Faces', obj.elems(elem_num,obj.sf.contour),'FaceColor',elem_color,'EdgeColor',edge_color);
+                patch('Vertices', nodesplot, 'Faces', obj.elems(elem_num,obj.sf.contour),'FaceColor',elem_color,'EdgeColor',edge_color,'LineWidth',0.1);
             end
             if plotNodes
                 scatter(nodesplot(:,1),nodesplot(:,2),".")

@@ -50,6 +50,11 @@ classdef LinearNaturalVibration < FEAnalysis
            obj.omegas=sqrt(lambdas);
        end
 
+
+        function freqs = getFreqs(obj)
+            freqs = diag(obj.omegas)/2/pi;
+        end
+
        function solveWeighted(obj, x, num_eigenvalues)
            [I,J,~,~] = obj.globalMatrixIndices();
            obj.prepareRHSVectors();
@@ -75,6 +80,23 @@ classdef LinearNaturalVibration < FEAnalysis
            obj.qnodal = obj.fromFEMVector( obj.qfem );
            obj.computeElementResults(x);
        end
+
+       function plotNaturalForms(obj, basename, formslist)
+            freqs = obj.getFreqs();
+            for k=1:numel(formslist)
+                form=formslist(k);
+                %subplot(5, 2, k);
+                figure
+                obj.setForm(1,form);
+                obj.felems{1}.plotWithSettings(obj.mesh.nodes,"deformed",obj.fromFEMVector( obj.qforms(:,form) ),0.1);
+                %axis on, xlabel('x-axis'), ylabel('y-axis'), view(3)
+                omega_str = sprintf('%.4g', freqs(form));
+                title(['Form:' num2str(form), ' Frq. = ' omega_str ' Hz']);
+                saveas(gcf, [basename '_form_' num2str(form) '.pdf'])
+                savefig(gcf,[basename '_form_' num2str(form) '.fig'])
+            end
+       end
+
    end
 end
 

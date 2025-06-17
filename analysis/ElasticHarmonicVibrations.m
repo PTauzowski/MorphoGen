@@ -100,10 +100,19 @@ classdef ElasticHarmonicVibrations < FEAnalysis
            end
        end
         
-       function computeCorrelationMatrix(obj)
+       function computeSelfCorrelationMatrix(obj)
            for k=1:obj.nmodes
                for l=1:obj.nmodes
                     obj.correlation_matrix(k,l)=abs(obj.modes(:,k)'*obj.modes(:,l))/norm(obj.modes(:,k))/norm(obj.modes(:,l));
+               end
+           end
+       end
+
+       function Corr = computeCorrelationMatrix(obj, dd_modes, nmodes)
+           Corr=zeros(nmodes,nmodes);
+           for k=1:nmodes
+               for l=1:nmodes
+                    Corr(k,l)=abs(dd_modes(:,k)'*obj.modes(:,l,end))/norm(dd_modes(:,k))/norm(obj.modes(:,l,end));
                end
            end
        end

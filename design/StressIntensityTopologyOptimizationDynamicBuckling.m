@@ -59,9 +59,9 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
                 %% 
                 xlabel('Volume fracion [%]');
                 ylabel('Frequency [Hz]');
-                %xlim([37 57]);
+                ylim([0 inf])
                 set(gca, 'FontSize', 18)
-                saveas(gcf,[basename '_frequency_loadmode_' num2str(load_mode) '_mode_'  num2str(l)  '.png'])
+                saveas(gcf,[basename '_frequency_loadmode_' num2str(load_mode) '_mode_'  num2str(l)  '.png']);
                 savefig(gcf,[basename '_frequency_loadmode_' num2str(load_mode) '_mode_'  num2str(l)  '.fig'])
 
             end
@@ -77,7 +77,8 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
                 fe.plotWithSettings(mesh.nodes,"deformed",obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.modes(:,i,frame) ),scales(i),"elem nums",obj.allx(:,frame)>=0.5,"edge color", "k");
                 title(['Load mode ' num2str(load_mode) ', Eigen mode ' num2str(i) ', vol_{fr}=' num2str(obj.plVol(frame)) ', Frq. =' num2str(obj.plOmegas(i,frame),4) ' [Hz]'  ', iter:' num2str(frame)]);
                 set(gca, 'FontSize', fontsize)
-                saveas(gcf,[basename '_loadmode_' num2str(load_mode) '_mode_' num2str(i)  '_iters_' num2str(frame) '.pdf'])
+                exportgraphics(gcf,[basename '_loadmode_' num2str(load_mode) '_mode_' num2str(i)  '_iters_' num2str(frame) '.pdf'],'ContentType','vector')
+                saveas(gcf,[basename '_loadmode_' num2str(load_mode) '_mode_' num2str(i)  '_iters_' num2str(frame) '.png']);
                 savefig(gcf,[basename '_loadmode_' num2str(load_mode) '_mode_' num2str(i)  '_iters_' num2str(frame) '.fig'])
             end
            
@@ -96,7 +97,7 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
             fe.plotWithSettings(mesh.nodes,"deformed",obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.modes(:,mode2,frame) ),0.2,"elem nums",obj.allx(:,frame)>=0.5);
             title(['Mode ' num2str(mode2) ', vol_{fr}=' num2str(topOptSecondOrder.plVol(frame)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(mode2,frame),4) ' [Hz]' ', iter' num2str(frame)]);
             set(gca, 'FontSize', fontsize)
-            saveas(gcf,[ basename '_corrframes_' num2str(frame) '.pdf'])
+            saveas(gcf,[ basename '_corrframes_' num2str(frame) '.png'])
             savefig(gcf,[ basename '_corrframes_' num2str(frame) '.fig'])
 
         end
@@ -113,7 +114,7 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
             xlabel(['Mode number' num2str(mode)]);
             ylabel(['Frame ' num2str(frame)]);
             title('Correlation matrix of eigenmode 1');
-            saveas(gcf,[ basename '_corr_map_' num2str(frame) '.pdf'])
+            saveas(gcf,[ basename '_corr_map_' num2str(frame) '.png'])
             savefig(gcf,[ basename '_corrf_map_' num2str(frame) '.fig'])
         end
 
@@ -156,7 +157,7 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
                         title(['Mode ' kstr ', vol_{fr}=' num2str(topOptSecondOrder.plVol(k+1)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(1,k+1),4) ' [Hz]' ', iter' num2str(k+1)]);
                         set(gca, 'FontSize', fontsize)
                 
-                        saveas(gcf,[basename '_frame_correlation_mode_1_' num2str(k) '.pdf'])
+                        saveas(gcf,[basename '_frame_correlation_mode_1_' num2str(k) '.png'])
                         savefig(gcf,[basename '_frame_correlation_mode_1_' num2str(k) '.fig'])
                     end
                 end
