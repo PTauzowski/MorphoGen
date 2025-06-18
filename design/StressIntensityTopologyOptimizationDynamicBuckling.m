@@ -28,19 +28,17 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
         function printIterationInfo(obj)
             fprintf('%5i ',obj.iteration);
             fprintf('Vrel=%2.1f ',round(sum( obj.x )/obj.V0*1000)/10);
-            fprintf('lambda=%5.3g ', obj.FEAnalysis.lambda);
-            fprintf('omega(1)=%5.3g ', obj.FEAnalysis.omegas(1));
-            fprintf('omega(2)=%5.3g ', obj.FEAnalysis.omegas(2));
-            fprintf('omega(3)=%5.3g ', obj.FEAnalysis.omegas(3));
-            fprintf('omega(4)=%5.3g ', obj.FEAnalysis.omegas(4));
+            %fprintf('lambda=%5.3g ', obj.FEAnalysis.lambda);
+            fprintf('frq(1)=%5.3g ', obj.FEAnalysis.frequencies(1,end));
+            fprintf('frq(2)=%5.3g ', obj.FEAnalysis.frequencies(2,end));
+            fprintf('frq(3)=%5.3g ', obj.FEAnalysis.frequencies(3,end));
+            fprintf('frq(4)=%5.3g ', obj.FEAnalysis.frequencies(4,end));
             fprintf('\n');
-            obj.plLambda = [ obj.plLambda abs( obj.FEAnalysis.lambda) ];
-            obj.plOmegas = [ obj.plOmegas abs( obj.FEAnalysis.omegas) ];
+%            obj.plLambda = [ obj.plLambda abs( obj.FEAnalysis.lambda) ];
+            obj.plOmegas = [ obj.plOmegas abs( obj.FEAnalysis.omegas(:,end) ) ];
             obj.plVol = [ obj.plVol round(sum( obj.x )/obj.V0*1000)/10 ];
             
-            if abs(obj.FEAnalysis.lambda)>=1
-                obj.lastStableFrame=obj.iteration;
-            end
+          
         end
 
         function [plCor] = getModesCorrelation(obj, mode)
@@ -53,7 +51,7 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
         function plot_frequencies(obj, basename, load_mode, nmodes)
             for l=1:nmodes
                 figure, hold on
-                p2=plot(obj.plVol,obj.plOmegas(l,:)','LineWidth', 3);
+                p2=plot(obj.plVol,obj.plOmegas(l,:)/2/pi','LineWidth', 3);
                 set(gca, 'XDir', 'reverse');
                 title(['Load mode '  num2str(load_mode)  ', Eigen mode '  num2str(l)  ' evolution']);
                 %% 
@@ -75,7 +73,7 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
                 figure, hold on;
                 %subplot(nmodes, 1, i);
                 fe.plotWithSettings(mesh.nodes,"deformed",obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.modes(:,i,frame) ),scales(i),"elem nums",obj.allx(:,frame)>=0.5,"edge color", "k");
-                title(['Load mode ' num2str(load_mode) ', Eigen mode ' num2str(i) ', vol_{fr}=' num2str(obj.plVol(frame)) ', Frq. =' num2str(obj.plOmegas(i,frame),4) ' [Hz]'  ', iter:' num2str(frame)]);
+                title(['Load mode ' num2str(load_mode) ', Eigen mode ' num2str(i) ', vol_{fr}=' num2str(obj.plVol(frame)) ', Frq. =' num2str(obj.plOmegas(i,frame)/2/pi,4) ' [Hz]'  ', iter:' num2str(frame)]);
                 set(gca, 'FontSize', fontsize)
                 exportgraphics(gcf,[basename '_loadmode_' num2str(load_mode) '_mode_' num2str(i)  '_iters_' num2str(frame) '.pdf'],'ContentType','vector')
                 saveas(gcf,[basename '_loadmode_' num2str(load_mode) '_mode_' num2str(i)  '_iters_' num2str(frame) '.png']);
@@ -90,12 +88,12 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
             figure;
             subplot(2, 1, 1);
             fe.plotWithSettings(mesh.nodes,"deformed",obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.modes(:,mode1,frame) ),0.2,"elem nums",obj.allx(:,frame)>=0.5);
-            title(['Mode ' num2str(mode1) ', vol_{fr}=' num2str(topOptSecondOrder.plVol(frame)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(mode1,frame),4) ' [Hz]'  ', iter:' num2str(frame)]);
+            title(['Mode ' num2str(mode1) ', vol_{fr}=' num2str(topOptSecondOrder.plVol(frame)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(mode1,frame)/2/pi,4) ' [Hz]'  ', iter:' num2str(frame)]);
             set(gca, 'FontSize', fontsize)
             
             subplot(2, 1, 2);
             fe.plotWithSettings(mesh.nodes,"deformed",obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.modes(:,mode2,frame) ),0.2,"elem nums",obj.allx(:,frame)>=0.5);
-            title(['Mode ' num2str(mode2) ', vol_{fr}=' num2str(topOptSecondOrder.plVol(frame)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(mode2,frame),4) ' [Hz]' ', iter' num2str(frame)]);
+            title(['Mode ' num2str(mode2) ', vol_{fr}=' num2str(topOptSecondOrder.plVol(frame)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(mode2,frame)/2/pi,4) ' [Hz]' ', iter' num2str(frame)]);
             set(gca, 'FontSize', fontsize)
             saveas(gcf,[ basename '_corrframes_' num2str(frame) '.png'])
             savefig(gcf,[ basename '_corrframes_' num2str(frame) '.fig'])
@@ -149,12 +147,12 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
                 
                         subplot(2, 1, 1);
                         fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( obj.FEAnalysis.modes(:,mode,k) ),0.1,"elem nums",topOptSecondOrder.allx(:,k)>=0.5,"nodes",false);
-                        title(['Mode ' kstr ', vol_{fr}=' num2str(topOptSecondOrder.plVol(k)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(1,k-1),4) ' [Hz]'], [ 'MAC=' num2str(pl_mode1_cor(k),3) ', iter:' num2str(k)]);
+                        title(['Mode ' kstr ', vol_{fr}=' num2str(topOptSecondOrder.plVol(k)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(1,k-1)/2/pi,4) ' [Hz]'], [ 'MAC=' num2str(pl_mode1_cor(k),3) ', iter:' num2str(k)]);
                         set(gca, 'FontSize', fontsize)
                         
                         subplot(2, 1, 2);
                         fe.plotWithSettings(mesh.nodes,"deformed",analysisSecondOrder.fromFEMVector( analysisSecondOrder.modes1(:,mode,k+1) ),0.1,"elem nums",topOptSecondOrder.allx(:,k+1)>=0.5,"nodes",false);
-                        title(['Mode ' kstr ', vol_{fr}=' num2str(topOptSecondOrder.plVol(k+1)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(1,k+1),4) ' [Hz]' ', iter' num2str(k+1)]);
+                        title(['Mode ' kstr ', vol_{fr}=' num2str(topOptSecondOrder.plVol(k+1)) ', Frq. =' num2str(topOptSecondOrder.plOmegas(1,k+1)/2/pi,4) ' [Hz]' ', iter' num2str(k+1)]);
                         set(gca, 'FontSize', fontsize)
                 
                         saveas(gcf,[basename '_frame_correlation_mode_1_' num2str(k) '.png'])

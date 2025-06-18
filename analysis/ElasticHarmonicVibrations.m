@@ -1,7 +1,7 @@
 classdef ElasticHarmonicVibrations < FEAnalysis
    
    properties
-        isMeshConst, isLoadConst, lambda, omegas, mode, modes, count, P0, nmodes, correlation_matrix;
+        isMeshConst, isLoadConst, lambdas, omegas, frequencies, mode, modes, nmodes, count, P0, correlation_matrix;
    end
    
    methods       
@@ -14,6 +14,9 @@ classdef ElasticHarmonicVibrations < FEAnalysis
             obj.rotations=[];
             obj.count=0;
             obj.modes=[];
+            obj.lambdas=[];
+            obj.omegas=[];
+            obj.frequencies=[];
             obj.nmodes=30;
             obj.correlation_matrix=zeros(obj.nmodes,obj.nmodes);
        end
@@ -62,11 +65,12 @@ classdef ElasticHarmonicVibrations < FEAnalysis
 
            [modes, lambdas] = solver.solveEigenproblem(vK,vM,obj.nmodes);
            obj.modes = cat(3, obj.modes, modes);
-           lambdas = diag(lambdas(1:obj.nmodes,1:obj.nmodes));
-           obj.omegas=sqrt(lambdas/2/pi);
+           obj.lambdas = [obj.lambdas diag(lambdas)];
+           obj.omegas=[ obj.omegas sqrt(diag(lambdas))];
+           obj.frequencies = [ obj.frequencies sqrt(diag(lambdas)) / 2 / pi];
            obj.Pfem=0*obj.Pfem;
            %obj.qfem = solver.solve(K-(lambdas(3)+lambdas(4))/2*M, obj.Pfem);
-           obj.Pfem = obj.toFEMVector(lambdas(obj.mode)*obj.fromFEMVector(modes(:,obj.mode)));
+           obj.Pfem = obj.toFEMVector(lambdas(obj.mode,obj.mode)*obj.fromFEMVector(modes(:,obj.mode)));
            if obj.count==1
                obj.P0=obj.Pfem;
            end
