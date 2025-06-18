@@ -37,15 +37,47 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
 %            obj.plLambda = [ obj.plLambda abs( obj.FEAnalysis.lambda) ];
             obj.plOmegas = [ obj.plOmegas abs( obj.FEAnalysis.omegas(:,end) ) ];
             obj.plVol = [ obj.plVol round(sum( obj.x )/obj.V0*1000)/10 ];
-            
-          
         end
 
-        function [plCor] = getModesCorrelation(obj, mode)
+        function [plCor] = getModesSelfCorrelation(obj, mode)
            plCor=[];
            for k=2:size(mode,2)
                plCor = [plCor abs(mode(:,k-1)'*mode(:,k))/norm(mode(:,k-1))/norm(mode(:,k))];
            end
+        end
+
+        function corrIdx = getModeSwitchMatrix(obj)
+           nmodes=size(obj.FEAnalysis.omegas,1);
+           corrIdx=zeros(nmodes,obj.iteration-1);
+           coors=zeros(1,nmodes);
+           for l=1:obj.iteration-1
+                for i=1:nmodes
+                    for j=1:nmodes
+                        coors(j)= abs(obj.FEAnalysis.modes(:,i,1)'*obj.FEAnalysis.modes(:,j,l))/norm(obj.FEAnalysis.modes(:,i,1))/norm(obj.FEAnalysis.modes(:,j,l));
+                    end
+                    [~, corrIdx(i,l)]=max(coors);
+               end
+           end
+        end
+
+        function plot_frequencies_switched(obj, basename, load_mode, nmodes, corrIdx)
+            niter=size(obj.plOmegas,2);
+            for l=1:nmodes
+                figure, hold on
+                o=zeros(1,niter);
+                for i=1:niter
+                    o(i) = obj.plOmegas(corrIdx(l,i),i)/2/pi;
+                end
+                p2=plot(obj.plVol,o','LineWidth', 3);
+                set(gca, 'XDir', 'reverse');
+                title(['Frequency with switch' newline 'Load mode '  num2str(load_mode)  ', Eigen mode '  num2str(l)]); 
+                xlabel('Volume fracion [%]');
+                ylabel('Frequency with switch [Hz]');
+                ylim([0 inf])
+                set(gca, 'FontSize', 18)
+                saveas(gcf,[basename '_switched_frequency_loadmode_' num2str(load_mode) '_mode_'  num2str(l)  '.png']);
+                savefig(gcf,[basename '_switched_frequency_loadmode_' num2str(load_mode) '_mode_'  num2str(l)  '.fig'])
+            end
         end
 
         function plot_frequencies(obj, basename, load_mode, nmodes)
@@ -53,20 +85,18 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
                 figure, hold on
                 p2=plot(obj.plVol,obj.plOmegas(l,:)/2/pi','LineWidth', 3);
                 set(gca, 'XDir', 'reverse');
-                title(['Load mode '  num2str(load_mode)  ', Eigen mode '  num2str(l)  ' evolution']);
-                %% 
+                title(['Load mode '  num2str(load_mode)  ', Eigen mode '  num2str(l)  ' evolution']); 
                 xlabel('Volume fracion [%]');
                 ylabel('Frequency [Hz]');
                 ylim([0 inf])
                 set(gca, 'FontSize', 18)
                 saveas(gcf,[basename '_frequency_loadmode_' num2str(load_mode) '_mode_'  num2str(l)  '.png']);
                 savefig(gcf,[basename '_frequency_loadmode_' num2str(load_mode) '_mode_'  num2str(l)  '.fig'])
-
             end
         end
 
         function plot_forms(obj, basename, nmodes, frame, load_mode, scales)
-            fontsize=10;
+            fontsize=18;
             fe=obj.FEAnalysis.felems{1};
             mesh=obj.FEAnalysis.mesh;
             for i=1:nmodes
@@ -122,7 +152,7 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
             for k=1:nforms
                 kstr=num2str(k);
                 %plCorr = round(obj.getModesCorrelation(squeeze(obj.FEAnalysis.modes(:,k,:)))/tol)*tol;
-                plCorr = obj.getModesCorrelation(squeeze(obj.FEAnalysis.modes(:,k,:)));
+                plCorr = obj.getModesSelfCorrelation(squeeze(obj.FEAnalysis.modes(:,k,:)));
                 figure, hold on
                 p2=plot(obj.plVol(1:end-1), plCorr(1,1:end)','LineWidth', 2);
                 ylim([0 1])
@@ -140,7 +170,7 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
         function plot_uncorrelated_frames(obj, basename)
             for mode=1:5
                 kstr=num2str(mode);
-                plCorr = obj.getModesCorrelation(obj.FEAnalysis.modes(:,mode,:));
+                plCorr = obj.getModesSelfCorrelation(obj.FEAnalysis.modes(:,mode,:));
                 for k=1:size(plCorr,2)
                     if plCorr(k)<0.3
                         figure;
