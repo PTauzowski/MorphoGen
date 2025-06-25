@@ -12,7 +12,7 @@ classdef ColumnModel3D < ModelLinear
             obj.fe=SolidElasticElem( sf, obj.mesh.elems );
             material = SolidMaterial('mat1');
             material.setElasticIzo(E, nu);
-            material.rho=rho;
+            material.setMassIzoMatrix(rho);
             obj.fe.setMaterial( material );            
             obj.analysis = LinearElasticityWeighted( obj.fe, obj.mesh, true ); 
             %obj.analysis = SecondOrderElasticityWeighted( obj.fe, obj.mesh, false );

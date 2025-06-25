@@ -21,43 +21,43 @@ model = ColumnModel3D( sf,b,h,l,nl,E,nu,rho,P,xp);
 % model.fe.plotWired( model.mesh.nodes, model.analysis.qnodal, 0.1);
 
 %%% Buckling analysis %%%
-stability = LinearStability( model.analysis.felems, model.mesh);
-stability.Pnodal = model.analysis.Pnodal;
-stability.Pfem = model.analysis.Pfem;
-stability.supports = model.analysis.supports;
-stability.solve( nEigenForms);
-lambdas = diag(stability.lambdas)
-disp(['Eigenvalue = ', num2str(lambdas(1))]),
-disp(['P_critical = ', num2str(Pcr)])
-
-P_critical_str = sprintf('%.4g', Pcr);
-sgtitle(['P_{cr} = ', P_critical_str]);
-for k=1:min(10,nEigenForms)
-    subplot(5, 2, k);
-    stability.setForm(k);
-    model.fe.plotSolidDeformed(model.mesh.nodes,stability.qnodal,0.2);
-    axis on, xlabel('x-axis'), ylabel('y-axis'), view(3)
-    lambda_str = sprintf('%.4g', lambdas(k));
-    title(['Form:' num2str(k), ' \lambda=' lambda_str]);
-end
-
+% stability = LinearStability( model.analysis.felems, model.mesh);
+% stability.Pnodal = model.analysis.Pnodal;
+% stability.Pfem = model.analysis.Pfem;
+% stability.supports = model.analysis.supports;
+% stability.solve( nEigenForms);
+% lambdas = diag(stability.lambdas)
+% disp(['Eigenvalue = ', num2str(lambdas(1))]),
+% disp(['P_critical = ', num2str(Pcr)])
+% 
+% P_critical_str = sprintf('%.4g', Pcr);
+% sgtitle(['P_{cr} = ', P_critical_str]);
+% for k=1:min(10,nEigenForms)
+%     subplot(5, 2, k);
+%     stability.setForm(k);
+%     model.fe.plotSolidDeformed(model.mesh.nodes,stability.qnodal,0.2);
+%     axis on, xlabel('x-axis'), ylabel('y-axis'), view(3)
+%     lambda_str = sprintf('%.4g', lambdas(k));
+%     title(['Form:' num2str(k), ' \lambda=' lambda_str]);
+% end
+% 
 
 %%% Modal analysis %%%
-% vibrations = LinearNaturalVibration(model.analysis.felems, model.mesh);
-% vibrations.Pnodal = model.analysis.Pnodal;
-% vibrations.Pfem = model.analysis.Pfem;
-% vibrations.supports = model.analysis.supports;
-% vibrations.solve( nEigenForms);
-% omegas = sqrt(diag( vibrations.lambdas));
-% 
-% disp(['Numerical = ', num2str(omegas(1))])
-% disp(['Analytical = ', num2str(3.5160/l^2*sqrt(E*(b*h^3/12)/(rho*b*h)))])
-% 
-% for k=1:min( 6, nEigenForms)
-%     figure, vibrations.setForm(k);
-%     model.fe.plotSolidDeformed(model.mesh.nodes, vibrations.qnodal, 0.2);
-%     title(['Eigenvector: ' num2str(k)]);
-% end
+vibrations = LinearNaturalVibration(model.analysis.felems, model.mesh);
+vibrations.Pnodal = model.analysis.Pnodal;
+vibrations.Pfem = model.analysis.Pfem;
+vibrations.supports = model.analysis.supports;
+vibrations.solve( nEigenForms);
+omegas = sqrt(diag( vibrations.lambdas));
+
+disp(['Numerical = ', num2str(omegas(1))])
+disp(['Analytical = ', num2str(3.5160/l^2*sqrt(E*(b*h^3/12)/(rho*b*h)))])
+
+for k=1:min( 6, nEigenForms)
+    figure, vibrations.setForm(k);
+    model.fe.plotSolidDeformed(model.mesh.nodes, vibrations.qnodal, 0.2);
+    title(['Eigenvector: ' num2str(k)]);
+end
 
 %%% Topological optimization %%%
 % % Filtering radius

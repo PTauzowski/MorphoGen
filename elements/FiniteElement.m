@@ -59,7 +59,7 @@ classdef (Abstract) FiniteElement < handle
             V = alldofs;
         end
 
-        function K = computeElementMatrices(obj, scale, weights, detJ,B,D)
+        function K = computeElementMatrices(obj, scale, weights, detJ, B, D)
             Ke =  reshape( scale , 1, 1, [], 1) .* reshape( weights , 1, 1, 1, []) .* detJ .* pagemtimes(pagemtimes(B,'transpose',D,'none'),B);
             K=sum(Ke,4);
         end
@@ -94,7 +94,7 @@ classdef (Abstract) FiniteElement < handle
             [~, ~, detJ] = obj.computeJacobian(nodes,dN,el_idx);
             N = permute(repmat(obj.shapeMatrix( integrator.points ),[1,1,1,nelems]),[1,2,4,3]);
             h = repelem(obj.props.h,nelems,1);
-            M = obj.computeElementMatrices(h, integrator.weights, detJ, N, [obj.mat.rho 0; 0 obj.mat.rho]);
+            M = obj.computeElementMatrices(h, integrator.weights, detJ, N, obj.mat.M);
          end
 
          function K = computeGeometricStifnessMatrix(obj, nodes, el_idx)

@@ -571,6 +571,60 @@ classdef SolidElasticElem < FiniteElement
             [~,ifaces] = unique( sort(reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))',2),'rows' );
             patch('Vertices', nodes+scd*q, 'Faces', allfaces(ifaces,:), 'FaceVertexCData', C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
         end
+
+        function plotWithSettings(obj, nodes, varargin)
+            hold on;
+            daspect([1 1 1]);
+            nodesplot=nodes;
+            plotWired=false;
+            plotNodes=false;
+            elem_color=[0.8 0.8 0.8];
+            edge_color='k';
+            nodes_color='r';
+            elem_inds=(1:size(obj.elems,1))';
+            for k=1:nargin-2
+                if isstring(varargin{k})
+                    if varargin{k}=="deformed"
+                        dg     = norm( max(nodes) - min(nodes) );
+                        maxs = max( abs(min(min(varargin{k+1}))), abs(max(max(varargin{k+1})) ) );
+                        nodesplot = (nodes + varargin{k+1} ./ maxs * dg * varargin{k+2});
+                    end
+                    if varargin{k}=="map"
+                        C=varargin{k+1};
+                    end
+                    if varargin{k}=="edge color"
+                        edge_color=varargin{k+1};
+                    end
+                    if varargin{k}=="elem color"
+                        elem_color=varargin{k+1};
+                    end
+                    if varargin{k}=="elem nums"
+                        elem_inds=varargin{k+1};
+                    end
+                    if varargin{k}=="wired"
+                        plotWired=varargin{k+1};
+                        elem_color='r';
+                    end
+                    if varargin{k}=="nodes"
+                        plotNodes=varargin{k+1};
+                        nodes_color='r';
+                    end
+                end
+            end
+            allfaces = reshape(obj.elems(elem_inds,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(find(elem_inds),1))';
+            [~,ifaces] = unique( sort(reshape(obj.elems(elem_inds,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(find(elem_inds),1))',2),'rows' );
+            if exist('C','var')
+                colormap('jet');
+                colorbar;
+                patch('Vertices', nodesplot, 'Faces', allfaces(ifaces,:), 'FaceVertexCData', C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
+            else 
+                patch('Vertices', nodesplot, 'Faces', allfaces(ifaces,:),'FaceColor',elem_color,'EdgeColor',edge_color,'LineWidth',0.1);
+            end
+            if plotNodes
+                scatter(nodesplot(:,1),nodesplot(:,2),nodesplot(:,3),".")
+            end
+        end
+
     end
 end
 

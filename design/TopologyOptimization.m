@@ -179,7 +179,7 @@ classdef TopologyOptimization < handle
                     obj.FEAnalysis.felems{i}.plotSolidSelected(obj.FEAnalysis.mesh.nodes,x(elem_inds{i})>0.5);
                     %obj.FEAnalysis.felems{i}.plotSolidSelected([obj.FEAnalysis.mesh.nodes(:,1) obj.FEAnalysis.mesh.nodes(:,2) -obj.FEAnalysis.mesh.nodes(:,3)],x(elem_inds{i})>0.5);
                     
-                    obj.FEAnalysis.felems{i}.plotSolidSelected(obj.FEAnalysis.mesh.nodes,obj.const_elems,[0.6,0.6,0.6]);
+                    obj.FEAnalysis.felems{i}.plotSolidSelected(obj.FEAnalysis.mesh.nodes,obj.const_elems',[0.6,0.6,0.6]);
                     %obj.FEAnalysis.felems{i}.plotSolidSelected([obj.FEAnalysis.mesh.nodes(:,1) obj.FEAnalysis.mesh.nodes(:,2) -obj.FEAnalysis.mesh.nodes(:,3)],obj.const_elems,[0.6,0.6,0.6]);
                 end
             else
