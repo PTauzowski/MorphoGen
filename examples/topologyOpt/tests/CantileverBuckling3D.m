@@ -11,7 +11,7 @@ cutTreshold = 0.005;
 
 ShapeFn = ShapeFunctionL8;
 mesh = Mesh();
-mesh.addRectMesh3D( 0, 0, 0, 2*l, l, l, 2*res, res, res, ShapeFn.localNodes);
+mesh.addRectMesh3D( 0, 0, 0, 3*l, l, 2*l, 3*res, res, 2*res, ShapeFn.localNodes);
 fe = SolidElasticElem( ShapeFn, mesh.elems );
 mX = max(mesh.nodes(:,1));
 
@@ -50,15 +50,15 @@ for k=1:min(10,nEigenForms)
     title(['Form:' num2str(k), ' \lambda=' lambda_str]);
 end
 
-%analysis = SecondOrderElasticityWeighted( fe, mesh, lambdas(nEigenForms), false );
-analysis = LinearElasticityWeighted( fe, mesh, false );
+analysis = SecondOrderElasticityWeighted( fe, mesh, lambdas(nEigenForms), false );
+%analysis = LinearElasticityWeighted( fe, mesh, false );
 analysis.Pnodal=stability.Pnodal;
 analysis.Pfem=stability.Pfem;
 analysis.supports=stability.supports;
 
 figure;
 tic
-topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.9, true );
+topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.3, true );
 [objF, xopt]  = topOpt.solve();
 toc
 
