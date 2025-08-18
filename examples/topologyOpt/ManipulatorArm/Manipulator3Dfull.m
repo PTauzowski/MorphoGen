@@ -15,11 +15,12 @@ ShapeFn=ShapeFunctionL8;
 frameElems=[1 2; 2 3; 3 4; 4 5; 5 6; 6 7; 7 8];
 nArms=size(frameElems,1);
 
-nSamples=5000;
+nSamples=100;
 samples=random("Uniform",0,360,nSamples,nArms);
 samples(:,1)=0;
-
-%[maxHM, endPoints, frameNodes] = computeArmSamples(E,nu,segmentLength,R,r,res, alpha, samples, ShapeFn);
+% tic
+% [maxHM, endPoints, frameNodes] = computeArmSamples(E,nu,segmentLength,R,r,res, alpha, samples, ShapeFn);
+% toc
 
 load("ManipulatorOpti5000_2.mat");
 
@@ -59,7 +60,7 @@ sampleMaxTz = samples(imaxTz1,:);
 sampleMinTy = samples(iminTy1,:);
 sampleMaxTy = samples(imaxTy1,:);
 
-%save("ManipulatorOpti5000_2f.mat");
+load("ManipulatorOpti5000_2f.mat");
 
 alpha=22.5;
 r=0.23;
@@ -87,7 +88,7 @@ modelMaxTy = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, sampleMaxTy, 
 
 nConfigs=5;
 
-%plotExtremalConfigurations(E,nu,segmentLength,R,r,res,alpha,ShapeFn,nConfigs,samples,vSortMs1,iSortMs1);
+plotExtremalConfigurations(E,nu,segmentLength,R,r,res,alpha,ShapeFn,nConfigs,samples,vSortMs1,iSortMs1);
 
 % plotArmConfigurationHMextended("maximal Huber-Mises stress configuration 1, \sigma_{HM}=" + num2str(vSort(nSamples-0)),'MaxHM_configuration1.pdf',E,nu,segmentLength,R,r,res, modelMax.halfSegmentNelems, alpha, samples(iSort(nSamples-0),:), ShapeFn, 0.0);
 % plotArmConfigurationHMextended("maximal Huber-Mises stress configuration 2, \sigma_{HM}=" + num2str(vSort(nSamples-1)),'MaxHM_configuration2.pdf',E,nu,segmentLength,R,r,res, modelMax.halfSegmentNelems, alpha, samples(iSort(nSamples-1),:), ShapeFn, 0.0);
@@ -121,28 +122,28 @@ sampleMaxMs=[ 0  45 45 45  270  180 180]; %  0 0   33.5628   56.5082   36.2258  
 
 modeSamples = [sampleMaxMz; sampleMaxTy; sampleMaxMs];
 
-%[maxHMa, endPointsa, frameNodes] = computeArmSamples(E,nu,segmentLength,R,r,res, alpha, [ sampleMaxMz; sampleMaxTy; sampleMaxMs], ShapeFn);
+[maxHMa, endPointsa, frameNodes] = computeArmSamples(E,nu,segmentLength,R,r,res, alpha, [ sampleMaxMz; sampleMaxTy; sampleMaxMs], ShapeFn);
 
-% plotArmConfigurationHM(E,nu,segmentLength,R,r,res, alpha, sampleMaxMz, ShapeFn);
-% title(['Model for minimal [averaged] Huber-Mises for HMmax=' num2str(vMaxMs1)]);
-% 
-% plotArmConfigurationHM(E,nu,segmentLength,R,r,res, alpha, sampleMaxTy, ShapeFn);
-% title(['Model for maximal shear force Ty max=' num2str(vMaxTz1)]);
-% 
-% plotArmConfigurationHM(E,nu,segmentLength,R,r,res, alpha, sampleMaxMs, ShapeFn);
-% title(['Model for maximal torsion moment Ms max=' num2str(vMaxMs1)]);
+plotArmConfigurationHM(E,nu,segmentLength,R,r,res, alpha, sampleMaxMz, ShapeFn);
+title(['Model for minimal [averaged] Huber-Mises for HMmax=' num2str(vMaxMs1)]);
 
-% loadFactor=0.4E8;
-% [xopt_bending, xopt_bending_buckling, bending_linear_lambda1, bending_buckling_lambda2 ]  = configurationTopology(E,nu,R,r,segmentLength,ShapeFn,alpha,sampleMaxMz,frameElems,loadFactor);
-% [xopt_shear, xopt_shear_buckling, shear_linear_lambda1, shear_buckling_lambda2 ]  = configurationTopology(E,nu,R,r,segmentLength,ShapeFn,alpha,sampleMaxTy,frameElems,loadFactor);
-% [xopt_torsion, xopt_torsion_buckling, torsion_linear_lambda1, torsion_buckling_lambda2 ]  = configurationTopology(E,nu,R,r,segmentLength,ShapeFn,alpha,sampleMaxMs,frameElems,loadFactor);
-% 
-% fprintf('\n');
-% disp(['Bending lambda linear = ' num2str(bending_linear_lambda1) ' Bending lambda buckling = ' num2str(bending_buckling_lambda2)]);
-% disp(['Shear lambda linear   = ' num2str(shear_linear_lambda1) ' Shear lambda buckling   = ' num2str(shear_buckling_lambda2)]);
-% disp(['Torsion lambda linear = ' num2str(torsion_linear_lambda1) ' Bending lambda buckling = ' num2str(torsion_buckling_lambda2)]);
+plotArmConfigurationHM(E,nu,segmentLength,R,r,res, alpha, sampleMaxTy, ShapeFn);
+title(['Model for maximal shear force Ty max=' num2str(vMaxTz1)]);
 
-load("ComposedTopologyMultiMaxAv.mat");
+plotArmConfigurationHM(E,nu,segmentLength,R,r,res, alpha, sampleMaxMs, ShapeFn);
+title(['Model for maximal torsion moment Ms max=' num2str(vMaxMs1)]);
+
+loadFactor=0.4E8;
+[xopt_bending, xopt_bending_buckling, bending_linear_lambda1, bending_buckling_lambda2 ]  = configurationTopology(E,nu,R,r,segmentLength,ShapeFn,alpha,sampleMaxMz,frameElems,loadFactor);
+[xopt_shear, xopt_shear_buckling, shear_linear_lambda1, shear_buckling_lambda2 ]  = configurationTopology(E,nu,R,r,segmentLength,ShapeFn,alpha,sampleMaxTy,frameElems,loadFactor);
+[xopt_torsion, xopt_torsion_buckling, torsion_linear_lambda1, torsion_buckling_lambda2 ]  = configurationTopology(E,nu,R,r,segmentLength,ShapeFn,alpha,sampleMaxMs,frameElems,loadFactor);
+
+fprintf('\n');
+disp(['Bending lambda linear = ' num2str(bending_linear_lambda1) ' Bending lambda buckling = ' num2str(bending_buckling_lambda2)]);
+disp(['Shear lambda linear   = ' num2str(shear_linear_lambda1) ' Shear lambda buckling   = ' num2str(shear_buckling_lambda2)]);
+disp(['Torsion lambda linear = ' num2str(torsion_linear_lambda1) ' Bending lambda buckling = ' num2str(torsion_buckling_lambda2)]);
+
+save("ComposedTopologyMultiMaxAv.mat");
 %load("ComposedTopologyMultiMaxAvRing.mat");
 
 E=2.0E9;

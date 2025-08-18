@@ -12,6 +12,6 @@ function [xopt_bending, xopt_bending_buckling, lambda1, lambda2 ]  = configurati
      Mz = Fel(11,barNumber)*loadFactor;
      My = Fel(12,barNumber)*loadFactor;
 
-    [xopt_bending, xopt_bending_buckling, lambda1, lambda2 ] = ArmTopOptBucklingFn('maxHM',R,r,segmentLength,alpha,Ty,Tz,N,My,Mz,Ms);
+    [xopt_bending, xopt_bending_buckling, lambda1, lambda2 ] = ArmTopOptBucklingFn('maxHM',ShapeFn,R,r,segmentLength,alpha,Ty,Tz,N,My,Mz,Ms);
 end
 

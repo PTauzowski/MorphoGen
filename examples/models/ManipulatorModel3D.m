@@ -37,11 +37,16 @@ classdef ManipulatorModel3D < handle
 
         end
 
-        
+        function ns = determineSegment( obj, elem )
+            nhs = round(elem ./ obj.halfSegmentNelems );  
+            ns = ceil((nhs - 1) / 2) + 1;
+        end
 
         function geterateManipulator(obj, ls, R, r, res, alpha, betas, sf )
             %obj.elems = obj.mesh.merge(mesh.nodes,obj.elems)
-            
+           Th=R-r;
+           resTh=1;
+           resCirc=round(2*pi*R/Th*resTh);
            c=cos(alpha);
            s=sin(alpha);
            rotCut=[c 0 s; 0 1 0; -s 0 c]';
@@ -55,14 +60,15 @@ classdef ManipulatorModel3D < handle
             phase=-betas(1)*obj.use_offset;
             [obj.mesh, obj.elems]=obj.generateSegment2a(R, r, ls, res, phase, rotCut, sf);
             obj.halfSegmentNelems=size(obj.elems,1);
-            obj.const_elems=(size(obj.elems,1)-2*res-1:size(obj.elems,1))';
-            last_const_elems=obj.elems(size(obj.elems,1)-2*res-1:size(obj.elems,1),:);
+            obj.const_elems=(size(obj.elems,1)-1*resCirc-1:size(obj.elems,1))';
+            last_const_elems=obj.elems(size(obj.elems,1)-1*resCirc-1:size(obj.elems,1),:);
             obj.mesh.nodes=obj.mesh.nodes*rotBeta;
             selector = Selector( @(x)( (x(:,3) < 1.0E-4) ) );
             obj.fixedSurfaceNodes = selector.select( obj.mesh.nodes );
             prevRot=rotCut*rotBeta;
             obj.xEnd=[0 0 ls];
             xEnds=[ [0 0 0]; obj.xEnd];
+           
             for k=2:length(betas)
                 c=cos(betas(k));
                 s=sin(betas(k));
@@ -76,8 +82,10 @@ classdef ManipulatorModel3D < handle
                 
                 mesh1.nodes=(mesh1.nodes+[0 0 ls])*rotCut*rotBeta*prevRot+obj.xEnd;  
                 obj.elems =[ obj.elems; obj.mesh.merge(mesh1.nodes, elems1) ];
-                last_const_elems=obj.elems(size(obj.elems,1)-2*res-1:size(obj.elems,1),:);
-                obj.const_elems=[ obj.const_elems; (size(obj.elems,1)-2*res:size(obj.elems,1))' ];
+                % last_const_elems=obj.elems(size(obj.elems,1)-5*res-1:size(obj.elems,1),:);
+                % obj.const_elems=[ obj.const_elems; (size(obj.elems,1)-5*res:size(obj.elems,1))' ];
+                last_const_elems=obj.elems(size(obj.elems,1)-1*resCirc-1:size(obj.elems,1),:);
+                obj.const_elems=[ obj.const_elems; (size(obj.elems,1)-1*resCirc:size(obj.elems,1))' ];
                 if k<length(betas)
                     obj.xEnd=obj.xEnd+[0 0 2*ls]*rotCut*rotBeta*prevRot;
                 else

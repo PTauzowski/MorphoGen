@@ -1,10 +1,12 @@
 clear;
 close all;
 
+% R,r,h,alpha,
+
 % Computations
 
 % ArmTopOptBucklingFn('Tx', 1.0E7, 0.0E7, 0.0E9, 0.0E7, 0.0E7, 0.0E7); 
-ArmTopOptBucklingFn('Ty', 0.0E7, 1.0E7, 0.0E9, 0.0E7, 0.0E7, 0.0E7);
+ArmTopOptBucklingFn('Ty_rev', 0.0E7, 1.0E7, 0.0E9, 0.0E7, 0.0E7, 0.0E7);
 % ArmTopOptBucklingFn('N',  0.0E7, 0.0E7, 1.0E7, 0.0E7, 0.0E7, 0.0E7);
 % ArmTopOptBucklingFn('Mx', 0.0E7, 0.0E7, 0.0E7, 1.0E7, 0.0E7, 0.0E7);
 % ArmTopOptBucklingFn('My', 0.0E7, 0.0E7, 0.0E7, 0.0E7, 1.0E7, 0.0E7);

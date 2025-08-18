@@ -4,14 +4,13 @@ function [maxHM, endPoints, frameNodes] = computeArmSamples(E,nu,segmentLength,R
     maxNM=zeros(nSamples,1);    
     endPoints=zeros(nSamples,3);
     nArms=size(samples,2);
-    ShapeFn = ShapeFunctionL8;
     frameNodes=zeros(nArms+1,3,nSamples);
     tic;
     for k=1:nSamples
         betas=samples(k,:);
     
         model = ManipulatorModel3D(E,nu,segmentLength,R,r,res, alpha, betas, ShapeFn, true);
-        model.analysis.printProblemInfo();
+        %model.analysis.printProblemInfo();
     
         x=ones(model.analysis.getTotalElemsNumber(),1);
         model.analysis.solveWeighted(x);
@@ -19,6 +18,9 @@ function [maxHM, endPoints, frameNodes] = computeArmSamples(E,nu,segmentLength,R
         maxHM(k)= max(model.fe.results.nodal.all(:,13));
         endPoints(k,:)=model.xEnd;
         frameNodes(:,:,k)=model.frameNodes;
+        if mod(nSamples,20)==0
+            disp(['Progress: ' num2str(round(k/nSamples*10000)/100) '%']);
+        end
     end
 
     disp(['Average single analysis time: ' num2str(toc/nSamples)]);

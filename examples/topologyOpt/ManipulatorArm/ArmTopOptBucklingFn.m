@@ -1,4 +1,4 @@
-function  [xopt, xopt_buckling, lambda1,lambda2] = ArmTopOptBucklingFn(name,R,r,h,alpha,Tx,Ty,N,Mx,My,Ms)
+function  [xopt, xopt_buckling, lambda1,lambda2] = ArmTopOptBucklingFn(name,ShapeFn,R,r,h,alpha,Tx,Ty,N,Mx,My,Ms)
 
     th=R-r;
 
@@ -16,7 +16,6 @@ function  [xopt, xopt_buckling, lambda1,lambda2] = ArmTopOptBucklingFn(name,R,r,
     penal=3;
     cutTreshold = 0.005;
     
-    ShapeFn = ShapeFunctionL8;
     mesh = Mesh();
     mesh.addManipulatorHalfSegment3D(r, R, h, alpha*pi/180, resTh, resCirc, resHeight, ShapeFn.localNodes);
     fe = SolidElasticElem( ShapeFn, mesh.elems );
