@@ -1,7 +1,7 @@
 classdef LinearNaturalVibration < FEAnalysis
 
     properties
-        omegas, qforms, freedofs, fixeddofs;
+        omegas, frequencies, qforms, freedofs, fixeddofs;
     end
 
    methods
@@ -48,11 +48,12 @@ classdef LinearNaturalVibration < FEAnalysis
 
            [obj.qforms, lambdas]=solver.solveEigenproblem(vK,vM,num_eigenvalues);
            obj.omegas=sqrt(lambdas);
+           obj.frequencies = diag(obj.omegas)/2/pi;
        end
 
 
         function freqs = getFreqs(obj)
-            freqs = diag(obj.omegas)/2/pi;
+            freqs = obj.frequencies;
         end
 
        function solveWeighted(obj, x, num_eigenvalues)
@@ -88,7 +89,7 @@ classdef LinearNaturalVibration < FEAnalysis
                 %subplot(5, 2, k);
                 figure
                 obj.setForm(1,form);
-                obj.felems{1}.plotWithSettings(obj.mesh.nodes,"deformed",obj.fromFEMVector( obj.qforms(:,form) ),0.1);
+                obj.felems{1}.plotWithSettings(obj.mesh.nodes,"edge color","none","deformed",obj.fromFEMVector( obj.qforms(:,form) ),0.1);
                 %axis on, xlabel('x-axis'), ylabel('y-axis'), view(3)
                 omega_str = sprintf('%.4g', freqs(form));
                 title(['Form:' num2str(form), ' Frq. = ' omega_str ' Hz']);

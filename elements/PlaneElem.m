@@ -224,7 +224,7 @@ classdef PlaneElem < FiniteElement
             nodesplot=nodes;
             plotWired=false;
             plotNodes=false;
-            elem_color=[0.8 0.8 0.8];
+            elem_color=[0.6 0.6 0.6];
             edge_color='k';
             nodes_color='r';
             elem_num=1:size(obj.elems,1);
@@ -262,7 +262,7 @@ classdef PlaneElem < FiniteElement
                 colorbar;
                 patch('Vertices', nodesplot, 'Faces', obj.elems(elem_num,obj.sf.contour), 'FaceVertexCData', C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
             else 
-                patch('Vertices', nodesplot, 'Faces', obj.elems(elem_num,obj.sf.contour),'FaceColor',elem_color,'EdgeColor',edge_color,'LineWidth',0.1);
+                patch('Vertices', nodesplot, 'Faces', obj.elems(elem_num,obj.sf.contour),'FaceColor',elem_color,'EdgeColor',edge_color,'LineWidth',0.01);
             end
             if plotNodes
                 scatter(nodesplot(:,1),nodesplot(:,2),".")

@@ -1,16 +1,17 @@
 classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTopologyOptimization
     
     properties
-         Vend, plLambda, plVol, plOmegas, lastStableFrame, bucklingForms, vibrationForms;
+         Vend, plLambdas, plVol, plOmegas, plFrequencies, lastStableFrame, bucklingForms, vibrationForms;
     end
     
     methods
         function obj = StressIntensityTopologyOptimizationDynamicBuckling(Rmin,linearElasticProblem,maxais,penal,Vend,is_const)
             obj=obj@StressIntensityTopologyOptimization(1,Rmin,linearElasticProblem,maxais,penal,is_const)
             obj.Vend=Vend;
-            obj.plLambda=[];
+            obj.plLambdas=[];
             obj.plVol=[];
             obj.plOmegas=[];
+            obj.plFrequencies=[];
         end
                            
         function of = computeObjectiveFunction(obj)
@@ -34,8 +35,9 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
             fprintf('frq(3)=%5.3g ', obj.FEAnalysis.frequencies(3,end));
             fprintf('frq(4)=%5.3g ', obj.FEAnalysis.frequencies(4,end));
             fprintf('\n');
-%            obj.plLambda = [ obj.plLambda abs( obj.FEAnalysis.lambda) ];
+            obj.plLambdas = [ obj.plLambdas abs( obj.FEAnalysis.lambdas(:,end)) ];
             obj.plOmegas = [ obj.plOmegas abs( obj.FEAnalysis.omegas(:,end) ) ];
+            obj.plFrequencies = [ obj.plFrequencies abs( obj.FEAnalysis.frequencies(:,end) ) ];
             obj.plVol = [ obj.plVol round(sum( obj.x )/obj.V0*1000)/10 ];
         end
 
@@ -66,7 +68,7 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
                 figure, hold on
                 o=zeros(1,niter);
                 for i=1:niter
-                    o(i) = obj.plOmegas(corrIdx(l,i),i)/2/pi;
+                    o(i) = obj.plFrequencies(corrIdx(l,i),i);
                 end
                 p2=plot(obj.plVol,o','LineWidth', 3);
                 set(gca, 'XDir', 'reverse');
@@ -83,7 +85,7 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
         function plot_frequencies(obj, basename, load_mode, nmodes)
             for l=1:nmodes
                 figure, hold on
-                p2=plot(obj.plVol,obj.plOmegas(l,:)/2/pi','LineWidth', 3);
+                p2=plot(obj.plVol,obj.plFrequencies(l,:)','LineWidth', 3);
                 set(gca, 'XDir', 'reverse');
                 title(['Load mode '  num2str(load_mode)  ', Eigen mode '  num2str(l)  ' evolution']); 
                 xlabel('Volume fracion [%]');
