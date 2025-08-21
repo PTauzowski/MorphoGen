@@ -114,6 +114,36 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
            
         end
 
+        function plot_loads(obj, basename, nmodes, frame, load_mode, scales)
+            fontsize=18;
+            fe=obj.FEAnalysis.felems{1};
+            mesh=obj.FEAnalysis.mesh;
+            for i=1:nmodes
+                figure, hold on;
+                daspect([1 1 1]);
+                %subplot(nmodes, 1, i);
+                %fe.plotWithSettings(mesh.nodes,"deformed",obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.modes(:,i,frame) ),scales(i),"elem nums",obj.allx(:,frame)>=0.5,"edge color", "k");
+                title(['Load mode ' num2str(load_mode) ', Eigen mode ' num2str(i) ', vol_{fr}=' num2str(obj.plVol(frame)) ', Frq. =' num2str(obj.plOmegas(i,frame)/2/pi,4) ' [Hz]'  ', iter:' num2str(frame)]);
+                set(gca, 'FontSize', fontsize)
+                existing_elems = find(obj.allx(:,frame)>=0.5);
+                existing_nodes=unique(existing_elems(:));
+                resX=size(find(mesh.nodes(:,2)==0),1);
+                resY=size(find(mesh.nodes(:,1)==0),1);
+                xn=reshape(mesh.nodes,resX,resY,2);
+                Pnodal=obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.computeLoadVector( frame ) );
+                Pxy=reshape(Pnodal,resX,resY,2);
+                step=8;
+                q = quiver(xn(1:step:end,1:step:end,1),xn(1:step:end,1:step:end,2),Pxy(1:step:end,1:step:end,1),Pxy(1:step:end,1:step:end,2),0.2);
+                %q = quiver(mesh.nodes(existing_nodes,1),mesh.nodes(existing_nodes,2),Pnodal(existing_nodes,1),Pnodal(existing_nodes,2),2);
+                % q.ShowArrowHead = 'off';
+                % q.Marker = '.';
+                exportgraphics(gcf,[basename 'loads_loadmode_' num2str(load_mode) '_mode_' num2str(i)  '_iters_' num2str(frame) '.pdf'],'ContentType','vector')
+                saveas(gcf,[basename 'loadmode_' num2str(load_mode) '_mode_' num2str(i)  '_iters_' num2str(frame) '.png']);
+                savefig(gcf,[basename 'loadmode_' num2str(load_mode) '_mode_' num2str(i)  '_iters_' num2str(frame) '.fig'])
+            end
+           
+        end
+
         function plot_subsequent_forms(obj, basename, mode1, mode2, frame)
             fontsize=16;
 

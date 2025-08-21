@@ -1,7 +1,7 @@
 classdef ElasticHarmonicVibrations < FEAnalysis
    
    properties
-        isMeshConst, isLoadConst, lambdas, omegas, frequencies, mode, modes, nmodes, count, P0, correlation_matrix;
+        isMeshConst, isLoadConst, lambdas, omegas, frequencies, mode, modes, nmodes, count, P0, correlation_matrix, freedofs;
    end
    
    methods       
@@ -58,6 +58,7 @@ classdef ElasticHarmonicVibrations < FEAnalysis
            end
            vK  = obj.assemblyGlobalMatrix('computeStifnessMatrix', x, obj.isMeshConst);
            vM  = obj.assemblyGlobalMatrix('computeMassMatrix', x, obj.isMeshConst);
+           obj.freedofs=solver.freedofs;
 
            K = solver.createSparseMatrix(vK);
            M = solver.createSparseMatrix(vM);
@@ -70,7 +71,8 @@ classdef ElasticHarmonicVibrations < FEAnalysis
            obj.frequencies = [ obj.frequencies sqrt(diag(lambdas)) / 2 / pi];
            obj.Pfem=0*obj.Pfem;
            %obj.qfem = solver.solve(K-(lambdas(3)+lambdas(4))/2*M, obj.Pfem);
-           obj.Pfem = obj.toFEMVector(lambdas(obj.mode,obj.mode)*obj.fromFEMVector(modes(:,obj.mode)));
+           Pfem=reshape(modes(solver.freedofs,obj.mode)),size(obj.ndofs,2),size(solver.freedofs,1))';
+           obj.Pfem = obj.toFEMVector(lambdas(obj.mode,obj.mode)*M*obj.fromFEMVector(modes(solver.freedofs,obj.mode)));
            if obj.count==1
                obj.P0=obj.Pfem;
            end
@@ -81,6 +83,10 @@ classdef ElasticHarmonicVibrations < FEAnalysis
            end
            obj.qnodal=obj.fromFEMVector(obj.qfem(:,1));
            qfem=obj.qfem;
+       end
+
+       function Pfem = computeLoadVector(obj, frame)
+           Pfem = obj.toFEMVector(obj.lambdas(obj.mode,frame)*M*obj.fromFEMVector(obj.modes(obj.freedofs,obj.mode,frame)));
        end
 
        function conds = tabMatrixCondition( obj, alphas, mode )
