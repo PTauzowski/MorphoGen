@@ -79,7 +79,7 @@ classdef (Abstract) FEAnalysis < handle
                 Fe = reshape(F',obj.getTaskDim(),1);
         end
         function F = fromFEMVector( obj, Fe )
-            F=reshape(Fe,size(obj.ndofs,2),size(obj.mesh.nodes,1))';
+            F=reshape(Fe,size(obj.ndofs,2),size(Fe,1)/size(obj.ndofs,2))';
         end
         function K = assemblyGlobalMatrix(obj, fname, x, is_const)
             K = [];

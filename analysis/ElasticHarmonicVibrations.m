@@ -1,7 +1,7 @@
 classdef ElasticHarmonicVibrations < FEAnalysis
    
    properties
-        isMeshConst, isLoadConst, lambdas, omegas, frequencies, mode, modes, nmodes, count, P0, correlation_matrix, freedofs;
+        isMeshConst, isLoadConst, lambdas, omegas, frequencies, mode, modes, nmodes, count, P0, correlation_matrix, freedofs, loadVectors;
    end
    
    methods       
@@ -17,6 +17,7 @@ classdef ElasticHarmonicVibrations < FEAnalysis
             obj.lambdas=[];
             obj.omegas=[];
             obj.frequencies=[];
+            obj.loadVectors=[];
             obj.nmodes=30;
             obj.correlation_matrix=zeros(obj.nmodes,obj.nmodes);
        end
@@ -70,23 +71,27 @@ classdef ElasticHarmonicVibrations < FEAnalysis
            obj.omegas=[ obj.omegas sqrt(diag(lambdas))];
            obj.frequencies = [ obj.frequencies sqrt(diag(lambdas)) / 2 / pi];
            obj.Pfem=0*obj.Pfem;
+           Pnodal = obj.Pfem;
            %obj.qfem = solver.solve(K-(lambdas(3)+lambdas(4))/2*M, obj.Pfem);
-           Pfem=reshape(modes(solver.freedofs,obj.mode)),size(obj.ndofs,2),size(solver.freedofs,1))';
-           obj.Pfem = obj.toFEMVector(lambdas(obj.mode,obj.mode)*M*obj.fromFEMVector(modes(solver.freedofs,obj.mode)));
+
+           obj.Pfem(solver.freedofs) =  lambdas(obj.mode,obj.mode)*M*modes(solver.freedofs,obj.mode) ;
+
            if obj.count==1
                obj.P0=obj.Pfem;
            end
            if obj.isLoadConst
                 obj.qfem = solver.solve(vK, obj.P0);
+                obj.loadVectors = [ obj.loadVectors obj.P0 ];
            else
                 obj.qfem = solver.solve(vK, obj.Pfem);
+                obj.loadVectors = [ obj.loadVectors obj.Pfem ];
            end
            obj.qnodal=obj.fromFEMVector(obj.qfem(:,1));
            qfem=obj.qfem;
        end
 
-       function Pfem = computeLoadVector(obj, frame)
-           Pfem = obj.toFEMVector(obj.lambdas(obj.mode,frame)*M*obj.fromFEMVector(obj.modes(obj.freedofs,obj.mode,frame)));
+       function Pfem = computeLoadVector(obj, frame ) 
+           Pfem = obj.loadVectors(:, frame);
        end
 
        function conds = tabMatrixCondition( obj, alphas, mode )
