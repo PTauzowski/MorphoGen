@@ -71,21 +71,15 @@ classdef ElasticHarmonicVibrations < FEAnalysis
            obj.omegas=[ obj.omegas sqrt(diag(lambdas))];
            obj.frequencies = [ obj.frequencies sqrt(diag(lambdas)) / 2 / pi];
            obj.Pfem=0*obj.Pfem;
-           Pnodal = obj.Pfem;
            %obj.qfem = solver.solve(K-(lambdas(3)+lambdas(4))/2*M, obj.Pfem);
 
-           obj.Pfem(solver.freedofs) =  lambdas(obj.mode,obj.mode)*M*modes(solver.freedofs,obj.mode) ;
-
-           if obj.count==1
-               obj.P0=obj.Pfem;
-           end
            if obj.isLoadConst
-                obj.qfem = solver.solve(vK, obj.P0);
-                obj.loadVectors = [ obj.loadVectors obj.P0 ];
+                obj.Pfem(solver.freedofs) =  lambdas(obj.mode,obj.mode)*M*obj.modes(solver.freedofs,obj.mode,1) ;
            else
-                obj.qfem = solver.solve(vK, obj.Pfem);
-                obj.loadVectors = [ obj.loadVectors obj.Pfem ];
+                obj.Pfem(solver.freedofs) =  lambdas(obj.mode,obj.mode)*M*modes(solver.freedofs,obj.mode) ;         
            end
+           obj.qfem = solver.solve(vK, obj.Pfem);
+           obj.loadVectors = [ obj.loadVectors obj.Pfem ];
            obj.qnodal=obj.fromFEMVector(obj.qfem(:,1));
            qfem=obj.qfem;
        end
