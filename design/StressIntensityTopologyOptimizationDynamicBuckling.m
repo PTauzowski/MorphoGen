@@ -73,13 +73,30 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
                 p2=plot(obj.plVol,o','LineWidth', 3);
                 set(gca, 'XDir', 'reverse');
                 title(['Frequency with switch' newline 'Load mode '  num2str(load_mode)  ', Eigen mode '  num2str(l)]); 
-                xlabel('Volume fracion [%]');
+                xlabel('Volume fraction [%]');
                 ylabel('Frequency with switch [Hz]');
                 ylim([0 inf])
                 set(gca, 'FontSize', 18)
                 saveas(gcf,[basename '_switched_frequency_loadmode_' num2str(load_mode) '_mode_'  num2str(l)  '.png']);
                 savefig(gcf,[basename '_switched_frequency_loadmode_' num2str(load_mode) '_mode_'  num2str(l)  '.fig'])
             end
+            figure, hold on
+            legend('on','Location','southwest');
+            set(gca, 'XDir', 'reverse');
+            title(['Frequency with switch' newline 'Topology '  num2str(load_mode)  ', Eigen mode '  num2str(l)]); 
+            xlabel('Volume fraction [%]');
+            ylabel('Normalized frequency [%]');
+            ylim([0 inf])
+            set(gca, 'FontSize', 18)
+            for l=1:nmodes                
+                o=zeros(1,niter);
+                for i=1:niter
+                    o(i) = obj.plFrequencies(corrIdx(l,i),i);
+                end
+                p2=plot(obj.plVol,o'/o(1)*100,'DisplayName',['mode ' num2str(l)], 'LineWidth', 3);             
+            end
+            saveas(gcf,[basename '_switched_normalized_frequency_loadmode_' num2str(load_mode) '_mode_'  num2str(l)  '.png']);
+            savefig(gcf,[basename '_switched_normalized_frequency_loadmode_' num2str(load_mode) '_mode_'  num2str(l)  '.fig'])
         end
 
         function plot_frequencies(obj, basename, load_mode, nmodes)
@@ -87,7 +104,7 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
                 figure, hold on
                 p2=plot(obj.plVol,obj.plFrequencies(l,:)','LineWidth', 3);
                 set(gca, 'XDir', 'reverse');
-                title(['Load mode '  num2str(load_mode)  ', Eigen mode '  num2str(l)  ' evolution']); 
+                title(['Topology '  num2str(load_mode)  ', Eigen mode '  num2str(l)  ' evolution']); 
                 xlabel('Volume fracion [%]');
                 ylabel('Frequency [Hz]');
                 ylim([0 inf])
@@ -95,6 +112,19 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
                 saveas(gcf,[basename '_frequency_loadmode_' num2str(load_mode) '_mode_'  num2str(l)  '.png']);
                 savefig(gcf,[basename '_frequency_loadmode_' num2str(load_mode) '_mode_'  num2str(l)  '.fig'])
             end
+            figure, hold on
+            legend('on','Location','southwest');
+            set(gca, 'XDir', 'reverse');
+            title(['Topology '  num2str(load_mode)  ', Eigen mode '  num2str(l)  ' evolution']); 
+            xlabel('Volume fraction [%]');
+            ylabel('Normalized frequency [%]');
+            ylim([0 inf])
+            for l=1:nmodes
+                p2=plot(obj.plVol,obj.plFrequencies(l,:)'/obj.plFrequencies(l,1)*100,'DisplayName',['mode ' num2str(l)], 'LineWidth', 3); 
+            end
+            set(gca, 'FontSize', 18)
+            saveas(gcf,[basename '_frequency_nolmalized_' num2str(load_mode) '_mode_'  num2str(l)  '.png']);
+            savefig(gcf,[basename '_frequency_nolmalized_' num2str(load_mode) '_mode_'  num2str(l)  '.fig'])
         end
 
         function plot_forms(obj, basename, nmodes, frame, load_mode, scales)
@@ -114,12 +144,12 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
            
         end
 
-        function plot_loads(obj, basename, nmodes, frame, load_mode, scales)
+        function plot_loads(obj, basename, nmodes, frame, load_mode, scales, step)
             fontsize=18;
             fe=obj.FEAnalysis.felems{1};
             mesh=obj.FEAnalysis.mesh;
             for i=1:nmodes
-                figure, hold on;
+                figure, hold on, axis off;
                 daspect([1 1 1]);
                 %subplot(nmodes, 1, i);
                 %fe.plotWithSettings(mesh.nodes,"deformed",obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.modes(:,i,frame) ),scales(i),"elem nums",obj.allx(:,frame)>=0.5,"edge color", "k");
@@ -130,9 +160,8 @@ classdef StressIntensityTopologyOptimizationDynamicBuckling < StressIntensityTop
                 resX=size(find(mesh.nodes(:,2)==0),1);
                 resY=size(find(mesh.nodes(:,1)==0),1);
                 xn=reshape(mesh.nodes,resX,resY,2);
-                Pnodal=obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.computeLoadVector( frame ) );
+                Pnodal=obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.computeLoadVector( frame, obj.allx(:,frame) ) );
                 Pxy=reshape(Pnodal,resX,resY,2);
-                step=8;
                 q = quiver(xn(1:step:end,1:step:end,1),xn(1:step:end,1:step:end,2),Pxy(1:step:end,1:step:end,1),Pxy(1:step:end,1:step:end,2),0.2);
                 %q = quiver(mesh.nodes(existing_nodes,1),mesh.nodes(existing_nodes,2),Pnodal(existing_nodes,1),Pnodal(existing_nodes,2),2);
                 % q.ShowArrowHead = 'off';

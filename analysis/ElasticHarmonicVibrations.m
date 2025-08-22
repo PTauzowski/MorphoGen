@@ -74,7 +74,7 @@ classdef ElasticHarmonicVibrations < FEAnalysis
            %obj.qfem = solver.solve(K-(lambdas(3)+lambdas(4))/2*M, obj.Pfem);
 
            if obj.isLoadConst
-                obj.Pfem(solver.freedofs) =  lambdas(obj.mode,obj.mode)*M*obj.modes(solver.freedofs,obj.mode,1) ;
+                obj.Pfem(solver.freedofs) =  obj.lambdas(obj.mode,1)*M*obj.modes(solver.freedofs,obj.mode,1) ;
            else
                 obj.Pfem(solver.freedofs) =  lambdas(obj.mode,obj.mode)*M*modes(solver.freedofs,obj.mode) ;         
            end
@@ -84,7 +84,21 @@ classdef ElasticHarmonicVibrations < FEAnalysis
            qfem=obj.qfem;
        end
 
-       function Pfem = computeLoadVector(obj, frame ) 
+       function Pfem = computeLoadVector(obj, frame, x ) 
+           [I,J,~] = obj.globalMatrixIndices();
+           obj.prepareRHSVectors();
+            if size(obj.rotations,1)== 0 
+               solver = LinearEquationsSystem(I, J, obj.toFEMVector(obj.supports));
+           else
+               solver = LinearEquationsSystemTr2D(I, J, obj.toFEMVector(obj.supports),obj.rotations);
+           end
+           vM  = obj.assemblyGlobalMatrix('computeMassMatrix', x, obj.isMeshConst);
+           M = solver.createSparseMatrix(vM);
+           Pfem=0*obj.Pfem;
+           Pfem(solver.freedofs) = obj.lambdas(obj.mode,1)*M*obj.modes(solver.freedofs,obj.mode,1);
+       end
+
+       function Pfem = getLoadVector(obj, frame ) 
            Pfem = obj.loadVectors(:, frame);
        end
 
