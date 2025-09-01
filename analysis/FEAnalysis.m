@@ -200,7 +200,7 @@ classdef (Abstract) FEAnalysis < handle
            inds = obj.findDOFsIndices( dofnames );
            snodes = find(selector.select(obj.mesh.nodes));
            if  nargin==4
-               obj.q(snodes, inds) = repmat(varargin{1}, size(snodes,1),1 );
+               obj.qnodal(snodes, inds) = repmat(varargin{1}, size(snodes,1),1 );
            end
            obj.supports(snodes, obj.findDOFsIndices( dofnames ) ) = ones( size(snodes,1), size(dofnames,2) );
         end

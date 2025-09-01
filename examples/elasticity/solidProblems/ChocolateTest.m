@@ -2,10 +2,10 @@ clear;
 close all;
 
 ganTh=8;
-alGanTh=4;
+alGanTh=5;
 notchWidth=4;
 relNotchDepth=0.875;
-relRoutndNotchDepth=0.3;
+relRoutndNotchDepth=0.5;
 
 E=210000;
 nu=0.3;
@@ -22,7 +22,7 @@ model.plotZCoordsPoints()
 %model.setTempVars(T);
 
 model.solveWeighted();
-model.analysis.plotMaps(["uy" "ux" "sxx" "sxy" "syy" "sHM"],0.1);
+% model.analysis.plotMaps(["uy" "ux" "sxx" "sxy" "syy" "sHM"],0.1);
 model.fe.plotWired(model.mesh.nodes,model.analysis.qnodal,0.1);
 
 model.computeStressObjective()

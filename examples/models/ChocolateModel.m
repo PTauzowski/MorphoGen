@@ -20,13 +20,14 @@ classdef ChocolateModel < ModelLinear
 
             obj.allganElemsSelector = Selector( @(x)( x(:,3) > ganTh ) );
             obj.allganTopElemsSelector = Selector( @(x)( x(:,3) > ganTh+alGanTh*0.6 ) );
-            %fixedFaceSelector = Selector( @(x)( abs(x(:,3) - l)<0.001 ) );
+            %fixedFaceSelector = Selector( @(x)( abs(x(:,1) ) < 0.0001 ) );
             %loadedFaceSelector = Selector( @(x)( abs(x(:,1) - l)<0.001 ) );
 
             meshMax=max(obj.mesh.nodes);
             obj.analysis.fixClosestNode([0 0 0], ["ux" "uy" "uz"], [0 0 0] );
-            obj.analysis.fixClosestNode([meshMax(1) 0 0], ["uz"], 0);
-            obj.analysis.fixClosestNode([meshMax(1) meshMax(2) ganTh], ["ux" "uz"], [0 0] );
+            obj.analysis.fixClosestNode([meshMax(1) 0 0], ["uy" "uz"], [0 0]);
+            obj.analysis.fixClosestNode([meshMax(1) meshMax(2) ganTh], [ "ux" ], [0] );
+            %obj.analysis.fixNodes(fixedFaceSelector,["ux" "uy" "uz"], [0 0 0])
            
             obj.fe.props.h=1;
             obj.fe.props.ndT=zeros(1,size(obj.mesh.nodes,1));
@@ -104,7 +105,7 @@ classdef ChocolateModel < ModelLinear
             zGt = ganTh;
             
             % top of interface layer
-            zIt = zGt; +obj.intTh;
+            zIt = zGt; + obj.intTh;
             
             % bottom of noth
             zNb = zIt+obj.alGanTh-notchDepth;
@@ -216,7 +217,7 @@ classdef ChocolateModel < ModelLinear
             mesh.addShapedMesh3D( ShapeFn27,rNotch2,  [ncy,nnotch,nround], ShapeFn27.localNodes );
             mesh.duplicateTransformedMeshDeg3D( [x3/2  y3/2 ], 180, [0 0 0] );
             mesh.addShapedMesh3D( ShapeFn8, ganTileGeom, [ncx,ncy,ngan], ShapeFn27.localNodes );
-            %mesh.addShapedMesh3D( ShapeFn8, thTileGeom,  [ncx,ncy,1], ShapeFn27.localNodes );
+            mesh.addShapedMesh3D( ShapeFn8, thTileGeom,  [ncx,ncy,1], ShapeFn27.localNodes );
             mesh.addShapedMesh3D( ShapeFn8, allGanRound, [ncx,ncy,nround], ShapeFn27.localNodes );
             mesh.addShapedMesh3D( ShapeFn8, allGanStright, [ncx,ncy,nstr], ShapeFn27.localNodes );
             
