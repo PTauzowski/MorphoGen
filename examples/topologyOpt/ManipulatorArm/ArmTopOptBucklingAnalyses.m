@@ -1,4 +1,4 @@
-function  [analysisSecondOrder,  analysisWithBuckling, const_elems ] = ArmTopOptBucklingAnalyses(name,R,r,h,alpha,Tx,Ty,N,Mx,My,Ms)
+function  [analysisSecondOrder,  analysisWithBuckling, const_elems ] = ArmTopOptBucklingAnalyses(name,R,r,h,alpha,Tx,Ty,N,Mx,My,Ms,ringsMode)
 
     th=R-r;
 
@@ -58,8 +58,20 @@ function  [analysisSecondOrder,  analysisWithBuckling, const_elems ] = ArmTopOpt
     
     analysis.fixNodes( fixedEdgeSelector, ["ux" "uy" "uz"] );
     %analysis.fixClosestNode( [0 0 0], ["ux" "uy" "uz"], [0 0 0]);
-    %const_elems = [upElems downElems];
-    const_elems = upElems;
+    
+    switch(ringsMode)
+        case 0
+            const_elems = [];
+        case 01
+             const_elems = upElems;
+        case 10
+             const_elems = downElems;
+        case 11
+            const_elems = [upElems downElems];
+        otherwise
+            error(['Wrong ring mode constant:' num2str(ringsMode)])
+    end
+   
     
     %mesh.transformNodesXY( @(x)( [ x(:,1) x(:,2) x(:,3)-0.3*x(:,1).*x(:,3)/Length ] )  );
     

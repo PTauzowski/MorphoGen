@@ -146,7 +146,11 @@ classdef ManipulatorModel3D < handle
 
         function xnew=rotatePoints(x0,R,x)
             xnew=(x-x0)*R+x0;
-        end       
+        end 
+
+        function plot(obj)
+            obj.fe.plot(obj.mesh.nodes)
+        end
         
     end
 end
