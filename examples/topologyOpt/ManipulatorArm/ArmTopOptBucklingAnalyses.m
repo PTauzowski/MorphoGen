@@ -1,4 +1,4 @@
-function  [analysisSecondOrder,  analysisWithBuckling, const_elems ] = ArmTopOptBucklingAnalyses(name,R,r,h,alpha,Tx,Ty,N,Mx,My,Ms,ringsMode)
+function  [analysisSecondOrder,  analysisWithBuckling, const_elems ] = ArmTopOptBucklingAnalyses(name,R,r,h,alpha,N,Ty,Tz,Ms,My,Mz,ringsMode)
 
     th=R-r;
 
@@ -49,11 +49,11 @@ function  [analysisSecondOrder,  analysisWithBuckling, const_elems ] = ArmTopOpt
     upElems = mesh.findElems( loadedFaceSelector, false );
     downElems = mesh.findElems( fixedEdgeSelector, false );
     
-    analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [Tx 0 0] ));
+    analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [Tz 0 0] ));
     analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [0 Ty 0] ));
     analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [0 0 N] ));
     analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [x(:,1)*0 x(:,1)*0 (x(:,1)-xs(1))*My] ));
-    analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [x(:,1)*0 x(:,1)*0 (x(:,2)/R)*Mx] ));
+    analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [x(:,1)*0 x(:,1)*0 (x(:,2)/R)*Mz] ));
     analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + Ms*[-x(:,2)./sqrt((x(:,1)-xs(1)).^2+x(:,2).^2) (x(:,1)-xs(1))./sqrt((x(:,1)-xs(1)).^2+x(:,2).^2) x(:,3)*0] )); 
     
     analysis.fixNodes( fixedEdgeSelector, ["ux" "uy" "uz"] );

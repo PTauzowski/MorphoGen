@@ -32,7 +32,7 @@ classdef ManipulatorModel3D < handle
             loadedFaceSelector = Selector( obj.loadSurfaceNodes );
             
             obj.analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [0 0 -10] ));
-            obj.analysis.fixNodes( fixedEdgeSelector, ["ux" "uy" "uz"] );
+            obj.analysis.fixNodes( fixedEdgeSelector, [ "uz"] );
             obj.analysis.fixClosestNode( [0 0 0], ["ux" "uy" "uz"], [0 0 0]);
 
         end

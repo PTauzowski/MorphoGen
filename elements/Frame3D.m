@@ -22,7 +22,7 @@ classdef Frame3D < FiniteElement
                  
         end
 
-        function L = computeTransformationMatrix(obj, nodes)
+        function L = computeTransformationMatrixOld(obj, nodes)
               nelems = size(obj.elems,1);
               nnodes = size(obj.elems,2);
               ndofs = size( obj.ndofs,2);
@@ -52,6 +52,47 @@ classdef Frame3D < FiniteElement
                                c0 c0 c0 cj];
              end
         end
+
+        function L = computeTransformationMatrix(obj, nodes)
+            ne = size(obj.elems,1);
+            L  = zeros(12,12,ne);
+            Z3 = zeros(3,3);
+        
+            for k = 1:ne
+                x1 = nodes(obj.elems(k,1),:).';
+                x2 = nodes(obj.elems(k,2),:).';
+                dl = x2 - x1;   l = norm(dl);
+                assert(l > eps, 'Zero-length element %d', k);
+        
+                ex = dl / l;                        % local x (axis)
+                up = [0;0;1];                       % reference “up” (can be changed)
+                if abs(dot(ex,up)) > 0.98           % near-parallel → pick another up
+                    up = [0;1;0];
+                end
+                ey = up - ex*(ex.'*up);             % Gram–Schmidt: project into plane ⟂ ex
+                n  = norm(ey);
+                if n < 1e-12                        % extreme degeneracy guard
+                    up = [1;0;0];
+                    ey = up - ex*(ex.'*up); n = norm(ey);
+                    assert(n > 1e-12, 'Cannot build local frame for elem %d', k);
+                end
+                ey = ey/n;
+                ez = cross(ex,ey);                  % right-handed
+        
+                % 3x3 rotation: global → local (rows are local axes in global basis)
+                R = [ex.'; ey.'; ez.'];
+        
+                % Sanity (optional)
+                % if abs(det(R)-1) > 1e-10 || norm(R*R' - eye(3),'fro') > 1e-10, keyboard; end
+        
+                % 12x12 transform (u1,rot1,u2,rot2), each block 3x3 = R
+                L(:,:,k) = [ R  Z3 Z3 Z3;
+                             Z3 R  Z3 Z3;
+                             Z3 Z3 R  Z3;
+                             Z3 Z3 Z3 R  ];
+            end
+end
+
 
         function K = computeStifnessMatrix(obj, nodes, varargin)
               nelems = size(obj.elems,1);
