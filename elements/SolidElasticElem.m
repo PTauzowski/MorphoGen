@@ -1,4 +1,7 @@
 classdef SolidElasticElem < FiniteElement
+    properties
+        face_alpha, face_color, edge_color
+    end
     methods
         function obj = SolidElasticElem(sf,p)
              obj = obj@FiniteElement(sf,p);
@@ -7,6 +10,9 @@ classdef SolidElasticElem < FiniteElement
              obj.results.descriptions  = ["strain member exx" "strain member eyy" "strain member ezz" ...
                  "strain member exy" "strain member eyz" "strain member exz" "stress member sxx" "stress member syy" "stress member szz" ...
                  "stress member sxy" "stress member syz" "stress member sxz" "Huber-Mises stress" "Top opt density" "Nodal temperature"];
+             obj.face_alpha = 1.0;
+             obj.edge_color='k';
+             obj.face_color=[0.8 0.8 0.8];
         end
         function setIsotropicMaterial( obj, E, nu, rho )
             D = E / ( 1.0 + nu ) / ( 1 - 2.0 * nu ) * [ 1-nu nu nu 0 0 0; ...
@@ -541,8 +547,6 @@ classdef SolidElasticElem < FiniteElement
             end
         end
         function plot(obj,nodes,varargin)
-            hold on, axis off;
-            daspect([1 1 1]);
             col=[0.8 0.8 0.8];
             if nargin > 2
                 col=varargin{1};
@@ -555,14 +559,12 @@ classdef SolidElasticElem < FiniteElement
             delfaces(ifaces,:)=[];
             [~,ifaces,~]=setxor( sort(A,2), sort(delfaces,2), 'rows' );
             plotfaces=A(ifaces,:);
-            p=patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col,'EdgeColor','k',"FaceAlpha",1.0);
+            p=patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',obj.face_color,'EdgeColor',obj.edge_color,"FaceAlpha",obj.face_alpha);
             p.LineWidth = 0.01;
             %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col);
             %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col,"FaceAlpha",0.3);
         end
         function plotSolidDeformed(obj,nodes,qnodal,scale,varargin)
-            hold on, axis off;
-            daspect([1 1 1]);
             col=[0.8 0.8 0.8];
             % if nargin == 2
             %     col=[0.8 0.8 0.8];
@@ -580,7 +582,7 @@ classdef SolidElasticElem < FiniteElement
             delfaces(ifaces,:)=[];
             [~,ifaces,~]=setxor( sort(A,2), sort(delfaces,2), 'rows' );
             plotfaces=A(ifaces,:);
-            patch('Vertices', defnodes, 'Faces', plotfaces,'FaceColor',col,'EdgeColor','k');
+            patch('Vertices', defnodes, 'Faces', plotfaces,'FaceColor',obj.face_color,'EdgeColor',obj.edge_color,"FaceAlpha",obj.face_alpha);
             %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col);
             %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col,"FaceAlpha",0.3);
         end
@@ -588,8 +590,6 @@ classdef SolidElasticElem < FiniteElement
             if isempty(elem_inds)
                 return
             end
-            hold on, axis off;
-            daspect([1 1 1]);
             if nargin == 3
                 col=[0.8 0.8 0.8];
             else
@@ -607,8 +607,8 @@ classdef SolidElasticElem < FiniteElement
             [uniqueEdges, ~, idx] = unique(sort(reshape(obj.elems(sel_inds,obj.sf.edges)',size(obj.sf.edges,1),size(obj.sf.edges,2)*size(find(sel_inds),1))',2), 'rows', 'stable');
             counts = histcounts(idx, 1:(max(idx)+1));
             edgesNoDuplicates = uniqueEdges(counts == 1, :);
-            patch('Vertices', nodes, 'Faces', allfaces(ifaces,:),'FaceColor','none','EdgeColor','k');
-            patch('Vertices', nodes, 'Faces', allfaces(ifaces,:),'FaceColor',col,'EdgeColor','none',"FaceAlpha",1.0);
+            patch('Vertices', nodes, 'Faces', allfaces(ifaces,:),'FaceColor',obj.face_color,'EdgeColor',obj.edge_color);
+            patch('Vertices', nodes, 'Faces', allfaces(ifaces,:),'FaceColor',col,'EdgeColor','none',"FaceAlpha",obj.face_alpha);
             x=[nodes(edgesNoDuplicates(:,1),1) nodes(edgesNoDuplicates(:,2),1) NaN(size(edgesNoDuplicates,1),1) ];
             y=[nodes(edgesNoDuplicates(:,1),2) nodes(edgesNoDuplicates(:,2),2) NaN(size(edgesNoDuplicates,1),1) ];
             z=[nodes(edgesNoDuplicates(:,1),3) nodes(edgesNoDuplicates(:,2),3) NaN(size(edgesNoDuplicates,1),1) ];
@@ -627,12 +627,12 @@ classdef SolidElasticElem < FiniteElement
             if isempty(obj.selectedElems)
                 allfaces = reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))';
                 [~,ifaces] = unique( sort(reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))',2),'rows' );
-                patch('Vertices', nodes+scd*q, 'Faces', allfaces(ifaces,:), 'FaceVertexCData', C , "FaceColor", "interp", "EdgeColor","k", "LineStyle", "none","FaceAlpha", 1 );
+                patch('Vertices', nodes+scd*q, 'Faces', allfaces(ifaces,:), 'FaceVertexCData', C , "FaceColor", "interp", "EdgeColor",obj.edge_color, "LineStyle", "none","FaceAlpha",obj.face_alpha);
             else
 
                 allfaces = reshape(obj.elems(obj.selectedElems,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems(obj.selectedElems,:),1))';
                 [~,ifaces] = unique( sort(reshape(obj.elems(obj.selectedElems,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems(obj.selectedElems,:),1))',2),'rows' );
-                patch('Vertices', nodes+scd*q, 'Faces', allfaces(ifaces,:), 'FaceVertexCData', C , "FaceColor", "interp", "EdgeColor","k", "LineStyle", "none", "FaceAlpha", 1 );
+                patch('Vertices', nodes+scd*q, 'Faces', allfaces(ifaces,:), 'FaceVertexCData', C , "FaceColor", "interp", "EdgeColor",obj.edge_color, "LineStyle", "none", "FaceAlpha",obj.face_alpha );
             end
         end
         end

@@ -166,16 +166,15 @@ end
               end
         end
 
-        function plotMap(obj)
+        function plotMap(obj,nodes)
         end
-        function plot (obj, nodes)    
-            hold on;
-            daspect([1 1 1]);
+        
+        function plot(obj, nodes)    
             nelems=size(obj.elems,1);
-             plot3([ nodes(obj.elems(:,1),1) nodes(obj.elems(:,2),1) NaN(nelems,1) ]',...
+            plot3([ nodes(obj.elems(:,1),1) nodes(obj.elems(:,2),1) NaN(nelems,1) ]',...
                    [ nodes(obj.elems(:,1),2) nodes(obj.elems(:,2),2) NaN(nelems,1) ]',...
                    [ nodes(obj.elems(:,1),3) nodes(obj.elems(:,2),3) NaN(nelems,1) ]',...
-                    "LineStyle","-","Marker","o","Color","k","LineWidth",2);
+                    "LineStyle","-","Marker","o","Color","b","LineWidth",3);
         end
         function plotWired (obj)
         end

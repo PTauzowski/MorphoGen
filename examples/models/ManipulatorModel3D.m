@@ -2,7 +2,8 @@ classdef ManipulatorModel3D < handle
  
     
     properties
-        analysis, fixedEdgeSelector, alpha, mesh, elems, fe, xEnd, frameNodes, const_elems, upper_nodes, loadSurfaceNodes, fixedSurfaceNodes, halfSegmentNelems, use_offset;
+        analysis, frame_analysis, fixedEdgeSelector, alpha, mesh, frame_mesh, elems, fe, xEnd, frameNodes, frameElem
+        const_elems, upper_nodes, loadSurfaceNodes, fixedSurfaceNodes, halfSegmentNelems, use_offset;
     end
     
     methods                       
@@ -34,6 +35,16 @@ classdef ManipulatorModel3D < handle
             obj.analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [0 0 -10] ));
             obj.analysis.fixNodes( fixedEdgeSelector, [ "uz"] );
             obj.analysis.fixClosestNode( [0 0 0], ["ux" "uy" "uz"], [0 0 0]);
+
+            frame_elems = [1 2; 2 3; 3 4; 4 5; 5 6; 6 7; 7 8];
+            obj.frame_mesh=Mesh();
+            obj.frame_mesh.nodes=obj.frameNodes;
+            obj.frame_mesh.elems = frame_elems;
+            
+            obj.frameElem=Frame3D(frame_elems,E,0.02,0.8*E,0.0004,0.0004,0.003);
+            obj.frame_analysis = LinearElasticityWeighted( obj.frameElem, obj.frame_mesh, false );
+            obj.frame_analysis.fixClosestNode([0 0 0], ["ux" "uy" "uz" "fix" "fiy" "fiz"], [0 0 0 0 0 0]);
+            obj.frame_analysis.loadClosestNode(obj.frame_mesh.nodes(end,:), ["ux" "uy" "uz" "fix" "fiy" "fiz"], [0 0 -1 0 0 0] );
 
         end
 
@@ -149,7 +160,93 @@ classdef ManipulatorModel3D < handle
         end 
 
         function plot(obj)
-            obj.fe.plot(obj.mesh.nodes)
+            figure
+            hold on, axis on; 
+            daspect([1 1 1]);
+            xlabel("x");
+            ylabel("y");
+            zlabel("z");
+
+            light('Position', [-1 -2 5], 'Style', 'local');
+            light('Position', [1 1 5], 'Style', 'infinite');
+            ax = gca; 
+
+            obj.fe.face_alpha = 0.2;
+            ec = obj.fe.edge_color;
+            obj.fe.edge_color='none';
+            bj.fe.face_color=[0.2 0 0.2];
+            obj.fe.plot(obj.mesh.nodes);
+            obj.frameElem.plot(obj.frame_mesh.nodes);
+            
+            figure;
+            tiledlayout(2,2,'Padding','compact','TileSpacing','compact');
+ 
+            % --- Top view ---
+            nexttile;
+            hold on, axis on; 
+            daspect([1 1 1]);
+            xlabel("x");
+            ylabel("y");
+            zlabel("z");
+
+            light('Position', [-1 -2 5], 'Style', 'local');
+            light('Position', [1 1 5], 'Style', 'infinite');
+             obj.fe.plot(obj.mesh.nodes);
+            obj.frameElem.plot(obj.frame_mesh.nodes);
+            view(2);                % top (xy) view
+            axis equal off;
+            title('Top view');
+        
+            % --- Front view ---
+            nexttile;
+            hold on, axis on; 
+            daspect([1 1 1]);
+            xlabel("x");
+            ylabel("y");
+            zlabel("z");
+
+            light('Position', [-1 -2 5], 'Style', 'local');
+            light('Position', [1 1 5], 'Style', 'infinite');
+             obj.fe.plot(obj.mesh.nodes);
+            obj.frameElem.plot(obj.frame_mesh.nodes);
+            view(0,0);              % front (xz) view
+            axis equal off;
+            title('Front view');
+        
+            % --- Side view ---
+            nexttile;
+            hold on, axis on; 
+            daspect([1 1 1]);
+            xlabel("x");
+            ylabel("y");
+            zlabel("z");
+
+            light('Position', [-1 -2 5], 'Style', 'local');
+            light('Position', [1 1 5], 'Style', 'infinite');
+             obj.fe.plot(obj.mesh.nodes);
+            obj.frameElem.plot(obj.frame_mesh.nodes);
+            view(90,0);             % side (yz) view
+            axis equal off;
+            title('Side view');
+        
+            % --- 3D / perspective view ---
+            nexttile;
+            hold on, axis on; 
+            daspect([1 1 1]);
+            xlabel("x");
+            ylabel("y");
+            zlabel("z");
+
+            light('Position', [-1 -2 5], 'Style', 'local');
+            light('Position', [1 1 5], 'Style', 'infinite');
+            obj.fe.plot(obj.mesh.nodes);
+            obj.frameElem.plot(obj.frame_mesh.nodes);
+            view(3);                % default 3D
+            axis equal off;
+            title('3D view');
+
+            obj.fe.face_alpha = 1.0;
+            obj.fe.edge_color=ec;
         end
         
     end
