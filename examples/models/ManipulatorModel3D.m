@@ -159,24 +159,54 @@ classdef ManipulatorModel3D < handle
             xnew=(x-x0)*R+x0;
         end 
 
-        function plot(obj)
+        function compute(obj, x)
+            if size(x,1)==1
+                x=ones(obj.analysis.getTotalElemsNumber(),1);
+            end
+            obj.analysis.solveWeighted(x);
+            obj.analysis.computeElementResults(x);
+        end
+
+        function plot(obj)       
             figure
             hold on, axis on; 
             daspect([1 1 1]);
-            xlabel("x");
-            ylabel("y");
-            zlabel("z");
+            obj.analysis.felems{1}.plot(obj.mesh.nodes);
+            obj.analysis.plotCurrentLoad();
+            obj.analysis.plotSupport();
+        end
 
-            light('Position', [-1 -2 5], 'Style', 'local');
-            light('Position', [1 1 5], 'Style', 'infinite');
-            ax = gca; 
+        function maxHM = plotHM_map(obj, x)
+            if size(x,1)==1
+                x=ones(obj.analysis.getTotalElemsNumber(),1);
+            end
+            selems = x > 0.5; 
+            maxHM = max(obj.analysis.felems{1}.results.gp.all(13,selems,:));
+            figure
+            hold on, axis on; 
+            daspect([1 1 1]);
+            obj.analysis.felems{1}.selectedElems=selems;
+            obj.analysis.plotMaps(["sHM"],0.0)
+            obj.analysis.felems{1}.selectedElems=[];
+        end
+
+        function plotConfigurations(obj)
+            % figure
+            % hold on, axis on; 
+            % daspect([1 1 1]);
+            % xlabel("x");
+            % ylabel("y");
+            % zlabel("z");
+            % 
+            % light('Position', [-1 -2 5], 'Style', 'local');
+            % light('Position', [1 1 5], 'Style', 'infinite');
+            % ax = gca; 
+            % 
 
             obj.fe.face_alpha = 0.2;
             ec = obj.fe.edge_color;
             obj.fe.edge_color='none';
             bj.fe.face_color=[0.2 0 0.2];
-            obj.fe.plot(obj.mesh.nodes);
-            obj.frameElem.plot(obj.frame_mesh.nodes);
             
             figure;
             tiledlayout(2,2,'Padding','compact','TileSpacing','compact');
@@ -191,7 +221,7 @@ classdef ManipulatorModel3D < handle
 
             light('Position', [-1 -2 5], 'Style', 'local');
             light('Position', [1 1 5], 'Style', 'infinite');
-             obj.fe.plot(obj.mesh.nodes);
+            obj.fe.plot(obj.mesh.nodes);
             obj.frameElem.plot(obj.frame_mesh.nodes);
             view(2);                % top (xy) view
             axis equal off;
@@ -207,7 +237,7 @@ classdef ManipulatorModel3D < handle
 
             light('Position', [-1 -2 5], 'Style', 'local');
             light('Position', [1 1 5], 'Style', 'infinite');
-             obj.fe.plot(obj.mesh.nodes);
+            obj.fe.plot(obj.mesh.nodes);
             obj.frameElem.plot(obj.frame_mesh.nodes);
             view(0,0);              % front (xz) view
             axis equal off;
@@ -223,7 +253,7 @@ classdef ManipulatorModel3D < handle
 
             light('Position', [-1 -2 5], 'Style', 'local');
             light('Position', [1 1 5], 'Style', 'infinite');
-             obj.fe.plot(obj.mesh.nodes);
+            obj.fe.plot(obj.mesh.nodes);
             obj.frameElem.plot(obj.frame_mesh.nodes);
             view(90,0);             % side (yz) view
             axis equal off;
