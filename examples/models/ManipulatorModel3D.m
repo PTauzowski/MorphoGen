@@ -176,6 +176,20 @@ classdef ManipulatorModel3D < handle
             obj.analysis.plotSupport();
         end
 
+        function plotMesh(obj)       
+            obj.fe.face_alpha = 0.2;
+            ec = obj.fe.edge_color;
+            obj.fe.edge_color='none';
+            obj.fe.face_color=[0.4 0.4 0.4];
+
+
+            obj.fe.plot(obj.mesh.nodes);
+            obj.frameElem.plot(obj.frame_mesh.nodes);
+            
+            obj.fe.face_alpha = 1.0;
+            obj.fe.edge_color=ec;
+        end
+
         function maxHM = plotHM_map(obj, x)
             if size(x,1)==1
                 x=ones(obj.analysis.getTotalElemsNumber(),1);
@@ -190,7 +204,7 @@ classdef ManipulatorModel3D < handle
             obj.analysis.felems{1}.selectedElems=[];
         end
 
-        function plotConfigurations(obj)
+        function plotConfigurations(obj,filename)
             % figure
             % hold on, axis on; 
             % daspect([1 1 1]);
@@ -277,6 +291,9 @@ classdef ManipulatorModel3D < handle
 
             obj.fe.face_alpha = 1.0;
             obj.fe.edge_color=ec;
+
+            exportgraphics(gcf, filename+".png", 'Resolution', 1200); 
+            savefig(gcf, filename+".fig");
         end
         
     end
