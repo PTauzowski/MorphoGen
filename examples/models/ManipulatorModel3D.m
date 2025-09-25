@@ -204,7 +204,7 @@ classdef ManipulatorModel3D < handle
             obj.analysis.felems{1}.selectedElems=[];
         end
 
-        function plotConfigurations(obj,filename)
+        function plotConfigurations(obj,filename, description, genforces)
             % figure
             % hold on, axis on; 
             % daspect([1 1 1]);
@@ -223,6 +223,7 @@ classdef ManipulatorModel3D < handle
             bj.fe.face_color=[0.2 0 0.2];
             
             figure;
+            
             tiledlayout(2,2,'Padding','compact','TileSpacing','compact');
  
             % --- Top view ---
@@ -288,6 +289,8 @@ classdef ManipulatorModel3D < handle
             view(3);                % default 3D
             axis equal off;
             title('3D view');
+
+            sgtitle({ description, [' N= ' sprintf('%.2f',genforces(1)) ', T_y= ' sprintf('%.2f',genforces(2)) ', T_z= ' sprintf('%.2f',genforces(3)) ', M_s= ' sprintf('%.2f',genforces(4)) ', M_y= ' sprintf('%.2f',genforces(5)) ', M_z= ' sprintf('%.2f',genforces(6))]}, 'FontWeight','bold');
 
             obj.fe.face_alpha = 1.0;
             obj.fe.edge_color=ec;
