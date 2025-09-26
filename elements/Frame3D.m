@@ -54,6 +54,51 @@ classdef Frame3D < FiniteElement
         end
 
         function L = computeTransformationMatrix(obj, nodes)
+            % Local frame:
+            %  ex = element axis
+            %  ey = unit vector in the GLOBAL XY plane, orthogonal to ex
+            %  ez = ex × ey  (right-handed)
+            ne = size(obj.elems,1);
+            L  = zeros(12,12,ne);
+            Z3 = zeros(3,3);
+        
+            for k = 1:ne
+                i = obj.elems(k,1); j = obj.elems(k,2);
+                x1 = nodes(i,:).'; x2 = nodes(j,:).';
+                dl = x2 - x1;    ell = norm(dl);
+                assert(ell > eps, 'Zero-length element %d', k);
+        
+                ex = dl / ell;
+        
+                % --- build ey in the global XY plane (z=0) and ⟂ ex ---
+                % project ex to XY: p = [ex1 ex2 0]
+                p = [ex(1); ex(2); 0];
+                if norm(p) >= 1e-12
+                    % any unit vector in XY perpendicular to p works:
+                    % take u = [-p_y, p_x, 0] normalized
+                    u  = [-p(2); p(1); 0];
+                    ey = u / norm(u);
+                else
+                    % ex is ~vertical; choose global X as ey (in XY and ⟂ ex)
+                    ey = [1; 0; 0];
+                end
+        
+                ez = cross(ex, ey);           % right-handed
+                % (no need to renormalize: ex,ey are unit & orthogonal)
+        
+                % Rotation (global → local): rows are local axes in global basis
+                R = [ex.'; ey.'; ez.'];
+        
+                % 12×12 block-diag with R
+                L(:,:,k) = [ R  Z3 Z3 Z3;
+                             Z3 R  Z3 Z3;
+                             Z3 Z3 R  Z3;
+                             Z3 Z3 Z3 R ];
+            end
+        end
+
+
+        function L = computeTransformationMatrix_old(obj, nodes)
             ne = size(obj.elems,1);
             L  = zeros(12,12,ne);
             Z3 = zeros(3,3);
@@ -174,10 +219,151 @@ end
             plot3([ nodes(obj.elems(:,1),1) nodes(obj.elems(:,2),1) NaN(nelems,1) ]',...
                    [ nodes(obj.elems(:,1),2) nodes(obj.elems(:,2),2) NaN(nelems,1) ]',...
                    [ nodes(obj.elems(:,1),3) nodes(obj.elems(:,2),3) NaN(nelems,1) ]',...
-                    "LineStyle","-","Marker","o","Color","b","LineWidth",3);
+                    "LineStyle","-","Marker","o","Color","b","LineWidth",2);
         end
+        function plotSelected(obj, nodes, idx)    
+            nelems=size(obj.elems,1);
+            plot3([ nodes(obj.elems(idx,1),1) nodes(obj.elems(idx,2),1) NaN(size(idx,2),1) ]',...
+                   [ nodes(obj.elems(idx,1),2) nodes(obj.elems(idx,2),2) NaN(size(idx,2),1) ]',...
+                   [ nodes(obj.elems(idx,1),3) nodes(obj.elems(idx,2),3) NaN(size(idx,2),1) ]',...
+                    "LineStyle","-","Marker","o","Color","r","LineWidth",4);
+        end
+        function plotLocalCS(obj, nodes, scale, zoffset, relative)
+            if nargin<3 || isempty(scale),   scale   = 0.15; end
+            if nargin<4 || isempty(zoffset), zoffset = 0.0;  end
+            if nargin<5 || isempty(relative),relative = false; end
+        
+            ne = size(obj.elems,1);
+            C  = zeros(ne,3); EX=C; EY=C; EZ=C; Ls=zeros(ne,1);
+        
+            L  = obj.computeTransformationMatrix(nodes);
+        
+            for k=1:ne
+                i = obj.elems(k,1); j = obj.elems(k,2);
+                x1 = nodes(i,:); x2 = nodes(j,:);
+                C(k,:)  = 0.5*(x1 + x2);
+                Ls(k)   = norm(x2 - x1);
+                R       = L(1:3,1:3,k);  % rows: ex; ey; ez
+                EX(k,:) = R(1,:); EY(k,:) = R(2,:); EZ(k,:) = R(3,:);
+            end
+        
+            % offset along LOCAL z if requested
+            if relative, C = C + (zoffset.*Ls).*EZ; else, C = C + zoffset.*EZ; end
+        
+            holdState = ishold; hold on
+            % x=red, y=green, z=blue
+            quiver3(C(:,1),C(:,2),C(:,3), scale*EX(:,1), scale*EX(:,2), scale*EX(:,3), 0, 'Color',[0.85 0.10 0.10], 'LineWidth',1.3);
+            quiver3(C(:,1),C(:,2),C(:,3), scale*EY(:,1), scale*EY(:,2), scale*EY(:,3), 0, 'Color',[0.10 0.60 0.10], 'LineWidth',1.3);
+            quiver3(C(:,1),C(:,2),C(:,3), scale*EZ(:,1), scale*EZ(:,2), scale*EZ(:,3), 0, 'Color',[0.10 0.10 0.85], 'LineWidth',1.3);
+            axis equal
+            if ~holdState, hold off, end
+        end
+        function plotLocalCS_old(obj, nodes, scale, zoffset)
+            if nargin < 3 || isempty(scale),    scale    = 0.15; end
+            if nargin < 4 || isempty(zoffset),  zoffset  = 0.0;  end
+            if nargin < 5 || isempty(relative), relative  = false; end
+        
+            ne = size(obj.elems,1);
+            C  = zeros(ne,3); EX = C; EY = C; EZ = C; Ls = zeros(ne,1);
+        
+            L = obj.computeTransformationMatrix(nodes); % uses same R as stiffness/xform
+        
+            % Collect midpoints, local axes, and lengths
+            for k = 1:ne
+                i = obj.elems(k,1); j = obj.elems(k,2);
+                x1 = nodes(i,:); x2 = nodes(j,:);
+                C(k,:)  = 0.5*(x1 + x2);
+                Ls(k)   = norm(x2 - x1);
+                R       = L(1:3,1:3,k);      % rows: ex; ey; ez in global coords
+                EX(k,:) = R(1,:); 
+                EY(k,:) = R(2,:);
+                EZ(k,:) = R(3,:);
+            end
+        
+            % Offset along LOCAL z (ez expressed in global basis)
+            if relative
+                C = C + (zoffset .* Ls) .* EZ;   % fraction of each element length
+            else
+                C = C + zoffset .* EZ;           % absolute units
+            end
+        
+            holdState = ishold; hold on
+            quiver3(C(:,1),C(:,2),C(:,3), scale*EX(:,1), scale*EX(:,2), scale*EX(:,3), 0, ...
+                    'Color',[0.85 0.1 0.1], 'LineWidth',1.3); % ex (red)
+            quiver3(C(:,1),C(:,2),C(:,3), scale*EY(:,1), scale*EY(:,2), scale*EY(:,3), 0, ...
+                    'Color',[0.10 0.6 0.10], 'LineWidth',1.3); % ey (green)
+            quiver3(C(:,1),C(:,2),C(:,3), scale*EZ(:,1), scale*EZ(:,2), scale*EZ(:,3), 0, ...
+                    'Color',[0.10 0.1 0.85], 'LineWidth',1.3); % ez (blue)
+            axis equal
+            if ~holdState, hold off, end
+        end
+        
+       
+        function plotLocalForces(obj,nodes,qnodal,opts)
+            if nargin<4, opts=struct; end
+            opts = defaults(opts, 'scaleF',1e-3, 'scaleM',5e-4, 'sample','avg');
+            
+            [Fel,~] = obj.computeResults(nodes,qnodal);
+            ne = size(obj.elems,1);
+            
+            C=zeros(ne,3); EX=C; EY=C; EZ=C;
+            N=zeros(ne,1); Ty=N; Tz=N; Ms=N; My=N; Mz=N;
+            
+            L = obj.computeTransformationMatrix(nodes);
+            for k=1:ne
+                i=obj.elems(k,1); j=obj.elems(k,2);
+                x1=nodes(i,:); x2=nodes(j,:); 
+                C(k,:)  = 0.5*(x1+x2);
+                R       = L(1:3,1:3,k);
+                EX(k,:) = R(1,:); EY(k,:)=R(2,:); EZ(k,:)=R(3,:);
+                f = Fel(:,k);
+                switch opts.sample
+                    case 'end1'
+                        N(k)=f(1);  Ty(k)=f(2);  Tz(k)=f(3);
+                        Ms(k)=f(4); My(k)=f(5);  Mz(k)=f(6);
+                    otherwise % avg
+                        N(k)=0.5*(f(1)-f(7));   Ty(k)=0.5*(f(2)-f(8));   Tz(k)=0.5*(f(3)-f(9));
+                        Ms(k)=0.5*(f(4)-f(10)); My(k)=0.5*(f(5)-f(11));  Mz(k)=0.5*(f(6)-f(12));
+                end
+            end
+            
+            holdstate=ishold; hold on
+            sF=opts.scaleF;
+            quiver3(C(:,1),C(:,2),C(:,3), sF*N.*EX(:,1), sF*N.*EX(:,2), sF*N.*EX(:,3), 0, 'Color',[0.80 0 0],'LineWidth',1.6);
+            quiver3(C(:,1),C(:,2),C(:,3), sF*Ty.*EY(:,1), sF*Ty.*EY(:,2), sF*Ty.*EY(:,3), 0, 'Color',[0 0.55 0],'LineWidth',1.6);
+            quiver3(C(:,1),C(:,2),C(:,3), sF*Tz.*EZ(:,1), sF*Tz.*EZ(:,2), sF*Tz.*EZ(:,3), 0, 'Color',[0 0.2 0.8],'LineWidth',1.6);
+            
+            % moments as arcs -> one line per type, NaN-separated
+            sM=abs(opts.scaleM);
+            plot3(makeArcs(C,EX,sM*abs(Ms)),'-','Color',[0.85 0.45 0],'LineWidth',1.4);
+            plot3(makeArcs(C,EY,sM*abs(My)),'-','Color',[0.45 0 0.85],'LineWidth',1.4);
+            plot3(makeArcs(C,EZ,sM*abs(Mz)),'-','Color',[0 0.65 0.85],'LineWidth',1.4);
+            
+            axis equal
+            if ~holdstate, hold off, end
+            
+                function [X,Y,Z]=makeArcs(C_,N_,R_)
+                    nseg = 24; t = linspace(0,2*pi,nseg);
+                    % basis in plane ⟂ normal
+                    A = [1,0,0]; 
+                    U = A - dot(A,N_,2).*N_; nz = vecnorm(U,2,2); 
+                    swap = nz<1e-8; A(swap,:) = repmat([0,1,0],sum(swap),1);
+                    U = A - dot(A,N_,2).*N_; U = U./vecnorm(U,2,2);
+                    V = cross(N_,U,2);
+                    % allocate and fill with NaNs between arcs
+                    X = NaN(ne*nseg,1); Y=X; Z=X;
+                    for p=1:ne
+                        P = C_(p,:) + R_(p)*( U(p,:).*cos(t).' + V(p,:).*sin(t).' );
+                        idx = (p-1)*nseg + (1:nseg);
+                        X(idx)=P(:,1); Y(idx)=P(:,2); Z(idx)=P(:,3);
+                    end
+                end
+        end
+
+
         function plotWired (obj)
         end
+
         function [Fel, Feg] = computeResults(obj,nodes,qnodal) 
             L  = obj.computeTransformationMatrix(nodes); 
             Ke = obj.computeLocalStifnessMatrix(nodes);

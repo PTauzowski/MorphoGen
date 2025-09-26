@@ -204,7 +204,7 @@ classdef ManipulatorModel3D < handle
             obj.analysis.felems{1}.selectedElems=[];
         end
 
-        function plotConfigurations(obj,filename, description, genforces)
+        function plotConfigurations(obj,filename, description, genforces, max_segment)
             % figure
             % hold on, axis on; 
             % daspect([1 1 1]);
@@ -217,10 +217,12 @@ classdef ManipulatorModel3D < handle
             % ax = gca; 
             % 
 
+            max_elem = max_segment + 1;
+
             obj.fe.face_alpha = 0.2;
             ec = obj.fe.edge_color;
             obj.fe.edge_color='none';
-            bj.fe.face_color=[0.2 0 0.2];
+            obj.fe.face_color=[0.2 0.2 0.2];
             
             figure;
             
@@ -286,17 +288,46 @@ classdef ManipulatorModel3D < handle
             light('Position', [1 1 5], 'Style', 'infinite');
             obj.fe.plot(obj.mesh.nodes);
             obj.frameElem.plot(obj.frame_mesh.nodes);
+            obj.frameElem.plotLocalCS(obj.frame_mesh.nodes, 0.2, 0.02);
+            obj.frameElem.plotSelected(obj.frame_mesh.nodes, max_elem);
             view(3);                % default 3D
             axis equal off;
             title('3D view');
 
-            sgtitle({ description, [' N= ' sprintf('%.2f',genforces(1)) ', T_y= ' sprintf('%.2f',genforces(2)) ', T_z= ' sprintf('%.2f',genforces(3)) ', M_s= ' sprintf('%.2f',genforces(4)) ', M_y= ' sprintf('%.2f',genforces(5)) ', M_z= ' sprintf('%.2f',genforces(6))]}, 'FontWeight','bold');
+            sgtitle({ description, [' Q_1= ' sprintf('%.2f',genforces(1)) ', Q_2= ' sprintf('%.2f',genforces(2)) ', Q_3= ' sprintf('%.2f',genforces(3)) ', Q_4= ' sprintf('%.2f',genforces(4)) ', Q_5= ' sprintf('%.2f',genforces(5)) ', Q_6= ' sprintf('%.2f',genforces(6))]}, 'FontWeight','bold');
+
+            exportgraphics(gcf, filename+".png", 'Resolution', 1200); 
+            savefig(gcf, filename+".fig");
+
+            figure,hold on, axis on; 
+            daspect([1 1 1]);
+            xlabel("x");
+            ylabel("y");
+            zlabel("z");
+             % --- 3D / perspective view ---
+            nexttile;
+            hold on, axis on; 
+            daspect([1 1 1]);
+            xlabel("x");
+            ylabel("y");
+            zlabel("z");
+
+            light('Position', [-1 -2 5], 'Style', 'local');
+            light('Position', [1 1 5], 'Style', 'infinite');
+            obj.fe.plot(obj.mesh.nodes);
+            obj.frameElem.plot(obj.frame_mesh.nodes);
+            obj.frameElem.plotLocalCS(obj.frame_mesh.nodes, 0.2,0.02);
+            obj.frameElem.plotSelected(obj.frame_mesh.nodes, max_elem);
+            view(3);                % default 3D
+            axis equal;
+
+            title({ description, [' Q_1= ' sprintf('%.2f',genforces(1)) ', Q_2= ' sprintf('%.2f',genforces(2)) ', Q_3= ' sprintf('%.2f',genforces(3)) ', Q_4= ' sprintf('%.2f',genforces(4)) ', Q_5= ' sprintf('%.2f',genforces(5)) ', Q_6= ' sprintf('%.2f',genforces(6))]}, 'FontWeight','bold');
 
             obj.fe.face_alpha = 1.0;
             obj.fe.edge_color=ec;
 
-            exportgraphics(gcf, filename+".png", 'Resolution', 1200); 
-            savefig(gcf, filename+".fig");
+            exportgraphics(gcf, filename+"_PAN.png", 'Resolution', 1200); 
+            savefig(gcf, filename+"_PAN.fig");
         end
         
     end
