@@ -204,6 +204,51 @@ classdef ManipulatorModel3D < handle
             obj.analysis.felems{1}.selectedElems=[];
         end
 
+         function FN = computeFrameNodesOnly(obj,  ls, alpha_deg, betas_deg)
+            alpha = deg2rad(alpha_deg);
+            betas = deg2rad(betas_deg(:).');   % row
+            nJ = numel(betas);
+    
+            % rotCutT = Ry(alpha)'; rotCut2T = Ry(2*alpha)';
+            ca = cos(alpha);  sa = sin(alpha);
+            rotCutT  = [ ca  0  sa;  0  1  0; -sa  0  ca ]';
+            c2 = cos(2*alpha); s2 = sin(2*alpha);
+            rotCut2T = [ c2  0  s2;  0  1  0; -s2  0  c2 ]';
+    
+            % Rz1T
+            cb = cos(betas(1)); sb = sin(betas(1));
+            Rz1T = [ cb -sb 0; sb cb 0; 0 0 1 ]';
+    
+            prevRot = rotCutT * Rz1T;
+    
+            xEnd = [0 0 ls];
+            FN = zeros(nJ,3);
+            FN(1,:) = [0 0 0];
+            FN(2,:) = xEnd;
+    
+            for k = 2:nJ
+                cb = cos(betas(k)); sb = sin(betas(k));
+                RzTk = [ cb -sb 0; sb cb 0; 0 0 1 ]';
+                step = (k < nJ) * 2*ls + (k == nJ) * ls;
+                xEnd = xEnd + [0 0 step] * rotCutT * RzTk * prevRot;
+                FN(k,:) = xEnd;
+                % prevRot = Ry(2*alpha)' * Rz(betas(k))' * prevRot
+                prevRot = rotCut2T * RzTk * prevRot;
+            end
+        end
+    
+        function FNb = computeFrameNodesBatch(obj, ls, alpha_deg, betas_deg_batch)
+            B = betas_deg_batch;
+            if size(B,1) < size(B,2) && size(B,1) <= 8
+                B = B.';
+            end
+            [nSamples, nJoints] = size(B);
+            FNb = zeros(nJoints, 3, nSamples);
+            for s = 1:nSamples
+                FNb(:,:,s) = obj.computeFrameNodesOnly(ls, alpha_deg, B(s,:));
+            end
+        end
+
         function plotConfigurations(obj,filename, description, genforces, max_segment)
             % figure
             % hold on, axis on; 
