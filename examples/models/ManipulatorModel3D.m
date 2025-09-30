@@ -262,7 +262,7 @@ classdef ManipulatorModel3D < handle
             % ax = gca; 
             % 
 
-            max_elem = max_segment + 1;
+            max_elem = max_segment;
 
             obj.fe.face_alpha = 0.2;
             ec = obj.fe.edge_color;
