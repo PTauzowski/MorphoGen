@@ -1,7 +1,7 @@
 classdef Frame3D < FiniteElement
       
     properties
-        E,A,G,Jy,Jz,Ks;
+        E,A,G,Jy,Jz,Ks,betas;
        
     end
       
@@ -53,6 +53,76 @@ classdef Frame3D < FiniteElement
              end
         end
 
+        function L = computeTransformationMatrixRotated(obj, nodes, varargin)
+            % L: 12x12xnelems local->global transformation matrices
+            % Options:
+            %   'gamma_deg' : nelemsx1 or scalar axial twist (deg)
+            %   'y_ref'     : nelemsx3 local Y directions in GLOBAL coords (overrides gamma)
+            
+                p = inputParser;
+                addParameter(p, 'gamma_deg', [], @(x)isnumeric(x));
+                addParameter(p, 'y_ref',     [], @(x)isnumeric(x) && (isempty(x) || size(x,2)==3));
+                parse(p, varargin{:});
+                gamma_deg = p.Results.gamma_deg;
+                y_ref     = p.Results.y_ref;
+            
+                ne = size(obj.elems,1);
+                if isempty(gamma_deg), gamma_deg = zeros(ne,1); end
+                if isrow(gamma_deg),   gamma_deg = gamma_deg(:); end
+                if isscalar(gamma_deg), gamma_deg = repmat(gamma_deg, ne, 1); end
+            
+                L = zeros(12,12,ne);
+                for e = 1:ne
+                    i = obj.elems(e,1);  j = obj.elems(e,2);
+                    p1 = nodes(i,:);     p2 = nodes(j,:);
+                    ex = p2 - p1;  ln = norm(ex);
+                    if ln < 1e-14, error('Element %d has zero length.', e); end
+                    ex = ex / ln;                        % local x along bar
+            
+                    % --- seed local y (before axial twist)
+                    if ~isempty(y_ref)
+                        ey0 = y_ref(e,:);
+                        ey0 = ey0 - dot(ey0,ex)*ex;      % orthogonalize to x
+                        nrm = norm(ey0);
+                        if nrm < 1e-12
+                            % fallback if parallel/degenerate
+                            if abs(ex(3)) < 0.95
+                                ref = [0 0 1];
+                            else
+                                ref = [1 0 0];
+                            end
+                            ey0 = ref - dot(ref,ex)*ex;
+                            ey0 = ey0 / norm(ey0);
+                        else
+                            ey0 = ey0 / nrm;
+                        end
+                    else
+                        % default: keep Y as parallel to global XY plane as possible
+                        if abs(ex(3)) < 0.95
+                            ref = [0 0 1];
+                        else
+                            ref = [1 0 0];
+                        end
+                        ey0 = ref - dot(ref,ex)*ex;
+                        ey0 = ey0 / norm(ey0);
+                    end
+            
+                    % --- axial twist gamma about local x
+                    g  = deg2rad(gamma_deg(e));
+                    ey =  ey0*cos(g) + cross(ex,ey0)*sin(g);   % Rodrigues
+                    ez =  cross(ex,ey);
+                    ey = ey / norm(ey);
+                    ez = ez / norm(ez);
+            
+                    % --- rotation local->global (columns are local axes in global coords)
+                    R = [ex(:) ey(:) ez(:)];
+            
+                    % --- 12x12 transform, DOF order [u v w rx ry rz]_1, [u v w rx ry rz]_2
+                    L(:,:,e) = blkdiag(R, R, R, R);
+                end
+            end
+
+
         function L = computeTransformationMatrix(obj, nodes)
             % Local frame:
             %  ex = element axis
@@ -98,47 +168,6 @@ classdef Frame3D < FiniteElement
         end
 
 
-        function L = computeTransformationMatrix_old(obj, nodes)
-            ne = size(obj.elems,1);
-            L  = zeros(12,12,ne);
-            Z3 = zeros(3,3);
-        
-            for k = 1:ne
-                x1 = nodes(obj.elems(k,1),:).';
-                x2 = nodes(obj.elems(k,2),:).';
-                dl = x2 - x1;   l = norm(dl);
-                assert(l > eps, 'Zero-length element %d', k);
-        
-                ex = dl / l;                        % local x (axis)
-                up = [0;0;1];                       % reference “up” (can be changed)
-                if abs(dot(ex,up)) > 0.98           % near-parallel → pick another up
-                    up = [0;1;0];
-                end
-                ey = up - ex*(ex.'*up);             % Gram–Schmidt: project into plane ⟂ ex
-                n  = norm(ey);
-                if n < 1e-12                        % extreme degeneracy guard
-                    up = [1;0;0];
-                    ey = up - ex*(ex.'*up); n = norm(ey);
-                    assert(n > 1e-12, 'Cannot build local frame for elem %d', k);
-                end
-                ey = ey/n;
-                ez = cross(ex,ey);                  % right-handed
-        
-                % 3x3 rotation: global → local (rows are local axes in global basis)
-                R = [ex.'; ey.'; ez.'];
-        
-                % Sanity (optional)
-                % if abs(det(R)-1) > 1e-10 || norm(R*R' - eye(3),'fro') > 1e-10, keyboard; end
-        
-                % 12x12 transform (u1,rot1,u2,rot2), each block 3x3 = R
-                L(:,:,k) = [ R  Z3 Z3 Z3;
-                             Z3 R  Z3 Z3;
-                             Z3 Z3 R  Z3;
-                             Z3 Z3 Z3 R  ];
-            end
-end
-
-
         function K = computeStifnessMatrix(obj, nodes, varargin)
               nelems = size(obj.elems,1);
               nnodes = size(obj.elems,2);
@@ -146,7 +175,8 @@ end
               dim = nnodes * ndofs;
               K  = zeros( dim , dim, nelems );
               Kl = obj.computeLocalStifnessMatrix(nodes,varargin);
-              L  = obj.computeTransformationMatrix(nodes);              
+              L  = obj.computeTransformationMatrixRotated(nodes,'gamma_deg',obj.betas); 
+              L  = obj.computeTransformationMatrix(nodes);  
               for k=1:nelems
                  K(:,:,k) = L(:,:,k)' * Kl(:,:,k) * L(:,:,k);
               end
@@ -219,16 +249,99 @@ end
             plot3([ nodes(obj.elems(:,1),1) nodes(obj.elems(:,2),1) NaN(nelems,1) ]',...
                    [ nodes(obj.elems(:,1),2) nodes(obj.elems(:,2),2) NaN(nelems,1) ]',...
                    [ nodes(obj.elems(:,1),3) nodes(obj.elems(:,2),3) NaN(nelems,1) ]',...
-                    "LineStyle","-","Marker","o","Color","b","LineWidth",2);
+                    "LineStyle","-","Marker","o","MarkerEdgeColor",'r',"MarkerFaceColor",'r',"Color","k","LineWidth",3);
         end
         function plotSelected(obj, nodes, idx)    
             nelems=size(obj.elems,1);
             plot3([ nodes(obj.elems(idx,1),1) nodes(obj.elems(idx,2),1) NaN(size(idx,2),1) ]',...
                    [ nodes(obj.elems(idx,1),2) nodes(obj.elems(idx,2),2) NaN(size(idx,2),1) ]',...
                    [ nodes(obj.elems(idx,1),3) nodes(obj.elems(idx,2),3) NaN(size(idx,2),1) ]',...
-                    "LineStyle","-","Marker","o","Color","r","LineWidth",4);
+                    "LineStyle","-","Marker",".","Color","m","LineWidth",5);
         end
-        function plotLocalCS(obj, nodes, scale, zoffset, relative)
+
+        function h = plotLocalCS(obj, nodes, varargin)
+           % Draw one triad per element at its midpoint.
+            % Options:
+            %   'gamma_deg'   : nelemsx1 or scalar axial twist (deg)
+            %   'y_ref'       : nelemsx3 desired local Y vectors (global) – overrides gamma
+            %   'scale'       : arrow length (default 0.25 * mean element length)
+            %   'offsetLocal' : [ox oy oz] shift of base point in LOCAL coords (default [0 0 0])
+            %   'idx'         : which elements to draw (default all)
+            %   'ax'          : target axes (default gca)
+            
+                p = inputParser;
+                addParameter(p,'gamma_deg',[],@isnumeric);
+                addParameter(p,'y_ref',[],@(x)isnumeric(x) && (isempty(x) || size(x,2)==3));
+                addParameter(p,'scale',[],@isnumeric);
+                addParameter(p,'offsetLocal',[0 0 0],@(x)isnumeric(x)&&numel(x)==3);
+                addParameter(p,'idx',[],@isnumeric);
+                addParameter(p,'ax',[],@(x) isempty(x) || isgraphics(x,'axes'));
+                parse(p,varargin{:});
+                gamma_deg   = p.Results.gamma_deg;
+                y_ref       = p.Results.y_ref;
+                offsetLocal = p.Results.offsetLocal(:).';
+                ax          = p.Results.ax; if isempty(ax), ax = gca; end
+            
+                ne = size(obj.elems,1);
+                if isempty(p.Results.idx), idx = 1:ne; else, idx = p.Results.idx(:).'; end
+                if isempty(gamma_deg), gamma_deg = zeros(ne,1); end
+                if isrow(gamma_deg),   gamma_deg = gamma_deg(:); end
+                if isscalar(gamma_deg), gamma_deg = repmat(gamma_deg, ne, 1); end
+            
+                lens = vecnorm(nodes(obj.elems(:,2),:) - nodes(obj.elems(:,1),:), 2, 2);
+                sc   = p.Results.scale;
+                if isempty(sc), sc = 0.25 * mean(lens); end
+            
+                nplot = numel(idx);
+                P  = zeros(nplot,3); Ux = P; Uy = P; Uz = P;
+            
+                k = 0;
+                for e = idx
+                    i = obj.elems(e,1);  j = obj.elems(e,2);
+                    p1 = nodes(i,:);     p2 = nodes(j,:);
+                    mid = 0.5*(p1+p2);
+            
+                    ex = p2 - p1; ex = ex / norm(ex);
+            
+                    % local Y seed
+                    if ~isempty(y_ref)
+                        ey0 = y_ref(e,:);
+                        ey0 = ey0 - dot(ey0,ex)*ex; ey0 = ey0 / norm(ey0);
+                    else
+                        if abs(ex(3)) < 0.95
+                            ref = [0 0 1];
+                        else
+                            ref = [1 0 0];
+                        end
+                        ey0 = ref - dot(ref,ex)*ex; ey0 = ey0 / norm(ey0);
+                    end
+            
+                    g  = deg2rad(gamma_deg(e));
+                    ey =  ey0*cos(g) + cross(ex,ey0)*sin(g);
+                    ez =  cross(ex,ey);
+                    ey = ey / norm(ey); ez = ez / norm(ez);
+            
+                    base = mid + offsetLocal(1)*ex + offsetLocal(2)*ey + offsetLocal(3)*ez;
+            
+                    k = k+1;
+                    P(k,:)  = base;
+                    Ux(k,:) = sc * ex;
+                    Uy(k,:) = sc * ey;
+                    Uz(k,:) = sc * ez;
+                end
+            
+                hold_state = ishold(ax); hold(ax,'on');
+                hx = quiver3(ax, P(:,1),P(:,2),P(:,3), Ux(:,1),Ux(:,2),Ux(:,3), 0, 'Color',[0.85 0.1 0.1], 'LineWidth',1.2);
+                hy = quiver3(ax, P(:,1),P(:,2),P(:,3), Uy(:,1),Uy(:,2),Uy(:,3), 0, 'Color',[0.00 0.6 0.0], 'LineWidth',1.2);
+                hz = quiver3(ax, P(:,1),P(:,2),P(:,3), Uz(:,1),Uz(:,2),Uz(:,3), 0, 'Color',[0.10 0.1 0.9], 'LineWidth',1.2);
+                if ~hold_state, hold(ax,'off'); end
+                axis(ax,'equal');
+            
+                h = struct('x',hx,'y',hy,'z',hz);
+         end
+
+
+        function plotLocalCS_old(obj, nodes, scale, zoffset, relative)
             if nargin<3 || isempty(scale),   scale   = 0.15; end
             if nargin<4 || isempty(zoffset), zoffset = 0.0;  end
             if nargin<5 || isempty(relative),relative = false; end
@@ -258,45 +371,7 @@ end
             axis equal
             if ~holdState, hold off, end
         end
-        function plotLocalCS_old(obj, nodes, scale, zoffset)
-            if nargin < 3 || isempty(scale),    scale    = 0.15; end
-            if nargin < 4 || isempty(zoffset),  zoffset  = 0.0;  end
-            if nargin < 5 || isempty(relative), relative  = false; end
         
-            ne = size(obj.elems,1);
-            C  = zeros(ne,3); EX = C; EY = C; EZ = C; Ls = zeros(ne,1);
-        
-            L = obj.computeTransformationMatrix(nodes); % uses same R as stiffness/xform
-        
-            % Collect midpoints, local axes, and lengths
-            for k = 1:ne
-                i = obj.elems(k,1); j = obj.elems(k,2);
-                x1 = nodes(i,:); x2 = nodes(j,:);
-                C(k,:)  = 0.5*(x1 + x2);
-                Ls(k)   = norm(x2 - x1);
-                R       = L(1:3,1:3,k);      % rows: ex; ey; ez in global coords
-                EX(k,:) = R(1,:); 
-                EY(k,:) = R(2,:);
-                EZ(k,:) = R(3,:);
-            end
-        
-            % Offset along LOCAL z (ez expressed in global basis)
-            if relative
-                C = C + (zoffset .* Ls) .* EZ;   % fraction of each element length
-            else
-                C = C + zoffset .* EZ;           % absolute units
-            end
-        
-            holdState = ishold; hold on
-            quiver3(C(:,1),C(:,2),C(:,3), scale*EX(:,1), scale*EX(:,2), scale*EX(:,3), 0, ...
-                    'Color',[0.85 0.1 0.1], 'LineWidth',1.3); % ex (red)
-            quiver3(C(:,1),C(:,2),C(:,3), scale*EY(:,1), scale*EY(:,2), scale*EY(:,3), 0, ...
-                    'Color',[0.10 0.6 0.10], 'LineWidth',1.3); % ey (green)
-            quiver3(C(:,1),C(:,2),C(:,3), scale*EZ(:,1), scale*EZ(:,2), scale*EZ(:,3), 0, ...
-                    'Color',[0.10 0.1 0.85], 'LineWidth',1.3); % ez (blue)
-            axis equal
-            if ~holdState, hold off, end
-        end
         
        
         function plotLocalForces(obj,nodes,qnodal,opts)

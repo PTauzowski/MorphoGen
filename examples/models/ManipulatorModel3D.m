@@ -249,7 +249,7 @@ classdef ManipulatorModel3D < handle
             end
         end
 
-        function plotConfigurations(obj,filename, description, genforces, max_segment)
+        function plotConfigurations(obj,filename, description, genforces, betas, max_segment)
             % figure
             % hold on, axis on; 
             % daspect([1 1 1]);
@@ -264,12 +264,17 @@ classdef ManipulatorModel3D < handle
 
             max_elem = max_segment;
 
-            obj.fe.face_alpha = 0.2;
+            obj.fe.face_alpha = 0.1;
             ec = obj.fe.edge_color;
             obj.fe.edge_color='none';
             obj.fe.face_color=[0.2 0.2 0.2];
             
             figure;
+            hold on, axis on; 
+            daspect([1 1 1]);
+            xlabel("x");
+            ylabel("y");
+            zlabel("z");
             
             tiledlayout(2,2,'Padding','compact','TileSpacing','compact');
  
@@ -333,7 +338,7 @@ classdef ManipulatorModel3D < handle
             light('Position', [1 1 5], 'Style', 'infinite');
             obj.fe.plot(obj.mesh.nodes);
             obj.frameElem.plot(obj.frame_mesh.nodes);
-            obj.frameElem.plotLocalCS(obj.frame_mesh.nodes, 0.2, 0.02);
+            obj.frameElem.plotLocalCS(obj.frame_mesh.nodes, 'gamma_deg', betas, 'offsetLocal',[0 0 0.02], 'scale', 0.2);
             obj.frameElem.plotSelected(obj.frame_mesh.nodes, max_elem);
             view(3);                % default 3D
             axis equal off;
@@ -361,7 +366,7 @@ classdef ManipulatorModel3D < handle
             light('Position', [1 1 5], 'Style', 'infinite');
             obj.fe.plot(obj.mesh.nodes);
             obj.frameElem.plot(obj.frame_mesh.nodes);
-            obj.frameElem.plotLocalCS(obj.frame_mesh.nodes, 0.2,0.02);
+            obj.frameElem.plotLocalCS(obj.frame_mesh.nodes, 'gamma_deg', betas, 'offsetLocal',[0 0 0.02], 'scale', 0.2);
             obj.frameElem.plotSelected(obj.frame_mesh.nodes, max_elem);
             view(3);                % default 3D
             axis equal;
