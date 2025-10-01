@@ -22,36 +22,95 @@ classdef Frame3D < FiniteElement
                  
         end
 
-        function L = computeTransformationMatrixOld(obj, nodes)
+        function L = computeTransformationMatrixAnsys(obj, nodes)
               nelems = size(obj.elems,1);
               nnodes = size(obj.elems,2);
               ndofs = size( obj.ndofs,2);
               dim = nnodes * ndofs;
               L = zeros( dim , dim, nelems );
-              c0 =zeros(3,3);
+              T = zeros(3,3);
+              T0 = zeros(3,3);
               for k=1:nelems
                  l=norm(nodes(obj.elems(k,2),:)-nodes(obj.elems(k,1),:));
                  dl=nodes(obj.elems(k,2),:)-nodes(obj.elems(k,1),:);
                  dx=dl(1); 
                  dy=dl(2);
                  dz=dl(3);
-                 l1=norm(dl(1:2));
-                 if l1>1.0E-8
-                        cj=[  dx/l         dy/l        dz/l; ...
-                             -dy/l1        dx/l1       0; ... 
-                             -dx/l*dz/l1  -dz/l*dy/l1  l1/l ];
+                 lxy=norm(dl(1:2));
+                 d=0.0001*l;
+                 x1 = nodes(obj.elems(k,1),1);
+                 x2 = nodes(obj.elems(k,2),1);
+                 y1 = nodes(obj.elems(k,1),2);
+                 y2 = nodes(obj.elems(k,2),2);
+                 z1 = nodes(obj.elems(k,1),3);
+                 z2 = nodes(obj.elems(k,2),3);
+                 if lxy>d
+                    s1= (y2-y1)/lxy;  
+                    c1= (x2-x1)/lxy;
+                    
                  else
-                     cj = [ 0    0  dz/l; ...
-                            0    1  0;
-                           -dz/l 0, 0];
+                     s1=0.0;
+                     c1=1.0;
                  end
+                 s2=(z2-z1)/l;
+                 c2=lxy/l;
+                 s3=0; %sin(deg2rad(obj.betas(k)));
+                 c3=1; %cos(deg2rad(obj.betas(k)));
+
+                 T= [  c1*c2               s1*c2              s2; ...
+                      (-c1*s2*s3-s1*c3)   (-s1*s2*s3+c1*c3)   s3*c2; ...
+                      (-c1*s2*c3-s1*s3)   (-s1*s2*c3-c1*s3)   c3*c2 ];
                  
-                 L(:,:,k) =  [ cj c0 c0 c0; ...
-                               c0 cj c0 c0; ...
-                               c0 c0 cj c0; ...
-                               c0 c0 c0 cj];
+                 L(:,:,k) =  [ T T0 T0 T0; ...
+                               T0 T T0 T0; ...
+                               T0 T0 T T0; ...
+                               T0 T0 T0 T ];
              end
         end
+
+        function L = computeTransformationMatrixAnsys2(obj, nodes, varargin)
+            % L: 12x12xnelems; rows=axes (ANSYS T). Set 'columns',true to return columns=axes (R = T').
+                p = inputParser;
+                addParameter(p,'gamma_deg',0,@isnumeric);     % axial twist per element (deg)
+                addParameter(p,'columns',false,@islogical);   % return R (columns=axes) if true
+                parse(p,varargin{:});
+                gamma = p.Results.gamma_deg;
+                cols  = p.Results.columns;
+            
+                ne = size(obj.elems,1);
+                if isscalar(gamma), gamma = repmat(gamma,ne,1); end
+                if isrow(gamma),   gamma  = gamma(:); end
+            
+                L  = zeros(12,12,ne);
+                Z3 = zeros(3,3);
+            
+                for e = 1:ne
+                    i = obj.elems(e,1); j = obj.elems(e,2);
+                    d  = nodes(j,:) - nodes(i,:);
+                    Lg = norm(d);
+                    if Lg < 1e-14, error('Element %d has zero length.', e); end
+                    d  = d / Lg;                         % ex (global)
+            
+                    % Build an orthonormal triad without roll using a robust reference:
+                    if abs(d(3)) < 0.95, ref = [0 0 1]; else, ref = [1 0 0]; end
+                    ey0 = ref - dot(ref,d)*d; ey0 = ey0 / norm(ey0);
+                    ez0 = cross(d,ey0);                 % guaranteed ⟂ and normalized
+            
+                    % Apply axial roll gamma about ex=d (Rodrigues on the ey0–ez0 plane)
+                    cg = cosd(gamma(e)); sg = sind(gamma(e));
+                    ey = cg*ey0 + sg*ez0;
+                    ez = -sg*ey0 + cg*ez0;
+            
+                    % ANSYS convention: rows are local axes in global coordinates (T)
+                    T = [d; ey; ez];                    % 3x3; rows = ex,ey,ez
+            
+                    % Optionally switch to columns=axes convention (R = T')
+                    if cols, R = T.'; blk = R; else, blk = T; end
+            
+                    L(:,:,e) = blkdiag(blk,blk,blk,blk);
+                end
+            end
+
 
         function L = computeTransformationMatrixRotated(obj, nodes, varargin)
             % L: 12x12xnelems local->global transformation matrices
@@ -175,8 +234,10 @@ classdef Frame3D < FiniteElement
               dim = nnodes * ndofs;
               K  = zeros( dim , dim, nelems );
               Kl = obj.computeLocalStifnessMatrix(nodes,varargin);
-              L  = obj.computeTransformationMatrixRotated(nodes,'gamma_deg',obj.betas); 
-              L  = obj.computeTransformationMatrix(nodes);  
+              L = obj.computeTransformationMatrixAnsys(nodes);
+              %L  = obj.computeTransformationMatrixAnsys2(nodes,'gamma_deg',obj.betas);
+              %L  = obj.computeTransformationMatrixRotated(nodes,'gamma_deg',obj.betas); 
+              %L  = obj.computeTransformationMatrix(nodes);  
               for k=1:nelems
                  K(:,:,k) = L(:,:,k)' * Kl(:,:,k) * L(:,:,k);
               end
@@ -440,7 +501,10 @@ classdef Frame3D < FiniteElement
         end
 
         function [Fel, Feg] = computeResults(obj,nodes,qnodal) 
-            L  = obj.computeTransformationMatrix(nodes); 
+            L = obj.computeTransformationMatrixAnsys(nodes);
+            %L  = obj.computeTransformationMatrixAnsys2(nodes,'gamma_deg',obj.betas);
+            %L  = obj.computeTransformationMatrixRotated(nodes,'gamma_deg',obj.betas);
+            %L  = obj.computeTransformationMatrix(nodes); 
             Ke = obj.computeLocalStifnessMatrix(nodes);
             Fel = zeros(12,size(L,3));
             Feg = zeros(12,size(L,3));
