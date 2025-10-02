@@ -68,163 +68,7 @@ classdef Frame3D < FiniteElement
              end
         end
 
-        function L = computeTransformationMatrixAnsys2(obj, nodes, varargin)
-            % L: 12x12xnelems; rows=axes (ANSYS T). Set 'columns',true to return columns=axes (R = T').
-                p = inputParser;
-                addParameter(p,'gamma_deg',0,@isnumeric);     % axial twist per element (deg)
-                addParameter(p,'columns',false,@islogical);   % return R (columns=axes) if true
-                parse(p,varargin{:});
-                gamma = p.Results.gamma_deg;
-                cols  = p.Results.columns;
-            
-                ne = size(obj.elems,1);
-                if isscalar(gamma), gamma = repmat(gamma,ne,1); end
-                if isrow(gamma),   gamma  = gamma(:); end
-            
-                L  = zeros(12,12,ne);
-                Z3 = zeros(3,3);
-            
-                for e = 1:ne
-                    i = obj.elems(e,1); j = obj.elems(e,2);
-                    d  = nodes(j,:) - nodes(i,:);
-                    Lg = norm(d);
-                    if Lg < 1e-14, error('Element %d has zero length.', e); end
-                    d  = d / Lg;                         % ex (global)
-            
-                    % Build an orthonormal triad without roll using a robust reference:
-                    if abs(d(3)) < 0.95, ref = [0 0 1]; else, ref = [1 0 0]; end
-                    ey0 = ref - dot(ref,d)*d; ey0 = ey0 / norm(ey0);
-                    ez0 = cross(d,ey0);                 % guaranteed ⟂ and normalized
-            
-                    % Apply axial roll gamma about ex=d (Rodrigues on the ey0–ez0 plane)
-                    cg = cosd(gamma(e)); sg = sind(gamma(e));
-                    ey = cg*ey0 + sg*ez0;
-                    ez = -sg*ey0 + cg*ez0;
-            
-                    % ANSYS convention: rows are local axes in global coordinates (T)
-                    T = [d; ey; ez];                    % 3x3; rows = ex,ey,ez
-            
-                    % Optionally switch to columns=axes convention (R = T')
-                    if cols, R = T.'; blk = R; else, blk = T; end
-            
-                    L(:,:,e) = blkdiag(blk,blk,blk,blk);
-                end
-            end
-
-
-        function L = computeTransformationMatrixRotated(obj, nodes, varargin)
-            % L: 12x12xnelems local->global transformation matrices
-            % Options:
-            %   'gamma_deg' : nelemsx1 or scalar axial twist (deg)
-            %   'y_ref'     : nelemsx3 local Y directions in GLOBAL coords (overrides gamma)
-            
-                p = inputParser;
-                addParameter(p, 'gamma_deg', [], @(x)isnumeric(x));
-                addParameter(p, 'y_ref',     [], @(x)isnumeric(x) && (isempty(x) || size(x,2)==3));
-                parse(p, varargin{:});
-                gamma_deg = p.Results.gamma_deg;
-                y_ref     = p.Results.y_ref;
-            
-                ne = size(obj.elems,1);
-                if isempty(gamma_deg), gamma_deg = zeros(ne,1); end
-                if isrow(gamma_deg),   gamma_deg = gamma_deg(:); end
-                if isscalar(gamma_deg), gamma_deg = repmat(gamma_deg, ne, 1); end
-            
-                L = zeros(12,12,ne);
-                for e = 1:ne
-                    i = obj.elems(e,1);  j = obj.elems(e,2);
-                    p1 = nodes(i,:);     p2 = nodes(j,:);
-                    ex = p2 - p1;  ln = norm(ex);
-                    if ln < 1e-14, error('Element %d has zero length.', e); end
-                    ex = ex / ln;                        % local x along bar
-            
-                    % --- seed local y (before axial twist)
-                    if ~isempty(y_ref)
-                        ey0 = y_ref(e,:);
-                        ey0 = ey0 - dot(ey0,ex)*ex;      % orthogonalize to x
-                        nrm = norm(ey0);
-                        if nrm < 1e-12
-                            % fallback if parallel/degenerate
-                            if abs(ex(3)) < 0.95
-                                ref = [0 0 1];
-                            else
-                                ref = [1 0 0];
-                            end
-                            ey0 = ref - dot(ref,ex)*ex;
-                            ey0 = ey0 / norm(ey0);
-                        else
-                            ey0 = ey0 / nrm;
-                        end
-                    else
-                        % default: keep Y as parallel to global XY plane as possible
-                        if abs(ex(3)) < 0.95
-                            ref = [0 0 1];
-                        else
-                            ref = [1 0 0];
-                        end
-                        ey0 = ref - dot(ref,ex)*ex;
-                        ey0 = ey0 / norm(ey0);
-                    end
-            
-                    % --- axial twist gamma about local x
-                    g  = deg2rad(gamma_deg(e));
-                    ey =  ey0*cos(g) + cross(ex,ey0)*sin(g);   % Rodrigues
-                    ez =  cross(ex,ey);
-                    ey = ey / norm(ey);
-                    ez = ez / norm(ez);
-            
-                    % --- rotation local->global (columns are local axes in global coords)
-                    R = [ex(:) ey(:) ez(:)];
-            
-                    % --- 12x12 transform, DOF order [u v w rx ry rz]_1, [u v w rx ry rz]_2
-                    L(:,:,e) = blkdiag(R, R, R, R);
-                end
-            end
-
-
-        function L = computeTransformationMatrix(obj, nodes)
-            % Local frame:
-            %  ex = element axis
-            %  ey = unit vector in the GLOBAL XY plane, orthogonal to ex
-            %  ez = ex × ey  (right-handed)
-            ne = size(obj.elems,1);
-            L  = zeros(12,12,ne);
-            Z3 = zeros(3,3);
         
-            for k = 1:ne
-                i = obj.elems(k,1); j = obj.elems(k,2);
-                x1 = nodes(i,:).'; x2 = nodes(j,:).';
-                dl = x2 - x1;    ell = norm(dl);
-                assert(ell > eps, 'Zero-length element %d', k);
-        
-                ex = dl / ell;
-        
-                % --- build ey in the global XY plane (z=0) and ⟂ ex ---
-                % project ex to XY: p = [ex1 ex2 0]
-                p = [ex(1); ex(2); 0];
-                if norm(p) >= 1e-12
-                    % any unit vector in XY perpendicular to p works:
-                    % take u = [-p_y, p_x, 0] normalized
-                    u  = [-p(2); p(1); 0];
-                    ey = u / norm(u);
-                else
-                    % ex is ~vertical; choose global X as ey (in XY and ⟂ ex)
-                    ey = [1; 0; 0];
-                end
-        
-                ez = cross(ex, ey);           % right-handed
-                % (no need to renormalize: ex,ey are unit & orthogonal)
-        
-                % Rotation (global → local): rows are local axes in global basis
-                R = [ex.'; ey.'; ez.'];
-        
-                % 12×12 block-diag with R
-                L(:,:,k) = [ R  Z3 Z3 Z3;
-                             Z3 R  Z3 Z3;
-                             Z3 Z3 R  Z3;
-                             Z3 Z3 Z3 R ];
-            end
-        end
 
 
         function K = computeStifnessMatrix(obj, nodes, varargin)
@@ -410,7 +254,7 @@ classdef Frame3D < FiniteElement
             ne = size(obj.elems,1);
             C  = zeros(ne,3); EX=C; EY=C; EZ=C; Ls=zeros(ne,1);
         
-            L  = obj.computeTransformationMatrix(nodes);
+            L  = obj.computeTransformationMatrixAnsys(nodes);
         
             for k=1:ne
                 i = obj.elems(k,1); j = obj.elems(k,2);
@@ -512,6 +356,17 @@ classdef Frame3D < FiniteElement
             ndofs=6;
             nelems=size(obj.elems,1);
             qelems = reshape( qnodal( obj.elems',:)', nnodes * ndofs, nelems );
+            xend=nodes(end,:);
+            Fels=zeros(6,size(nodes,1));
+            for k=1:size(nodes,1)
+                xk=nodes(k,:);
+                Fels(1,k)=0;
+                Fels(2,k)=0;
+                Fels(3,k)=1;
+                Fels(4,k)= (xend(2)-xk(2));
+                Fels(5,k)=-(xend(1)-xk(1));
+                Fels(6,k)=0;
+            end
             for k=1:size(L,3)
                 Fel(:,k) = Ke(:,:,k)*L(:,:,k)*qelems(:,k);
                 Feg(:,k) = L(:,:,k)'*Fel(:,k);
