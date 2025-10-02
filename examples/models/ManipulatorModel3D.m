@@ -338,7 +338,7 @@ classdef ManipulatorModel3D < handle
             light('Position', [1 1 5], 'Style', 'infinite');
             obj.fe.plot(obj.mesh.nodes);
             obj.frameElem.plot(obj.frame_mesh.nodes);
-            obj.frameElem.plotLocalCS(obj.frame_mesh.nodes, 'gamma_deg', betas, 'offsetLocal',[0 0 0.02], 'scale', 0.2);
+            obj.frameElem.plotLocalCS(obj.frame_mesh.nodes); %, 'gamma_deg', betas, 'offsetLocal',[0 0 0.02], 'scale', 0.2);
             obj.frameElem.plotSelected(obj.frame_mesh.nodes, max_elem);
             view(3);                % default 3D
             axis equal off;
@@ -366,7 +366,7 @@ classdef ManipulatorModel3D < handle
             light('Position', [1 1 5], 'Style', 'infinite');
             obj.fe.plot(obj.mesh.nodes);
             obj.frameElem.plot(obj.frame_mesh.nodes);
-            obj.frameElem.plotLocalCS(obj.frame_mesh.nodes, 'gamma_deg', betas, 'offsetLocal',[0 0 0.02], 'scale', 0.2);
+            obj.frameElem.plotLocalCS(obj.frame_mesh.nodes); %, 'gamma_deg', betas, 'offsetLocal',[0 0 0.02], 'scale', 0.2);
             obj.frameElem.plotSelected(obj.frame_mesh.nodes, max_elem);
             view(3);                % default 3D
             axis equal;

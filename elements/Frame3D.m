@@ -175,7 +175,7 @@ classdef Frame3D < FiniteElement
               dim = nnodes * ndofs;
               K  = zeros( dim , dim, nelems );
               Kl = obj.computeLocalStifnessMatrix(nodes,varargin);
-              L  = obj.computeTransformationMatrixRotated(nodes,'gamma_deg',obj.betas); 
+              %L  = obj.computeTransformationMatrixRotated(nodes,'gamma_deg',obj.betas); 
               L  = obj.computeTransformationMatrix(nodes);  
               for k=1:nelems
                  K(:,:,k) = L(:,:,k)' * Kl(:,:,k) * L(:,:,k);
@@ -259,7 +259,7 @@ classdef Frame3D < FiniteElement
                     "LineStyle","-","Marker",".","Color","m","LineWidth",5);
         end
 
-        function h = plotLocalCS(obj, nodes, varargin)
+        function h = plotLocalCSRotated(obj, nodes, varargin)
            % Draw one triad per element at its midpoint.
             % Options:
             %   'gamma_deg'   : nelemsx1 or scalar axial twist (deg)
@@ -341,7 +341,7 @@ classdef Frame3D < FiniteElement
          end
 
 
-        function plotLocalCS_old(obj, nodes, scale, zoffset, relative)
+        function plotLocalCS(obj, nodes, scale, zoffset, relative)
             if nargin<3 || isempty(scale),   scale   = 0.15; end
             if nargin<4 || isempty(zoffset), zoffset = 0.0;  end
             if nargin<5 || isempty(relative),relative = false; end
@@ -440,6 +440,7 @@ classdef Frame3D < FiniteElement
         end
 
         function [Fel, Feg] = computeResults(obj,nodes,qnodal) 
+            %L  = obj.computeTransformationMatrixRotated(nodes,'gamma_deg',obj.betas); 
             L  = obj.computeTransformationMatrix(nodes); 
             Ke = obj.computeLocalStifnessMatrix(nodes);
             Fel = zeros(12,size(L,3));
