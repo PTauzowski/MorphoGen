@@ -39,7 +39,7 @@ function  [analysisSecondOrder,  analysisWithBuckling, const_elems ] = ArmTopOpt
     % loadedFaceSelector = Selector( @(x)( abs(x(:,3)- Length) < 0.001 ) );
     constElemsSelector =  Selector( @(x)( (x(:,3) < 0.05 * h ) ) & (x(:,3) > 0.96 * h ) );
     
-    
+   
     un=false(size(mesh.nodes,1),1);
     dn=false(size(mesh.nodes,1),1);
     un( upward_facing_nodes ) = true;
@@ -49,9 +49,9 @@ function  [analysisSecondOrder,  analysisWithBuckling, const_elems ] = ArmTopOpt
     upElems = mesh.findElems( loadedFaceSelector, false );
     downElems = mesh.findElems( fixedEdgeSelector, false );
     
-    analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [Tz 0 0] ));
+    analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 - [Tz 0 0] ));
     analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [0 Ty 0] ));
-    analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [0 0 N] ));
+    analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 - [0 0 N] ));
     analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [x(:,1)*0 x(:,1)*0 (x(:,1)-xs(1))*My] ));
     analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [x(:,1)*0 x(:,1)*0 (x(:,2)/R)*Mz] ));
     analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + Ms*[-x(:,2)./sqrt((x(:,1)-xs(1)).^2+x(:,2).^2) (x(:,1)-xs(1))./sqrt((x(:,1)-xs(1)).^2+x(:,2).^2) x(:,3)*0] )); 

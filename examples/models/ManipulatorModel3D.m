@@ -250,24 +250,27 @@ classdef ManipulatorModel3D < handle
         end
 
         function plotConfigurations(obj,filename, description, genforces, betas, max_segment)
-            % figure
-            % hold on, axis on; 
-            % daspect([1 1 1]);
-            % xlabel("x");
-            % ylabel("y");
-            % zlabel("z");
-            % 
-            % light('Position', [-1 -2 5], 'Style', 'local');
-            % light('Position', [1 1 5], 'Style', 'infinite');
-            % ax = gca; 
-            % 
+             function plot_model()
+                obj.fe.face_alpha = 0.1;
 
-            max_elem = max_segment;
+                obj.fe.edge_color='none';
+                obj.fe.face_color=[0.2 0.2 0.2]; 
+                
+                obj.fe.plot(obj.mesh.nodes);
+                obj.frameElem.plot(obj.frame_mesh.nodes);
+                
+                obj.fe.face_alpha = 0.8;
+                obj.fe.edge_color=[0.5 0.5 0.5];
+                obj.fe.plotSolidSelected(obj.mesh.nodes,obj.const_elems);
+                
+             end
 
             obj.fe.face_alpha = 0.1;
-            ec = obj.fe.edge_color;
             obj.fe.edge_color='none';
-            obj.fe.face_color=[0.2 0.2 0.2];
+            obj.fe.face_color=[0.2 0.2 0.2];  
+            ec = obj.fe.edge_color;
+
+            max_elem = max_segment;
             
             figure;
             hold on, axis on; 
@@ -288,8 +291,7 @@ classdef ManipulatorModel3D < handle
 
             light('Position', [-1 -2 5], 'Style', 'local');
             light('Position', [1 1 5], 'Style', 'infinite');
-            obj.fe.plot(obj.mesh.nodes);
-            obj.frameElem.plot(obj.frame_mesh.nodes);
+            plot_model();
             view(2);                % top (xy) view
             axis equal off;
             title('Top view');
@@ -304,8 +306,7 @@ classdef ManipulatorModel3D < handle
 
             light('Position', [-1 -2 5], 'Style', 'local');
             light('Position', [1 1 5], 'Style', 'infinite');
-            obj.fe.plot(obj.mesh.nodes);
-            obj.frameElem.plot(obj.frame_mesh.nodes);
+            plot_model();
             view(0,0);              % front (xz) view
             axis equal off;
             title('Front view');
@@ -320,8 +321,7 @@ classdef ManipulatorModel3D < handle
 
             light('Position', [-1 -2 5], 'Style', 'local');
             light('Position', [1 1 5], 'Style', 'infinite');
-            obj.fe.plot(obj.mesh.nodes);
-            obj.frameElem.plot(obj.frame_mesh.nodes);
+            plot_model();
             view(90,0);             % side (yz) view
             axis equal off;
             title('Side view');
@@ -336,8 +336,7 @@ classdef ManipulatorModel3D < handle
 
             light('Position', [-1 -2 5], 'Style', 'local');
             light('Position', [1 1 5], 'Style', 'infinite');
-            obj.fe.plot(obj.mesh.nodes);
-            obj.frameElem.plot(obj.frame_mesh.nodes);
+            plot_model();
             obj.frameElem.plotLocalCS(obj.frame_mesh.nodes); %, 'gamma_deg', betas, 'offsetLocal',[0 0 0.02], 'scale', 0.2);
             obj.frameElem.plotSelected(obj.frame_mesh.nodes, max_elem);
             view(3);                % default 3D
@@ -364,8 +363,9 @@ classdef ManipulatorModel3D < handle
 
             light('Position', [-1 -2 5], 'Style', 'local');
             light('Position', [1 1 5], 'Style', 'infinite');
-            obj.fe.plot(obj.mesh.nodes);
-            obj.frameElem.plot(obj.frame_mesh.nodes);
+            % obj.fe.plot(obj.mesh.nodes);
+            % obj.frameElem.plot(obj.frame_mesh.nodes);
+            plot_model();
             obj.frameElem.plotLocalCS(obj.frame_mesh.nodes); %, 'gamma_deg', betas, 'offsetLocal',[0 0 0.02], 'scale', 0.2);
             obj.frameElem.plotSelected(obj.frame_mesh.nodes, max_elem);
             view(3);                % default 3D

@@ -154,17 +154,17 @@ classdef Frame3D < FiniteElement
             plot3([ nodes(obj.elems(:,1),1) nodes(obj.elems(:,2),1) NaN(nelems,1) ]',...
                    [ nodes(obj.elems(:,1),2) nodes(obj.elems(:,2),2) NaN(nelems,1) ]',...
                    [ nodes(obj.elems(:,1),3) nodes(obj.elems(:,2),3) NaN(nelems,1) ]',...
-                    "LineStyle","-","Marker","o","MarkerEdgeColor",'r',"MarkerFaceColor",'r',"Color","k","LineWidth",3);
+                    "LineStyle","-","Marker",".","MarkerSize", 6, "MarkerEdgeColor",'k',"MarkerFaceColor",'k',"Color","k","LineWidth",4);
         end
         function plotSelected(obj, nodes, idx)    
             nelems=size(obj.elems,1);
             plot3([ nodes(obj.elems(idx,1),1) nodes(obj.elems(idx,2),1) NaN(size(idx,2),1) ]',...
                    [ nodes(obj.elems(idx,1),2) nodes(obj.elems(idx,2),2) NaN(size(idx,2),1) ]',...
                    [ nodes(obj.elems(idx,1),3) nodes(obj.elems(idx,2),3) NaN(size(idx,2),1) ]',...
-                    "LineStyle","-","Marker",".","Color","m","LineWidth",5);
+                    "LineStyle","-","Marker",".", "MarkerSize", 8, "Color","r","LineWidth",6);
         end
 
-        function h = plotLocalCS(obj, nodes, varargin)
+        function h = plotLocalCS_betas(obj, nodes, varargin)
            % Draw one triad per element at its midpoint.
             % Options:
             %   'gamma_deg'   : nelemsx1 or scalar axial twist (deg)
@@ -221,7 +221,7 @@ classdef Frame3D < FiniteElement
                         ey0 = ref - dot(ref,ex)*ex; ey0 = ey0 / norm(ey0);
                     end
             
-                    g  = deg2rad(gamma_deg(e));
+                    g  = 0; %deg2rad(gamma_deg(e));
                     ey =  ey0*cos(g) + cross(ex,ey0)*sin(g);
                     ez =  cross(ex,ey);
                     ey = ey / norm(ey); ez = ez / norm(ez);
@@ -246,9 +246,9 @@ classdef Frame3D < FiniteElement
          end
 
 
-        function plotLocalCS_old(obj, nodes, scale, zoffset, relative)
+        function plotLocalCS(obj, nodes, scale, zoffset, relative)
             if nargin<3 || isempty(scale),   scale   = 0.15; end
-            if nargin<4 || isempty(zoffset), zoffset = 0.0;  end
+            if nargin<4 || isempty(zoffset), zoffset = 0.05;  end
             if nargin<5 || isempty(relative),relative = false; end
         
             ne = size(obj.elems,1);
