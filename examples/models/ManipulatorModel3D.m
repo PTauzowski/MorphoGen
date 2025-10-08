@@ -379,6 +379,16 @@ classdef ManipulatorModel3D < handle
             exportgraphics(gcf, filename+"_PAN.png", 'Resolution', 1200); 
             savefig(gcf, filename+"_PAN.fig");
         end
+
+        function x = segmentToArm(obj, xOpt)
+            nArms=size(obj.mesh.elems,1)/size(xOpt,1)/2;
+            x=xOpt;
+
+            for k=1:nArms-1
+                x=[x; flip(xOpt); xOpt ];
+            end
+            x=[x; flip(xOpt)];
+        end
         
     end
 end
