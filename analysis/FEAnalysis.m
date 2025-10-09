@@ -178,10 +178,13 @@ classdef (Abstract) FEAnalysis < handle
                 obj.Pnodal = Pelems;
             end
         end
-        function elementLoadSurfaceIntegral(obj, mode, faceSel, dofnames, valueFn )
+        function lnodes = elementLoadSurfaceIntegral(obj, mode, faceSel, dofnames, valueFn )
             di = obj.findDOFsIndices(dofnames);
+            lnodes=[];
             for k=1:max(size(obj.felems))
-                ffaces = obj.felems{k}.findFaces(obj.mesh.findNodes(faceSel)); 
+                lnd=obj.mesh.findNodes(faceSel);
+                ffaces = obj.felems{k}.findFaces(lnd); 
+                lnodes=[lnodes lnd];
                 obj.Pnodal = obj.felems{k}.loadSurfaceIntegral(mode, obj.mesh.nodes, ffaces, dofnames, di, obj.Pnodal, valueFn);
             end
         end
