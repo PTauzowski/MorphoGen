@@ -564,17 +564,20 @@ classdef SolidElasticElem < FiniteElement
             %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col);
             %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col,"FaceAlpha",0.3);
         end
-        function plotSolidDeformed(obj,nodes,qnodal,scale,varargin)
-            col=[0.8 0.8 0.8];
-            % if nargin == 2
-            %     col=[0.8 0.8 0.8];
-            % else
-            %     col=varargin{1};
-            % end
+        function plotSolidDeformed(obj,nodes,qnodal,scale,elem_inds,varargin)
+          
+
+            sel_inds=elem_inds;
+            if ~isempty(obj.selectedElems)
+                sel_inds=false(size(obj.elems,1),1);
+                sel_inds(obj.selectedElems)=true;
+                sel_inds=sel_inds & elem_inds;
+            end
+
             dg  = norm( max(nodes) - min(nodes) );
             maxs = max( abs(min(min(qnodal))), abs(max(max(qnodal)) ) );
             defnodes = (nodes + qnodal ./ maxs * dg * scale);
-            allfaces = reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))';
+            allfaces = reshape(obj.elems(sel_inds,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(find(sel_inds),1))';
             %allfaces = obj.elems(obj.sf.fcontours,:);
             [~,ifaces] = unique( sort(allfaces,2), 'rows' );
             A=allfaces(ifaces,:);
@@ -582,7 +585,7 @@ classdef SolidElasticElem < FiniteElement
             delfaces(ifaces,:)=[];
             [~,ifaces,~]=setxor( sort(A,2), sort(delfaces,2), 'rows' );
             plotfaces=A(ifaces,:);
-            patch('Vertices', defnodes, 'Faces', plotfaces,'FaceColor',obj.face_color,'EdgeColor',obj.edge_color,"FaceAlpha",obj.face_alpha);
+            patch('Vertices', defnodes, 'Faces', plotfaces,'FaceColor',obj.face_color,'EdgeColor',obj.edge_color,"FaceAlpha",obj.face_alpha)
             %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col);
             %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col,"FaceAlpha",0.3);
         end
