@@ -167,12 +167,9 @@ classdef ManipulatorModel3D < handle
             obj.analysis.computeElementResults(x);
         end
 
-        function plot(obj)       
-            figure
-            hold on, axis on; 
-            daspect([1 1 1]);
+        function plot(obj)      
             obj.analysis.felems{1}.plot(obj.mesh.nodes);
-            obj.analysis.plotCurrentLoad();
+            % obj.analysis.plotCurrentLoad();
             obj.analysis.plotSupport();
         end
 
