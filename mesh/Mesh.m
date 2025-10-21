@@ -2,7 +2,7 @@ classdef Mesh < handle
     
     properties
         nodes;
-        tolerance = 10000;
+        tolerance = 1.0E-5;
     end
     
     methods
@@ -13,7 +13,7 @@ classdef Mesh < handle
             nn = size(obj.nodes,1);
         end
         function mergedElems = merge( obj, newNodes, newElems )
-            [~,si1,si2] = unique( round(newNodes .* obj.tolerance), 'rows', 'stable' );
+            [~,si1,si2] = unique( round(newNodes / obj.tolerance), 'rows', 'stable' );
             newNodes = newNodes( si1, : );
             newElems = si2(newElems);
             if  size(newElems,2)==1
@@ -23,7 +23,7 @@ classdef Mesh < handle
                   obj.nodes = newNodes;
                   mergedElems = newElems;
            else
-                [~,i1,i2] = intersect( round(obj.nodes .* obj.tolerance), round(newNodes.*obj.tolerance), 'rows' );
+                [~,i1,i2] = intersect( round(obj.nodes ./ obj.tolerance), round(newNodes ./ obj.tolerance), 'rows' );
                 nidx  = 1:size(newNodes,1);
                 nidx( i2 ) = [];
                 noi   = 1:size(nidx,2);
@@ -38,7 +38,7 @@ classdef Mesh < handle
         end
        
         function newIndices = mergeMesh( obj, newMesh )
-            [~, iNodes, iNewNodes] = intersect( round(obj.nodes .* obj.tolerance), round(newMesh.nodes.*obj.tolerance), 'rows' );
+            [~, iNodes, iNewNodes] = intersect( round(obj.nodes ./ obj.tolerance), round(newMesh.nodes ./ obj.tolerance), 'rows' );
             uniqueIndices=1:size(newMesh.nodes,1);
             uniqueIndices(iNewNodes)=[];
             newIndices=1:size(newMesh.nodes,1);
@@ -485,7 +485,7 @@ classdef Mesh < handle
         end
         function elems = transformToPolar2D( obj, x0, y0, oldelems )
              newNodes = [ x0+obj.nodes(:,1).*cos( obj.nodes(:,2) ) y0+obj.nodes(:,1).*sin( obj.nodes(:,2) ) ];
-             [~,si1,si2] = unique( round(newNodes .* obj.tolerance), 'rows', 'stable' );
+             [~,si1,si2] = unique( round(newNodes / obj.tolerance), 'rows', 'stable' );
              obj.nodes = newNodes( si1, : );
              elems = si2(oldelems);
         end
