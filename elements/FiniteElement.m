@@ -64,6 +64,11 @@ classdef (Abstract) FiniteElement < handle
             K=sum(Ke,4);
         end
 
+        function P = computeElementSelfWeight(obj, scale, weights, detJ, N, rho)
+            Pe =  reshape( scale , 1, [], 1) .* reshape( rho , 1, [], 1) .* reshape( weights , 1, 1, []) .* pagemtimes(detJ , N);
+            P=sum(Pe,3);
+        end
+
         function K = computeStifnessMatrix(obj, nodes, el_idx)
             nelems = size(obj.elems,1);
             if (~isempty(el_idx))
@@ -96,6 +101,9 @@ classdef (Abstract) FiniteElement < handle
             h = repelem(obj.props.h,nelems,1);
             M = obj.computeElementMatrices(h, integrator.weights, detJ, N, obj.mat.M);
          end
+
+
+         
 
          function K = computeGeometricStifnessMatrix(obj, nodes, el_idx)
             nelems = size(obj.elems,1);
@@ -213,6 +221,7 @@ classdef (Abstract) FiniteElement < handle
                 K(:,:,k) = Ke;
             end
         end
+        
     end
     
 end

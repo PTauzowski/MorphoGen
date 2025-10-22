@@ -102,7 +102,7 @@ analysisWithBuckling.Pnodal=stability.Pnodal;
 analysisWithBuckling.Pfem=stability.Pfem;
 analysisWithBuckling.supports=stability.supports;
 
-harmonicVivrations = ElasticHarmonicVibrations(fe, mesh, 2*pi*174, true);
+harmonicVivrations = ElasticHarmonicVibrations(fe, mesh, 2*pi*174, true, true);
 harmonicVivrations.Pnodal=stability.Pnodal;
 harmonicVivrations.Pfem=stability.Pfem;
 harmonicVivrations.supports=stability.supports;
