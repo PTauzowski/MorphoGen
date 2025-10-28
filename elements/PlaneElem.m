@@ -190,26 +190,30 @@ classdef PlaneElem < FiniteElement
 
         end
                      
-        function Pnodal = selfWeightLoad(obj, nodes, el_idx, Pnodal)
+        function Pnodal = selfWeightLoad(obj, nodes, el_idx, x , Pnodal)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
             if (~isempty(el_idx))
                 nelems=numel(el_idx);
+            else
                 el_idx=1:nelems;
+            end
+            if isscalar(x)
+                x=ones(nelems,1);
             end
             integrator = obj.sf.createIntegrator();
             nip = size(integrator.points,1);
             dim=size(nodes,2);
-            Pxy=repmat([0 obj.mat.rho],2,4)';
-            Pxy(:,1)=0;
+            Pxy=repmat([0 -obj.mat.rho],4,1);
+            %Pxy(:,1)=0;
             dN = permute(repmat(obj.sf.computeGradient( integrator.points ),[1,1,1,nelems]),[2,1,4,3]);
-          % N = permute(repmat(obj.shapeMatrix( integrator.points ),[1,1,1,nelems]),[2,1,4,3]);
+            %N = permute(repmat(obj.shapeMatrix( integrator.points ),[1,1,1,nelems]),[2,1,4,3]);
             N = obj.sf.computeValue( integrator.points );
             h = repelem(obj.props.h,nelems,1);
             [~, ~, detJ] = obj.computeJacobian(nodes,dN,el_idx);
-            Pg = reshape( h , 1, 1, [], 1) .* reshape( integrator.weights , 1, 1, 1, []) .* detJ .* N .* Pxy;
+            Pg = sum(reshape( x(el_idx) , 1, 1, [], 1) .* reshape( h , 1, 1, [], 1) .* reshape( integrator.weights , 1, 1, 1, []) .* detJ .* ( N * Pxy ),4);
             for k=1:numel(el_idx)
-                Pnodal(obj.elems(el_idx(k),:),:) = squeeze(sum(sum(Pg(),4),2));
+                Pnodal(obj.elems(el_idx(k),:),:) = Pnodal(obj.elems(el_idx(k),:),:) + Pg(:,:,el_idx(k));
             end
          end
         

@@ -77,6 +77,9 @@ classdef (Abstract) StressIntensityTopologyOptimization < TopologyOptimization
         end
 
         function ais = computeAverageIntensities(obj)
+            obj.FEAnalysis.Pnodal(:) = 0;
+            obj.FEAnalysis.loadElementsSelfWeight(obj.x);
+            obj.FEAnalysis.Pfem = obj.FEAnalysis.toFEMVector(obj.FEAnalysis.Pnodal);
             obj.qnodal = obj.FEAnalysis.solve((obj.x).^obj.penal);
             obj.FEAnalysis.computeElementResults(obj.x.^obj.penal);
             ais = zeros(obj.FEAnalysis.getTotalElemsNumber(),1);

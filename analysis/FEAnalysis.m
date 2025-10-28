@@ -202,9 +202,9 @@ classdef (Abstract) FEAnalysis < handle
                 obj.Pnodal = obj.felems{k}.thermalLoad(obj.mesh.nodes, selems, obj.Pnodal, alpha);
             end
         end
-        function loadElementsSelfWeight(obj)
+        function loadElementsSelfWeight(obj,x)
             for k=1:max(size(obj.felems))
-                obj.Pnodal = obj.felems{k}.selfWeightLoad(obj.mesh.nodes, [], obj.Pnodal );
+                obj.Pnodal = obj.felems{k}.selfWeightLoad(obj.mesh.nodes, [], x, obj.Pnodal );
             end
         end
         function fixClosestNode(obj, x, dofnames, values )
