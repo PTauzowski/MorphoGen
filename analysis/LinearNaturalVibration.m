@@ -93,7 +93,7 @@ classdef LinearNaturalVibration < FEAnalysis
                 %axis on, xlabel('x-axis'), ylabel('y-axis'), view(3)
                 omega_str = sprintf('%.4g', freqs(form));
                 title(['Form:' num2str(form), ' Frq. = ' omega_str ' Hz']);
-                saveas(gcf, [basename '_form_' num2str(form) '.pdf'])
+                %saveas(gcf, [basename '_form_' num2str(form) '.pdf'])
                 savefig(gcf,[basename '_form_' num2str(form) '.fig'])
             end
        end
