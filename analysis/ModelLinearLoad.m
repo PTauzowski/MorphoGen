@@ -19,7 +19,7 @@ classdef ModelLinearLoad < ModelLinear
                 obj.analysis.Pfem=obj.P0fem;
                 obj.analysis.Pnodal(:)=0;
             end
-            obj.u0fem = obj.analysis.solveWeighted(obj.x);
+            obj.u0fem = obj.analysis.solve(obj.x);
             dim=size(obj.u0fem,2);
             obj.ures=zeros(1,dim);
             for k=1:dim
