@@ -166,6 +166,11 @@ classdef TopologyOptimization < handle
             %colorbar();
             daspect([1 1 1]);
             colormap(gray);
+            if exist('theme','file')
+                theme(gcf, "light");
+            else
+                set(gcf, 'Color', 'white');  % older alternative
+            end
             %colormap("jet");
             if  size(obj.FEAnalysis.mesh.nodes,2) == 3
                 view(45, 45);
