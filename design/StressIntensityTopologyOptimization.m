@@ -95,6 +95,7 @@ classdef (Abstract) StressIntensityTopologyOptimization < TopologyOptimization
             if k > 0 && k <= size( obj.allx,2 )
                 obj.x=obj.allx(:,k);
                 obj.FEAnalysis.computeElementResults(obj.x.^obj.penal);
+                obj.iteration = k;
                 return;
             end
             fprintf("The specified iteration number %d is outside the allowed range %d - %d\n",k,1,size( obj.allx,2 ));

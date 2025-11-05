@@ -158,7 +158,7 @@ classdef TopologyOptimization < handle
         end
         function plotCurrentFrame(obj)
                 obj.plotMeshTopology( obj.x, obj.elem_inds )
-                title(['FSD, volume fraction =' num2str(obj.computeVolumeFraction()) '(No. of iteration :',num2str(obj.iteration), ')']);
+                title("FSD, volume fraction = " + num2str(round(obj.computeVolumeFraction()*1000)/10) + "% (No. of iteration :" + num2str(obj.iteration + ")" ));
         end
         function plotMeshTopology( obj, x, elem_inds )
             clf;
