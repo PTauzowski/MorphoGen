@@ -82,7 +82,7 @@ classdef LinearNaturalVibration < FEAnalysis
            obj.computeElementResults(x);
        end
 
-       function plotNaturalForms(obj, basename, formslist, elem_nums)
+       function plotNaturalForms(obj, basename, formslist, elem_nums, title_pred)
             freqs = obj.getFreqs();
             for k=1:numel(formslist)
                 form=formslist(k);
@@ -92,7 +92,7 @@ classdef LinearNaturalVibration < FEAnalysis
                 obj.felems{1}.plotWithSettings(obj.mesh.nodes,"elem nums",elem_nums,"edge color","none","deformed",obj.fromFEMVector( obj.qforms(:,form) ),0.03);
                 %axis on, xlabel('x-axis'), ylabel('y-axis'), view(3)
                 omega_str = sprintf('%.4g', freqs(form));
-                title(['Form:' num2str(form), ' Frq. = ' omega_str ' Hz']);
+                title(title_pred + "Form:" + num2str(form) + " Frq. = " + omega_str + " Hz");
                 %saveas(gcf, [basename '_form_' num2str(form) '.pdf'])
                 savefig(gcf,basename + "_form_" + num2str(form) + ".fig");
             end
