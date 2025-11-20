@@ -134,35 +134,35 @@ classdef (Abstract) FEAnalysis < handle
             q = obj.qnodal;
         end
 
-        function clearCurrentLoad(obj)
-                obj.Pnodal(:)=0;
-                obj.Pfem=[];
-        end
-        function P = getCurrentNodalLoad(obj)
-            P=obj.Pnodal;
-        end
-        function P = getCurrentFEMlLoad(obj)
-            P=obj.Pfem;
-        end
-        function P = setCurrentNodalLoad(obj,P)
-            obj.Pnodal=P;
-        end
-        function createNextRightHandSideVector(obj)
-            obj.Pfem=[obj.Pfem obj.toFEMVector(obj.Pnodal) ];
-            obj.Pnodal(:) = 0;
-        end
-        function setRightHandSideVectorAsCurrent(obj,n)
-            obj.Pnodal = obj.fromFEMVector( obj.Pfem(:,n) );
-        end
-        
-        function setCurrentLoadToRightHandSideVectors(obj,n)
-            if size(obj.Pfem,2)==0  
-                obj.Pfem = obj.toFEMVector( obj.Pnodal );
-            else
-                obj.Pfem(:,n) =  obj.Pfem(:,n) + obj.toFEMVector( obj.Pnodal );
-            end
-        end
-        
+        % function clearCurrentLoad(obj)
+        %         obj.Pnodal(:)=0;
+        %         obj.Pfem=[];
+        % end
+        % function P = getCurrentNodalLoad(obj)
+        %     P=obj.Pnodal;
+        % end
+        % function P = getCurrentFEMlLoad(obj)
+        %     P=obj.Pfem;
+        % end
+        % function P = setCurrentNodalLoad(obj,P)
+        %     obj.Pnodal=P;
+        % end
+        % function createNextRightHandSideVector(obj)
+        %     obj.Pfem=[obj.Pfem obj.toFEMVector(obj.Pnodal) ];
+        %     obj.Pnodal(:) = 0;
+        % end
+        % function setRightHandSideVectorAsCurrent(obj,n)
+        %     obj.Pnodal = obj.fromFEMVector( obj.Pfem(:,n) );
+        % end
+        % 
+        % function setCurrentLoadToRightHandSideVectors(obj,n)
+        %     if size(obj.Pfem,2)==0  
+        %         obj.Pfem = obj.toFEMVector( obj.Pnodal );
+        %     else
+        %         obj.Pfem(:,n) =  obj.Pfem(:,n) + obj.toFEMVector( obj.Pnodal );
+        %     end
+        % end
+        % 
         function prepareRHSVectors(obj)
             obj.setCurrentLoadToRightHandSideVectors(size(obj.Pfem,2));
             obj.Pnodal(:)=0;

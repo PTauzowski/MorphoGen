@@ -24,7 +24,7 @@ classdef LinearNaturalVibration < FEAnalysis
        
        function solve(obj, num_eigenvalues,x)
            [I,J,~,~] = obj.globalMatrixIndices();
-           obj.prepareRHSVectors();
+%           obj.prepareRHSVectors();
            if size(obj.rotations,1)== 0 
                solver = LinearEquationsSystem(I, J, obj.toFEMVector(obj.supports));
            else
