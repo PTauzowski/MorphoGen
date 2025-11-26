@@ -77,19 +77,40 @@ classdef (Abstract) StressIntensityTopologyOptimization < TopologyOptimization
         end
 
         function ais = computeAverageIntensities(obj)
-            obj.qnodal = obj.FEAnalysis.solve((obj.x).^obj.penal);
-            obj.FEAnalysis.computeElementResults(obj.x.^obj.penal);
-            ais = zeros(obj.FEAnalysis.getTotalElemsNumber(),1);
-            for i=1:size(obj.FEAnalysis.felems,2)
-               hmIndex=find(obj.FEAnalysis.felems{i}.results.names == "sHM");
-               for j=1:size(obj.FEAnalysis.felems{i}.elems,1)
-                    %ais(obj.elem_inds{i}(j)) = mean( obj.linearElasticProblem.felems{i}.results.GPvalues(hmIndex,j,:) );
-                    ais(obj.elem_inds{i}(j)) = mean( obj.FEAnalysis.felems{i}.results.nodal.all(obj.FEAnalysis.felems{i}.elems(j,:),hmIndex) );
-               end
+            qfem = obj.FEAnalysis.solve((obj.x).^obj.penal);
+            nloads = size(qfem,2);
+            all_ais=[];
+            for k=1:nloads
+                obj.FEAnalysis.qnodal=obj.FEAnalysis.fromFEMVector(qfem(:,k));
+                obj.FEAnalysis.computeElementResults(obj.x.^obj.penal);
+                ais = zeros(obj.FEAnalysis.getTotalElemsNumber(),1);
+                for i=1:size(obj.FEAnalysis.felems,2)
+                   hmIndex=find(obj.FEAnalysis.felems{i}.results.names == "sHM");
+                   for j=1:size(obj.FEAnalysis.felems{i}.elems,1)
+                        %ais(obj.elem_inds{i}(j)) = mean( obj.linearElasticProblem.felems{i}.results.GPvalues(hmIndex,j,:) );
+                        ais(obj.elem_inds{i}(j)) = mean( obj.FEAnalysis.felems{i}.results.nodal.all(obj.FEAnalysis.felems{i}.elems(j,:),hmIndex) );
+                   end
+                end
+                obj.maxstress = [ obj.maxstress max(ais) ];
+                all_ais=[all_ais ais];
             end
-            obj.maxstress = [ obj.maxstress max(ais) ];
-            ais = ais / max(ais);
+            ais = max( all_ais, [], 2 ) / max(all_ais, [], "all");
         end
+
+        % function ais = computeAverageIntensities(obj)
+        %     obj.qnodal = obj.FEAnalysis.solve((obj.x).^obj.penal);
+        %     obj.FEAnalysis.computeElementResults(obj.x.^obj.penal);
+        %     ais = zeros(obj.FEAnalysis.getTotalElemsNumber(),1);
+        %     for i=1:size(obj.FEAnalysis.felems,2)
+        %        hmIndex=find(obj.FEAnalysis.felems{i}.results.names == "sHM");
+        %        for j=1:size(obj.FEAnalysis.felems{i}.elems,1)
+        %             %ais(obj.elem_inds{i}(j)) = mean( obj.linearElasticProblem.felems{i}.results.GPvalues(hmIndex,j,:) );
+        %             ais(obj.elem_inds{i}(j)) = mean( obj.FEAnalysis.felems{i}.results.nodal.all(obj.FEAnalysis.felems{i}.elems(j,:),hmIndex) );
+        %        end
+        %     end
+        %     obj.maxstress = [ obj.maxstress max(ais) ];
+        %     ais = ais / max(ais);
+        % end
 
         function setFrame( obj, k )
             if k > 0 && k <= size( obj.allx,2 )

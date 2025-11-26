@@ -23,11 +23,9 @@ classdef FreeVibrationsTopologyOpt < handle
         function plotNaturalForms(obj)
             freqs = obj.vibrations.omegas;
             for k=1:obj.neigenforms
-                %subplot(5, 2, k);
                 figure, hold on
                 obj.vibrations.setForm(1,k);
                 obj.analysis.felems{1}.plotWithSettings(obj.mesh.nodes,"deformed",obj.analysis.fromFEMVector( obj.vibrations.qnodal ),0.02);
-                %axis on, xlabel('x-axis'), ylabel('y-axis'), view(3)
                 omega_str = sprintf('%.4g', freqs(k));
                 title(['Form:' num2str(k), ' Frq. = ' omega_str ' Hz']);
                 saveas(gcf, [obj.basename '_form_' num2str(k) '.pdf'], 'ContentType','vector')
