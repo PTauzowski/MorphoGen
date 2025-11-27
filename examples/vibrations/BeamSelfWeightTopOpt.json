@@ -36,7 +36,7 @@
     "volume_fraction": 0.35,
     "method": "SIMP",
     "penalization": 3.0,
-    "filter_radius": 1.5,
+    "filter_radius": 0.04,
     "cut_threshold": 0.02,
     "move_limit": 0.2,
     "max_iters": 2000,
@@ -46,5 +46,5 @@
     "convergence_tol": 1e-3,
     "filter_type": "density"
   }
-}s
+}
  
