@@ -8,7 +8,7 @@
     "shape" : "rectangular",
     "size": {"length": 10.0, "height": 1.0},
     "thickness": 1.0,
-    "mesh": {"nelx": 500, "nely": 50},
+    "mesh": {"nelx": 400, "nely": 40},
     "passive_regions": {
       "flange": {
         "top_relative_height": 0.05,
@@ -33,7 +33,7 @@
   },
   "optimisation": {
     "objective": "min_compliance",
-    "volume_fraction": 0.35,
+    "volume_fraction": 0.4,
     "method": "SIMP",
     "penalization": 3.0,
     "filter_radius": 0.04,

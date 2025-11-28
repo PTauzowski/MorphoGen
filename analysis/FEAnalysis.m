@@ -169,8 +169,8 @@ classdef (Abstract) FEAnalysis < handle
         end
 
         function loadClosestNode(obj, x, dofnames, values )
-           %obj.Pnodal( obj.mesh.findClosestNode(x), obj.findDOFsIndices( dofnames ) ) = obj.Pnodal( obj.mesh.findClosestNode(x), obj.findDOFsIndices( dofnames ) ) + values;
-           obj.Pnodal( obj.mesh.findClosestNode(x), obj.findDOFsIndices( dofnames ) ) =  values;
+           obj.Pnodal( obj.mesh.findClosestNode(x), obj.findDOFsIndices( dofnames ) ) = obj.Pnodal( obj.mesh.findClosestNode(x), obj.findDOFsIndices( dofnames ) ) + values;
+           %obj.Pnodal( obj.mesh.findClosestNode(x), obj.findDOFsIndices( dofnames ) ) =  values;
         end
 
         function loadNodes(obj, nodesel, dofnames, values )
