@@ -71,7 +71,7 @@ classdef LinearNaturalVibration < FEAnalysis
            obj.computeElementResults(x);
        end
 
-       function plotNaturalForms(obj, basename, formslist, elem_nums, title_pred,scale,edge_color)
+       function plotNaturalForms(obj, basename, formslist, elem_nums, title_pred,scale,edge_color,elem_color)
             freqs = obj.getFreqs();
             for k=1:numel(formslist)
                 form=formslist(k);
@@ -83,7 +83,7 @@ classdef LinearNaturalVibration < FEAnalysis
                     set(gcf, 'Color', 'white');  % older alternative
                 end
                 obj.setForm(1,form);
-                obj.felems{1}.plotWithSettings(obj.mesh.nodes,"elem nums",elem_nums,"edge color",edge_color,"deformed",obj.fromFEMVector( obj.qforms(:,form) ),scale);
+                obj.felems{1}.plotWithSettings(obj.mesh.nodes,"elem nums",elem_nums,"edge color",edge_color,"elem color",elem_color,"deformed",obj.fromFEMVector( obj.qforms(:,form) ),scale);
                 %axis on, xlabel('x-axis'), ylabel('y-axis'), view(3)
                 omega_str = sprintf('%.4g', freqs(form));
                 title("FSD, "+title_pred + "Form:" + num2str(form) + " Frq. = " + omega_str + " Hz");
