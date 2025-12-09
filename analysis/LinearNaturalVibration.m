@@ -45,25 +45,6 @@ classdef LinearNaturalVibration < FEAnalysis
             freqs = obj.frequencies;
         end
 
-       % function solveWeighted(obj, x, num_eigenvalues)
-       %     [I,J,~,~] = obj.globalMatrixIndices();
-       %     obj.prepareRHSVectors();
-       %     if size(obj.rotations,1) == 0 
-       %         solver = LinearEquationsSystem(I, J, obj.toFEMVector(obj.supports));
-       %     else
-       %         solver = LinearEquationsSystemTr2D(I, J, obj.toFEMVector(obj.supports),obj.rotations);
-       %         R=0;
-       %     end
-       %     obj.freedofs=solver.freedofs;
-       %     K = obj.globalMatrixAggregationWeighted('computeStifnessMatrix',x);
-       %     %obj.qfem = solver.solve(K, obj.Pfem );
-       %     %obj.qnodal = obj.fromFEMVector( obj.qfem );
-       %     %obj.computeElementResults(x);
-       %     M = obj.globalMatrixAggregationWeighted('computeMassMatrix',x);
-       %     [obj.qforms, lambdas]=solver.solveEigenproblem(K,M,num_eigenvalues);
-       %     obj.omegas=sqrt(lambdas);
-       % end
-
        function setForm(obj,x,i)
            obj.qfem =0*obj.Pfem;
            obj.qfem= obj.qforms(:,i);
@@ -90,6 +71,50 @@ classdef LinearNaturalVibration < FEAnalysis
                 %saveas(gcf, [basename '_form_' num2str(form) '.pdf'])
                 savefig(gcf,basename + "_form_" + num2str(form) + ".fig");
             end
+       end
+
+       function correlation_matrix = computeSelfCorrelationMatrix(obj,nforms)
+           correlation_matrix=zeros(nforms,nforms);
+           for k=1:nforms
+               for l=1:nforms
+                    correlation_matrix(k,l)=abs(obj.qforms(:,k)'*obj.qforms(:,l))/norm(obj.qforms(:,k))/norm(obj.qforms(:,l));
+               end
+           end
+       end
+
+       function correlation_matrix = ComputeCorrelationMatrix(obj,nforms1,qforms2)
+           nforms2 = size(qforms2,2);
+           correlation_matrix = zeros(nforms1, nforms2);
+           for k=1:nforms1
+               for l=1:nforms2
+                    correlation_matrix(k,l)=abs(obj.qforms(:,k)'*qforms2(:,l))/norm(obj.qforms(:,k))/norm(qforms2(:,l));
+               end
+           end
+       end
+
+       function cv = computeCorrelationVector(obj,test_mode)
+           cv=zeros(1,obj.nmodes);
+           for k=1:obj.nmodes
+                    cv(k)=abs(test_mode'*obj.modes(:,k,end))/norm(test_mode)/norm(obj.modes(:,k,end));
+           end
+       end
+        
+       function printCorrelationTable(obj,file_name,caption,correlation_matrix)
+            [nRows, nCols] = size(correlation_matrix);
+
+            % Row names: "1", "2", ..., nRows
+            domain_mode = arrayfun(@num2str, 1:nRows, 'UniformOutput', false);
+
+            % Column names: "1", "2", ..., nCols   (or 'c1','c2',... if you prefer)
+            colNames = arrayfun(@num2str, 1:nCols, 'UniformOutput', false);
+            % or: colNames = strcat("c", string(1:nCols));   % gives {'c1','c2',...}
+
+            T = array2table(round(correlation_matrix*100)/100, ...
+                'RowNames', domain_mode, ...
+                'VariableNames', colNames);
+            disp(T);
+            writetable(T,file_name+".csv");
+            %writematrix(round(correlation_matrix*1000)/1000,file_name+".csv");
        end
 
    end
