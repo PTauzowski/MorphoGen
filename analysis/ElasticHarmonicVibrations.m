@@ -1,7 +1,7 @@
 classdef ElasticHarmonicVibrations < FEAnalysis
    
    properties
-        isMeshConst, isLoadConst, lambdas, lambdas1, omegas, frequencies, mode, modes, modes1, nmodes, count, P0, correlation_matrix, freedofs, loadVectors,save_frame_modes;
+        isMeshConst, isLoadConst, lambdas, lambdas1, omegas, frequencies, mode, modes, modes1, nmodes, count, P0, correlation_matrix, freedofs, loadVectors,save_frame_modes,M1;
    end
    
    methods       
@@ -41,9 +41,9 @@ classdef ElasticHarmonicVibrations < FEAnalysis
            vM  = obj.assemblyGlobalMatrix('computeMassMatrix', x, obj.isMeshConst);
            obj.freedofs=solver.freedofs;
 
-           K = solver.createSparseMatrix(vK);
-           M = solver.createSparseMatrix(vM);
-           save("LoadForce.mat",  "K", "M", "x");
+            K = solver.createSparseMatrix(vK);
+            M = solver.createSparseMatrix(vM);
+           % save("LoadForce.mat",  "K", "M", "x");
 
            [modes, lambdas] = solver.solveEigenproblem(vK,vM,obj.nmodes);
            lambdaVec = diag(lambdas);
@@ -66,13 +66,14 @@ classdef ElasticHarmonicVibrations < FEAnalysis
            if obj.count==1
                obj.modes1=modes;
                obj.lambdas1=lambdas;
+               obj.M1=M;
            end
 
            obj.Pfem=zeros(solver.dim,1);
            obj.qfem=zeros(solver.dim,1);
 
            if obj.isLoadConst
-                obj.Pfem(solver.freedofs) =  obj.lambdas1(obj.mode,obj.mode) * M * obj.modes1(solver.freedofs,obj.mode);
+                obj.Pfem(solver.freedofs) =  obj.lambdas1(obj.mode,obj.mode) * obj.M1 * obj.modes1(solver.freedofs,obj.mode);
            else
                 obj.Pfem(solver.freedofs) =  lambdas(obj.mode,obj.mode)*M*modes(solver.freedofs,obj.mode);         
            end
@@ -80,6 +81,7 @@ classdef ElasticHarmonicVibrations < FEAnalysis
            obj.loadVectors = [ obj.loadVectors obj.Pfem ];
            obj.qnodal=obj.fromFEMVector(obj.qfem(:,1));
            qfem=obj.qfem;
+
        end
 
        function Pfem = computeLoadVector(obj, frame, x ) 
