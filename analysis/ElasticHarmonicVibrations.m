@@ -1,7 +1,7 @@
 classdef ElasticHarmonicVibrations < FEAnalysis
    
    properties
-        isMeshConst, isLoadConst, lambdas, omegas, frequencies, mode, modes, nmodes, count, P0, correlation_matrix, freedofs, loadVectors;
+        isMeshConst, isLoadConst, lambdas, lambdas1, omegas, frequencies, mode, modes, modes1, nmodes, count, P0, correlation_matrix, freedofs, loadVectors,save_frame_modes;
    end
    
    methods       
@@ -19,6 +19,7 @@ classdef ElasticHarmonicVibrations < FEAnalysis
             obj.frequencies=[];
             obj.loadVectors=[];
             obj.nmodes=30;
+            obj.save_frame_modes=false;
             obj.correlation_matrix=zeros(obj.nmodes,obj.nmodes);
        end
 
@@ -45,17 +46,35 @@ classdef ElasticHarmonicVibrations < FEAnalysis
            save("LoadForce.mat",  "K", "M", "x");
 
            [modes, lambdas] = solver.solveEigenproblem(vK,vM,obj.nmodes);
-           obj.modes = cat(3, obj.modes, modes);
-           obj.lambdas = [obj.lambdas diag(lambdas)];
-           obj.omegas=[ obj.omegas sqrt(diag(lambdas))];
-           obj.frequencies = [ obj.frequencies sqrt(diag(lambdas)) / 2 / pi];
+           lambdaVec = diag(lambdas);
+            omegaVec = sqrt(lambdaVec);
+            freqVec = omegaVec / (2*pi);
+            
+            if obj.save_frame_modes
+                % Store history of modes: big memory cost
+                obj.modes       = cat(3, obj.modes, modes);
+                obj.lambdas     = [obj.lambdas lambdaVec];
+                obj.omegas      = [obj.omegas omegaVec];
+                obj.frequencies = [obj.frequencies freqVec];
+            else
+                % Keep only current modes: memory-friendly
+                obj.modes       = modes;
+                obj.lambdas     = lambdaVec;
+                obj.omegas      = omegaVec;
+                obj.frequencies = freqVec;
+            end
+           if obj.count==1
+               obj.modes1=modes;
+               obj.lambdas1=lambdas;
+           end
+
            obj.Pfem=zeros(solver.dim,1);
            obj.qfem=zeros(solver.dim,1);
 
            if obj.isLoadConst
-                obj.Pfem(solver.freedofs) =  obj.lambdas(obj.mode,1)*M*obj.modes(solver.freedofs,obj.mode,1) ;
+                obj.Pfem(solver.freedofs) =  obj.lambdas1(obj.mode,obj.mode) * M * obj.modes1(solver.freedofs,obj.mode);
            else
-                obj.Pfem(solver.freedofs) =  lambdas(obj.mode,obj.mode)*M*modes(solver.freedofs,obj.mode) ;         
+                obj.Pfem(solver.freedofs) =  lambdas(obj.mode,obj.mode)*M*modes(solver.freedofs,obj.mode);         
            end
            obj.qfem = solver.solve(vK, obj.Pfem);
            obj.loadVectors = [ obj.loadVectors obj.Pfem ];
