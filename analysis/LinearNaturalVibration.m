@@ -67,7 +67,7 @@ classdef LinearNaturalVibration < FEAnalysis
                 obj.felems{1}.plotWithSettings(obj.mesh.nodes,"elem nums",elem_nums,"edge color",edge_color,"elem color",elem_color,"deformed",obj.fromFEMVector( obj.qforms(:,form) ),scale);
                 %axis on, xlabel('x-axis'), ylabel('y-axis'), view(3)
                 omega_str = sprintf('%.4g', freqs(form));
-                title("FSD, "+title_pred + "Form:" + num2str(form) + " Frq. = " + omega_str + " Hz");
+                title("FSD, "+title_pred + "Mode :" + num2str(form) + " Freq. = " + omega_str + " Hz");
                 %saveas(gcf, [basename '_form_' num2str(form) '.pdf'])
                 savefig(gcf,basename + "_form_" + num2str(form) + ".fig");
             end
