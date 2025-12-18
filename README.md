@@ -60,7 +60,7 @@ fe.setMaterial( material ); % assigning material to finite element
 
 % ELEMENT layer (creating node selector object to select fixed edge (left))
 fixedEdgeSelector = Selector( @(x)( abs(x(:,1)) < 0.001 ) );
-sfL4 = ShapeFunctionL4; % type of shape function to be used (here: four node Langrange)
+sfL4 = ShapeFunctionQ4; % type of shape function to be used (here: four node Langrange)
 fe = PlaneStressElem( sfL4, mesh.elems ); % create plane stress finite element object
 
 % ANALYSIS layer (creating linear elastic finite element analysis object with weighted matrix feature, weighted by element density)

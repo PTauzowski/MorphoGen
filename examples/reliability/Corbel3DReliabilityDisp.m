@@ -6,7 +6,7 @@ resb=20;
 E=80000;
 nu=0.3;
 
-model = CorbelModelLinear3D(ShapeFunctionL8,resb,E,nu);
+model = CorbelModelLinear3D(ShapeFunctionH8,resb,E,nu);
 
 model.plotModel();
 view(45,45);

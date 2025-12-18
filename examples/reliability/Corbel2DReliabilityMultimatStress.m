@@ -16,7 +16,7 @@ P1=-2.5;
 P2=3;
 nu=0.3;
 
-model = CorbelModelMultiMat(ShapeFunctionL4,b,h,lc,fl,hc,resb,E1,E2,E3,nu);
+model = CorbelModelMultiMat(ShapeFunctionQ4,b,h,lc,fl,hc,resb,E1,E2,E3,nu);
 model.plotModel();
 
 

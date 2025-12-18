@@ -3,7 +3,7 @@ close all;
 r1=50;
 r2=100;
 div=10;
-sf = ShapeFunctionL4;
+sf = ShapeFunctionQ4;
 E=210000;
 nu=0.3;
 P=[0 -1];

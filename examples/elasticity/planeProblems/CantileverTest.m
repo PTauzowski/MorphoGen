@@ -1,6 +1,6 @@
 clear;
 close all;
-sf=ShapeFunctionL4;
+sf=ShapeFunctionQ4;
 l=1;
 nl=60;
 E=1;

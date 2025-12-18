@@ -10,7 +10,7 @@ betat=3;
 xp=[l 0.4*l];
 P = [5 -10];
 
-model = LShapeModelLinear(ShapeFunctionL4,l,res,E,nu,xp);
+model = LShapeModelLinear(ShapeFunctionQ4,l,res,E,nu,xp);
 model.setResultNode([0 l]);
 %model.plotModel();
 

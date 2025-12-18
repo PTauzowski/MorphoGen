@@ -23,7 +23,7 @@ fatigueData.Nexp=42150;
 xp=[l 0.2*l 0.4*l];
 P = [2 0 -10];
 
-model = LShapeSolidModel(ShapeFunctionL8,l,res,E,nu,xp,[l 0.2*l 0.4*l]);
+model = LShapeSolidModel(ShapeFunctionH8,l,res,E,nu,xp,[l 0.2*l 0.4*l]);
 model.plotModel();
 
 randomVariables={RandomVariable("Normal",P(1),0.2) RandomVariable("Normal",P(2),0.1) RandomVariable("Normal",P(3),1)};

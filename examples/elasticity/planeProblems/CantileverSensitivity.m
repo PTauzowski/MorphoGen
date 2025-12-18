@@ -3,7 +3,7 @@ close all;
 res = 10;
 l = 3;
 tic
-sfL4 = ShapeFunctionL16;
+sfL4 = ShapeFunctionQ16;
 mesh = Mesh();
 mesh.addRectMesh2D(0, 0, 2*l, l, 2*res, res, sfL4.pattern);
 fixedEdgeSelector = Selector( @(x)( abs(x(:,1))<0.001 ) );

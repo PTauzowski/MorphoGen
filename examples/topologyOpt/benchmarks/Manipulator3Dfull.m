@@ -15,7 +15,7 @@ samples=random("Uniform",0,360,nSamples,nArms);
 samples(:,1)=0;
 maxNM=zeros(nSamples,1);    
 endPoints=zeros(nSamples,3);
-ShapeFn = ShapeFunctionL8;
+ShapeFn = ShapeFunctionH8;
 
 % tic;
 % for k=1:nSamples

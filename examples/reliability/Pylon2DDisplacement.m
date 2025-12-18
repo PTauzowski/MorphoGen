@@ -13,7 +13,7 @@ xp=[b1 h-h1];
 xres=[0 h-h1];
 P = [0 -10];
 
-model = Pylon2DModel(ShapeFunctionL4,h,h1,b,b1,resb,E,nu,xp,xres);
+model = Pylon2DModel(ShapeFunctionQ4,h,h1,b,b1,resb,E,nu,xp,xres);
 model.plotModel();
 % model.solveWeighted();
 % model.analysis.plotMaps(["uy" "ux" "sxx" "sxy" "syy" "sHM"],0.1);

@@ -9,7 +9,7 @@ nu=0.3;
 xp=[l 0.4*l];
 P = [0 -100];
 
-model = LShapeModelLinear(ShapeFunctionL4,l,res,E,nu,xp,P);
+model = LShapeModelLinear(ShapeFunctionQ4,l,res,E,nu,xp,P);
 model.setResultNode([l 0]);
 model.plotModel();
 

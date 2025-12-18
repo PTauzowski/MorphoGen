@@ -12,7 +12,7 @@ resb=50;
 E=80000;
 nu=0.3;
 
-model = CorbelModelLinear(ShapeFunctionL4,b,h,lc,fl,hc,resb,E,nu);
+model = CorbelModelLinear(ShapeFunctionQ4,b,h,lc,fl,hc,resb,E,nu);
 
 model.plotModel();
 

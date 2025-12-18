@@ -41,7 +41,7 @@ classdef StressIntensityMultiMaxTopologyOptimization < StressIntensityTopologyOp
                 for i=1:size(obj.FEAnalysis.felems,2)
                    hmIndex=find(obj.FEAnalyses(k).felems{i}.results.names == "sHM");
                    for j=1:size(obj.FEAnalyses(k).felems{i}.elems,1)
-                        hm_stress(obj.elem_inds{i}(j),k) = obj.alphas(k) * mean( obj.FEAnalyses(k).felems{i}.results.nodal.all(obj.FEAnalyses(k).felems{i}.elems(j,:),hmIndex) );
+                        hm_stress(obj.elem_inds{i}(j),k) = obj.alphas(k) * min( obj.FEAnalyses(k).felems{i}.results.nodal.all(obj.FEAnalyses(k).felems{i}.elems(j,:),hmIndex) );
                    end
                 end
                 obj.maxstress = [ obj.maxstress max(hm_stress(:,k)) ];

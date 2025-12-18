@@ -38,7 +38,7 @@ classdef TaskFactory
         function sf = getShapeFunction(obj)
             switch obj.data.domain.shape_fn
                 case "Q4"
-                    sf = ShapeFunctionL4;
+                    sf = ShapeFunctionQ4;
                 otherwise
                     error("Unknown shape function: %s", obj.data.shapeFunction.type);
             end

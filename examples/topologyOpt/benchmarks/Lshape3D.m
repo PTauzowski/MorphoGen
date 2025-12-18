@@ -11,7 +11,7 @@ cutTreshold = 0.005;
 %penalty factor
 penal = 3;
 
-sfL8 = ShapeFunctionL8;
+sfL8 = ShapeFunctionH8;
 mesh = Mesh();
 mesh.addLshape3D( 2*l, 0.8*l, 2*res, sfL8.localNodes);
 fe=SolidElasticElem( sfL8, mesh.elems );
