@@ -1,4 +1,4 @@
-function  [analysisSecondOrder,  analysisWithBuckling, const_elems ] = ArmTopOptBucklingAnalyses(name,R,r,h,alpha,N,Ty,Tz,Ms,My,Mz,ringsMode)
+function  [analysisSecondOrder,  analysisWithBuckling, const_elems ] = ArmTopOptBucklingAnalyses(name,R,r,res_thickness,h,alpha,N,Ty,Tz,Ms,My,Mz,ringsMode)
 
     th=R-r;
 
@@ -7,7 +7,7 @@ function  [analysisSecondOrder,  analysisWithBuckling, const_elems ] = ArmTopOpt
     % resTh=max(1,round(th/2/pi/R*resCirc));
     % resHeight=max(1,round(h/4/pi/R*resCirc));
     
-    resTh=1;
+    resTh=res_thickness;
     resCirc=round(2*pi*R/th*resTh);
     resHeight=round(h/th*resTh);
     

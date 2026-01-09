@@ -567,7 +567,7 @@ classdef SolidElasticElem < FiniteElement
         function plotSolidDeformed(obj,nodes,qnodal,scale,elem_inds,varargin)
           
 
-            sel_inds=elem_inds;
+            sel_inds=true(size(obj.elems,1),1);
             if ~isempty(obj.selectedElems)
                 sel_inds=false(size(obj.elems,1),1);
                 sel_inds(obj.selectedElems)=true;

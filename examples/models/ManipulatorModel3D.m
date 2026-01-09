@@ -7,7 +7,7 @@ classdef ManipulatorModel3D < handle
     end
     
     methods                       
-        function obj = ManipulatorModel3D(E,nu,ls,R,r,res, alpha, betas, ShapeFn, use_offset)
+        function obj = ManipulatorModel3D(E,nu,ls,R,r,res, res_th, alpha, betas, ShapeFn, use_offset)
             alpha=alpha*pi/180;
             betas=betas*pi/180;
 
@@ -18,7 +18,7 @@ classdef ManipulatorModel3D < handle
             end
 
             obj.mesh=Mesh();
-            obj.geterateManipulator( ls, R, r, res, alpha, betas, ShapeFn );
+            obj.geterateManipulator( ls, R, r, res, res_th, alpha, betas, ShapeFn );
             obj.fe = SolidElasticElem( ShapeFn, obj.elems );
 
             obj.fe.props.h=1;
@@ -53,10 +53,10 @@ classdef ManipulatorModel3D < handle
             ns = ceil((nhs - 1) / 2) + 1;
         end
 
-        function geterateManipulator(obj, ls, R, r, res, alpha, betas, sf )
+        function geterateManipulator(obj, ls, R, r, res, res_th, alpha, betas, sf )
             %obj.elems = obj.mesh.merge(mesh.nodes,obj.elems)
            Th=R-r;
-           resTh=1;
+           resTh=res_th;
            resCirc=round(2*pi*R/Th*resTh);
            c=cos(alpha);
            s=sin(alpha);
