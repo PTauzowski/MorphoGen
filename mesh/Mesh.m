@@ -336,14 +336,62 @@ classdef Mesh < handle
             obj.transformMeshDeg2D( x0, 90, [0 0] );
             obj.addQuarterCircle( x0 , R, nr, pattern );
         end
-        function obj = addQuarterCylinder( obj, x0 , R, h, nr, pattern )
+        function obj = addQuarterCylinder(obj, x0, R, h, nr, pattern)
+                mesh1 = Mesh();
+            
+                a = R/(2*sqrt(2));
+            
+                shapeFn = ShapeFunctionH8();
+                mesh1.addShapedMesh3D( ...
+                    shapeFn, ...
+                    x0 + [ 0   0   0;
+                           R/2 0   0;
+                           0   R/2 0;
+                           a   a   0;
+                           0   0   h;
+                           R/2 0   h;
+                           0   R/2 h;
+                           a   a   h], ...
+                    [nr(1) nr(1) nr(2)], pattern );
+            
+                sfL2 = ShapeFunctionQ4();
+                sl1 = ShapeObjectRectangular(sfL2, x0 + [0   R/2 0;
+                                                        a   a   0;
+                                                        0   R/2 h;
+                                                        a   a   h]);
+                sl2 = ShapeObjectRectangular(sfL2, x0 + [a   a   0;
+                                                        R/2 0   0;
+                                                        a   a   h;
+                                                        R/2 0   h]);
+            
+                % --- IMPORTANT: use absolute z-range for cylinder ---
+                z0 = x0(3);
+                z1 = x0(3) + h;
+            
+                sc1 = CylinderObject(x0, R, 90, 45, z0, z1);
+                sc2 = CylinderObject(x0, R, 45, 0,  z0, z1);
+            
+                ms1 = MorphSpace(sl1, sc1);
+                ms2 = MorphSpace(sl2, sc2);
+            
+                mesh1.addObjectMesh3D(ms1, nr(1), nr(1), nr(2), pattern);
+                mesh1.addObjectMesh3D(ms2, nr(1), nr(1), nr(2), pattern);
+            
+                obj.merge(mesh1.nodes, mesh1.elems);
+            end
+
+        function obj = addQuarterCylinderOld( obj, x0 , R, h, nr, pattern )
              mesh1 = Mesh();
              shapeFn = ShapeFunctionH8();
              mesh1.addShapedMesh3D( shapeFn, x0+[ 0 0 0; R/2 0 0; 0 R/2 0; R/2/1.41 R/2/1.41 0; 0 0 h; R/2 0 h; 0 R/2 h; R/2/1.41 R/2/1.41 h], [nr(1) nr(1) nr(2)], pattern );
 
              sfL2 = ShapeFunctionQ4();
-             sl1 = ShapeObjectRectangular(sfL2,x0+[0 R/2 0; R/2/1.41 R/2/1.41 0; 0 R/2 h; R/2/1.41 R/2/1.41 h ]);
-             sl2 = ShapeObjectRectangular(sfL2,x0+[R/2/1.41 R/2/1.41 0; R/2 0 0; R/2/1.41 R/2/1.41 h; R/2 0 h]);
+             a = R/(2*sqrt(2));
+
+            sl1 = ShapeObjectRectangular(sfL2, x0+[0 R/2 0; a a 0; 0 R/2 h; a a h]);
+            sl2 = ShapeObjectRectangular(sfL2, x0+[a a 0; R/2 0 0; a a h; R/2 0 h]);
+
+           
              sc1 = CylinderObject(x0,R,90,45,0,h);
              sc2 = CylinderObject(x0,R,45,0,0,h);
 
@@ -352,10 +400,126 @@ classdef Mesh < handle
                 
              mesh1.addObjectMesh3D( ms1, nr(1), nr(1), nr(2), pattern );
              mesh1.addObjectMesh3D( ms2, nr(1), nr(1), nr(2), pattern );
-             %mesh1.addShapedMesh2D( shapeFn, x0+[ R/2 0; R 0; R/2/1.41 R/2/1.41; R/1.41 R/1.41 ], nr, pattern );
-             %mesh1.addShapedMesh2D( shapeFn, x0+[ 0 R/2; R/2/1.41 R/2/1.41; 0 R; R/1.41 R/1.41  ], nr, pattern );
              obj.merge( mesh1.nodes, mesh1.elems );
         end
+
+        function obj = addLayeredQuarterCylinder(obj, x0, R, h, nrZ, nrXY, add_interface, i_th, pattern)
+            %ADDLAYEREDQUARTERCYLINDER Stack quarter-cylinder layers in Z with optional interface layers.
+            %
+            %   obj = addLayeredQuarterCylinder(obj, x0, R, h, nrZ, nrXY, add_interface, i_th, pattern)
+            %
+            % Inputs:
+            %   x0            - base origin [x y z] of the cylinder stack
+            %   R             - radius
+            %   h             - vector of nominal layer heights (sum(h) = total height)
+            %   nrZ           - vector of z-resolutions per nominal layer (same length as h)
+            %   nrXY          - scalar in-plane resolution (used as nr(1) in addQuarterCylinder)
+            %   add_interface - logical; if true, insert interface layers between nominal layers
+            %   i_th          - interface thickness (height), used only if add_interface==true
+            %   pattern       - pattern passed to mesh generation
+            %
+            % Behavior with add_interface==true:
+            %   - Inserts (L-1) interface layers of height i_th, each with nrZ_interface = 1.
+            %   - To keep total height unchanged (still sum(h)), each nominal layer k is shortened:
+            %       h_eff(k) = h(k) - (k>1)*i_th/2 - (k<L)*i_th/2
+            %     i.e., remove i_th/2 at each internal boundary from the adjacent layers.
+            %
+            % Notes:
+            %   - z coordinates are stacked from x0(3) upwards.
+            %   - Uses existing obj.addQuarterCylinder(x0, R, h_layer, [nrXY nrZ_layer], pattern)
+            
+                % --- sanity checks ---
+                if numel(x0) ~= 3
+                    error('x0 must be a 1x3 vector.');
+                end
+                if ~isvector(h) || ~isvector(nrZ)
+                    error('h and nrZ must be vectors.');
+                end
+            
+                h   = h(:);
+                nrZ = nrZ(:);
+            
+                L = numel(h);
+                if numel(nrZ) ~= L
+                    error('h and nrZ must have the same number of layers.');
+                end
+                if any(h <= 0)
+                    error('All layer heights h must be > 0.');
+                end
+                if any(nrZ < 1) || any(mod(nrZ,1) ~= 0)
+                    error('All nrZ entries must be positive integers.');
+                end
+                if ~(isscalar(nrXY) && nrXY >= 1 && mod(nrXY,1) == 0)
+                    error('nrXY must be a positive integer scalar.');
+                end
+                if ~(islogical(add_interface) || (isscalar(add_interface) && (add_interface==0 || add_interface==1)))
+                    error('add_interface must be logical true/false.');
+                end
+                add_interface = logical(add_interface);
+            
+                if add_interface
+                    if ~(isscalar(i_th) && i_th > 0)
+                        error('i_th must be a positive scalar when add_interface is true.');
+                    end
+                    if L < 2
+                        % No interfaces possible; just build the single layer normally
+                        add_interface = false;
+                    end
+                end
+            
+                % --- compute effective layer heights if interfaces are enabled ---
+                if add_interface
+                    h_eff = h;
+                    for k = 1:L
+                        if k > 1
+                            h_eff(k) = h_eff(k) - i_th/2;
+                        end
+                        if k < L
+                            h_eff(k) = h_eff(k) - i_th/2;
+                        end
+                    end
+            
+                    if any(h_eff <= 0)
+                        error('Interface thickness i_th is too large: some effective layer heights become <= 0.');
+                    end
+                else
+                    h_eff = h;
+                end
+            
+                % --- build stack ---
+                zoff = 0.0;
+            
+                for k = 1:L
+                    % main layer k
+                    obj = obj.addQuarterCylinder( x0 + [0 0 zoff], R, h_eff(k), [nrXY nrZ(k)], pattern );
+                    zoff = zoff + h_eff(k);
+            
+                    % interface between k and k+1
+                    if add_interface && (k < L)
+                        obj = obj.addQuarterCylinder( x0 + [0 0 zoff], R, i_th, [nrXY 1], pattern );
+                        zoff = zoff + i_th;
+                    end
+                end
+            
+                % --- optional consistency check (floating tolerance) ---
+                targetH = sum(h);
+                if abs(zoff - targetH) > 1e-10 * max(1, targetH)
+                    error('Height mismatch: built height %.15g, expected %.15g.', zoff, targetH);
+                end
+            end
+
+
+        function obj = addLayeredQuarterCylinderInt(obj, x0, R, h, nrZ, nrXY, add_interface, i_th, pattern)
+                zoff = 0;
+                for k = 1:numel(h)
+                    obj = obj.addQuarterCylinder( x0 + [0 0 zoff], R, h(k), [nrXY nrZ(k)], pattern );
+                    zoff = zoff + h(k);
+                end
+                %obj.merge(mesh1.nodes, mesh1.elems);
+        end
+
+
+
         function obj = addHalfCylinder( obj, x0 , R, h, nr, localNodes )
             obj.addQuarterCylinder( x0 , R, h, nr, localNodes );
             obj.transformMesh3DDegXY( x0, 90, [0 0 0] );
@@ -372,7 +536,7 @@ classdef Mesh < handle
         end
         function addPipe3D(obj,x0,r,R,al1,al2,h1,h2,nr,nc,nz,lnodes)
             mesh=Mesh();
-            mesh.addRectMesh3D( r, deg2rad(al1), h1, R-r, deg2rad(al2-al1), h2-h1, nr, nc, nz, lnodes)
+            mesh.addRectMesh3D( r, deg2rad(al1), h1, R-r, deg2rad(al2-al1), h2-h1, nr, nc, nz, lnodes);
             mesh.transformToCylindrical3D(x0);
             obj.mergeMesh(mesh);
         end
@@ -420,6 +584,7 @@ classdef Mesh < handle
             obj.addRectMesh2D( 0, h, h, l-h, nh, nl-nh, pattern );
             obj.addRectMesh2D( h, 0, l-h, h, nl-nh, nh, pattern );
         end
+
         function obj = addLshape3D( obj, l, h, nh, lnodes )
             nl = round(l/h*nh+0.5);
             obj.addRectMesh3D( 0, 0, 0, h,   h, h,   nh,    nh, nh,    lnodes);
@@ -457,6 +622,54 @@ classdef Mesh < handle
                           x0(2)+(obj.nodes(:,1)-x0(1)).*sin(angleRad)+(obj.nodes(:,2)-x0(2)).*cos(angleRad)] + xm;
                   
         end
+
+        function cone_nodes = coneTransformationX(obj, l, r1, r2, nodes)
+            %CONETRANSFORMATIONX Taper (cone) transform around Z axis.
+            %
+            %   cone_nodes = coneTransformationX(l, r1, r2, nodes)
+            %
+            % Inputs:
+            %   l     - height of cone (z from 0 to l)
+            %   r1    - radius at z = 0
+            %   r2    - radius at z = l
+            %   nodes - Nx3 array of [x y z]
+            %
+            % Output:
+            %   cone_nodes - Nx3 transformed nodes
+            %
+            % Behavior:
+            %   - z is unchanged
+            %   - x,y are scaled by s(z) = 1 + (r2/r1 - 1) * (z/l)
+            %     so at z=0:  s=1
+            %        z=l:  s=r2/r1  (radius changes from r1 -> r2)
+            
+                cone_nodes = nodes;
+            
+                % Basic checks
+                if size(nodes,2) ~= 3
+                    error('nodes must be an Nx3 array.');
+                end
+                if l <= 0
+                    error('l must be > 0.');
+                end
+                if r1 == 0
+                    error('r1 must be non-zero (cannot scale by r2/r1).');
+                end
+            
+                z = nodes(:,3);
+            
+                % Clamp interpolation to [0, 1] in case some nodes are slightly outside
+                t = z ./ l;
+                t = max(0, min(1, t));
+            
+                % Linear scale from 1 at z=0 to (r2/r1) at z=l
+                s = 1 + (r2/r1 - 1) .* t;
+            
+                % Apply scaling in XY plane
+                cone_nodes(:,1) = nodes(:,1) .* s;
+                cone_nodes(:,2) = nodes(:,2) .* s;
+        end
+
         function obj = transformMesh3DDegXY( obj, x0, angleDeg, xm )
             angleRad = angleDeg*pi/180;
             obj.nodes = [ x0(1)+(obj.nodes(:,1)-x0(1)).*cos(angleRad)-(obj.nodes(:,2)-x0(2)).*sin(angleRad)...
