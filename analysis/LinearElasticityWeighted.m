@@ -13,6 +13,9 @@ classdef LinearElasticityWeighted < FEAnalysis
        function K = globalMatrixAggregationWeighted(obj, fname, x)
             K = [];
             ei = getElemIndices(obj);
+            if numel(x) == 1
+                x = ones(obj.getTotalElemsNumber() ,1);
+            end
             for k=1:size(obj.felems,2)
                 if ismethod(obj.felems{k},fname)
                     K = [ K; obj.felems{k}.(fname)(obj.mesh.nodes,x(ei{k})) ];
@@ -36,6 +39,21 @@ classdef LinearElasticityWeighted < FEAnalysis
            end
            qfem=obj.qfem;
            obj.qnodal=obj.fromFEMVector(qfem(:,1));
+       end
+
+       function obj = saveMatrices(obj,filename)
+          [I,J,~] = obj.globalMatrixIndices();
+          if obj.isConst
+                K = sparse(I,J,obj.globalMatrixAggregationWeighted('computeStifnessMatrixConst',1));
+          else
+                K = sparse(I,J,obj.globalMatrixAggregationWeighted('computeStifnessMatrix',1));
+          end
+           supports = obj.supports;
+           obj.prepareRHSVectors();
+           P = obj.Pfem;
+           nodes = obj.mesh.nodes;
+           elems = obj.mesh.elems;
+           save(filename, "nodes","elems","K","P","supports");
        end
    end
 end

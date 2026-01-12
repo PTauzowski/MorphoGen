@@ -6,19 +6,23 @@ classdef Frame3D < FiniteElement
     end
       
     methods
-        function obj = Frame3D(elems, E,A,G,Jy,Jz,Ks)
+        function obj = Frame3D(elems, E, nu, Ro, Ri)
              obj = obj@FiniteElement(ShapeFunctionsFrame3D,elems);
 
              obj.ndofs=["ux" "uy" "uz" "fix" "fiy" "fiz"];
              obj.results.names = ["N" "Ty" "Tz" "Ms" "My" "Mz"];
              obj.results.descriptions = ["normal force" "shear force Ty" "shear force Tz" ...
                  "torsion moment" "bending moment My" "bending moment Mz" ];
-              obj.E=E;
-              obj.A=A;
-              obj.G=G;
-              obj.Jy=Jy;
-              obj.Jz=Jz;
-              obj.Ks=Ks;
+             A  = pi*(Ro^2 - Ri^2);
+             Jy = (pi/4)*(Ro^4 - Ri^4);
+             Jz = Jy;
+             Ks = (pi/2)*(Ro^4 - Ri^4);   
+             obj.E=E;
+             obj.A=A;
+             obj.G = E/(2*(1+nu));
+             obj.Jy=Jy;
+             obj.Jz=Jz;
+             obj.Ks=Ks;
                  
         end
 

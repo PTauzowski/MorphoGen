@@ -7,7 +7,7 @@ classdef ManipulatorModel3D < handle
     end
     
     methods                       
-        function obj = ManipulatorModel3D(E,nu,ls,R,r,res, res_th, alpha, betas, ShapeFn, use_offset)
+        function obj = ManipulatorModel3D(E,nu,ls,R,r, res, res_th, alpha, betas, ShapeFn, use_offset, Pz)
             alpha=alpha*pi/180;
             betas=betas*pi/180;
 
@@ -31,8 +31,9 @@ classdef ManipulatorModel3D < handle
            
             fixedEdgeSelector = Selector( obj.fixedSurfaceNodes );
             loadedFaceSelector = Selector( obj.loadSurfaceNodes );
+            A = pi*(R^2 - r^2);
             
-            obj.analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [0 0 -10] ));
+            obj.analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [0 0 Pz/A] ));
             obj.analysis.fixNodes( fixedEdgeSelector, [ "uz"] );
             obj.analysis.fixClosestNode( [0 0 0], ["ux" "uy" "uz"], [0 0 0]);
 
@@ -41,10 +42,10 @@ classdef ManipulatorModel3D < handle
             obj.frame_mesh.nodes=obj.frameNodes;
             obj.frame_mesh.elems = frame_elems;
             
-            obj.frameElem=Frame3D(frame_elems,E,0.02,0.8*E,0.0004,0.0004,0.003);
+            obj.frameElem=Frame3D(frame_elems,E,nu,R,r);
             obj.frame_analysis = LinearElasticityWeighted( obj.frameElem, obj.frame_mesh, false );
             obj.frame_analysis.fixClosestNode([0 0 0], ["ux" "uy" "uz" "fix" "fiy" "fiz"], [0 0 0 0 0 0]);
-            obj.frame_analysis.loadClosestNode(obj.frame_mesh.nodes(end,:), ["ux" "uy" "uz" "fix" "fiy" "fiz"], [0 0 -1 0 0 0] );
+            obj.frame_analysis.loadClosestNode(obj.frame_mesh.nodes(end,:), ["ux" "uy" "uz" "fix" "fiy" "fiz"], [0 0 -Pz 0 0 0] );
 
         end
 
@@ -54,105 +55,112 @@ classdef ManipulatorModel3D < handle
         end
 
         function geterateManipulator(obj, ls, R, r, res, res_th, alpha, betas, sf )
-            %obj.elems = obj.mesh.merge(mesh.nodes,obj.elems)
-           Th=R-r;
-           resTh=res_th;
-           resCirc=round(2*pi*R/Th*resTh);
-           c=cos(alpha);
-           s=sin(alpha);
-           rotCut=[c 0 s; 0 1 0; -s 0 c]';
-           c=cos(2*alpha);
-           s=sin(2*alpha);
-           rotCut2=[c 0 s; 0 1 0; -s 0 c]';
-           c=cos(betas(1));
-           s=sin(betas(1));
-           rotBeta=[c -s 0; s c 0; 0 0 1]';
-            
-            phase=-betas(1)*obj.use_offset;
-            [obj.mesh, obj.elems]=obj.generateSegment2a(R, r, ls, res, phase, rotCut, sf);
-            obj.halfSegmentNelems=size(obj.elems,1);
-            obj.const_elems=(size(obj.elems,1)-1*resCirc-1:size(obj.elems,1))';
-            last_const_elems=obj.elems(size(obj.elems,1)-1*resCirc-1:size(obj.elems,1),:);
-            obj.mesh.nodes=obj.mesh.nodes*rotBeta;
-            selector = Selector( @(x)( (x(:,3) < 1.0E-4) ) );
-            obj.fixedSurfaceNodes = selector.select( obj.mesh.nodes );
-            prevRot=rotCut*rotBeta;
-            obj.xEnd=[0 0 ls];
-            xEnds=[ [0 0 0]; obj.xEnd];
-           
-            for k=2:length(betas)
-                c=cos(betas(k));
-                s=sin(betas(k));
+            Th = R - r;
+        
+            % --- thickness resolution (radial) ---
+            resTh = max(1, round(res_th));
+        
+            % --- choose circum + length resolution consistently with resTh ---
+            % (your original logic: scale with Th so elements stay ~ isotropic)
+            resCirc = max(3, round(2*pi*R/Th * resTh));
+            resLen  = max(1, round(ls/Th * resTh));
+        
+            % rotations...
+            c=cos(alpha); s=sin(alpha);
+            rotCut=[c 0 s; 0 1 0; -s 0 c]';
+            c=cos(2*alpha); s=sin(2*alpha);
+            rotCut2=[c 0 s; 0 1 0; -s 0 c]';
+            c=cos(betas(1)); s=sin(betas(1));
+            rotBeta=[c -s 0; s c 0; 0 0 1]';
+        
+            phase = -betas(1)*obj.use_offset;
+        
+            % --- first segment ---
+            [obj.mesh, obj.elems] = obj.generateSegment2a(R, r, ls, phase, rotCut, sf, resTh, resCirc, resLen);
+        
+            obj.halfSegmentNelems = size(obj.elems,1);
+        
+            % elements in ONE end slice (k = last along length):
+            sliceElems = resTh * resCirc;
+            ne = size(obj.elems,1);
+            obj.const_elems = (ne - sliceElems + 1 : ne).';
+        
+            obj.mesh.nodes = obj.mesh.nodes * rotBeta;
+            selector = Selector(@(x)(x(:,3) < 1.0E-4));
+            obj.fixedSurfaceNodes = selector.select(obj.mesh.nodes);
+        
+            prevRot = rotCut * rotBeta;
+            obj.xEnd = [0 0 ls];
+            xEnds = [[0 0 0]; obj.xEnd];
+        
+            for k = 2:length(betas)
+                c=cos(betas(k)); s=sin(betas(k));
                 rotBeta=[c -s 0; s c 0; 0 0 1]';
-                phase = obj.use_offset * ( phase-betas(k) );
-                [mesh1, elems1]=obj.generateSegment2b(R, r, ls, res, phase, rotCut, sf);
-                [mesh2, elems2]=obj.generateSegment2a(R, r, ls, res, phase, rotCut, sf);
-                if k<length(betas)
-                    elems1=[elems2; mesh1.merge(mesh2.nodes,elems2)];                    
+        
+                phase = obj.use_offset * (phase - betas(k));
+        
+                [mesh1, elems1] = obj.generateSegment2b(R, r, ls, phase, rotCut, sf, resTh, resCirc, resLen);
+                [mesh2, elems2] = obj.generateSegment2a(R, r, ls, phase, rotCut, sf, resTh, resCirc, resLen);
+        
+                if k < length(betas)
+                    elems1 = [elems2; mesh1.merge(mesh2.nodes, elems2)];
                 end
-                
-                mesh1.nodes=(mesh1.nodes+[0 0 ls])*rotCut*rotBeta*prevRot+obj.xEnd;  
-                obj.elems =[ obj.elems; obj.mesh.merge(mesh1.nodes, elems1) ];
-                % last_const_elems=obj.elems(size(obj.elems,1)-5*res-1:size(obj.elems,1),:);
-                % obj.const_elems=[ obj.const_elems; (size(obj.elems,1)-5*res:size(obj.elems,1))' ];
-                last_const_elems=obj.elems(size(obj.elems,1)-1*resCirc-1:size(obj.elems,1),:);
-                obj.const_elems=[ obj.const_elems; (size(obj.elems,1)-1*resCirc:size(obj.elems,1))' ];
-                if k<length(betas)
-                    obj.xEnd=obj.xEnd+[0 0 2*ls]*rotCut*rotBeta*prevRot;
+        
+                mesh1.nodes = (mesh1.nodes + [0 0 ls]) * rotCut * rotBeta * prevRot + obj.xEnd;
+                obj.elems = [obj.elems; obj.mesh.merge(mesh1.nodes, elems1)];
+        
+                % update const_elems for this newly appended part:
+                ne = size(obj.elems,1);
+                obj.const_elems = [obj.const_elems; (ne - sliceElems + 1 : ne).'];
+        
+                if k < length(betas)
+                    obj.xEnd = obj.xEnd + [0 0 2*ls] * rotCut * rotBeta * prevRot;
                 else
-                    obj.xEnd=obj.xEnd+[0 0 ls]*rotCut*rotBeta*prevRot;
+                    obj.xEnd = obj.xEnd + [0 0 ls]   * rotCut * rotBeta * prevRot;
                 end
-                xEnds=[ xEnds; obj.xEnd ];
-                prevRot=rotCut2*rotBeta*prevRot;
+                xEnds = [xEnds; obj.xEnd];
+                prevRot = rotCut2 * rotBeta * prevRot;
             end
-            tNodes = (obj.mesh.nodes-repmat(obj.xEnd,size(obj.mesh.nodes,1),1))*prevRot'*rotCut;
-            sNodes = abs(tNodes(:,3))<1.0E-4;
-            obj.loadSurfaceNodes = sNodes;
-            obj.frameNodes=xEnds;
-            %plot3(obj.mesh.nodes(sNodes,1),obj.mesh.nodes(sNodes,2),obj.mesh.nodes(sNodes,3),LineStyle="none",Marker="*",Color='r');
-            %line(tNodes(:,1),tNodes(:,2),tNodes(:,3),Marker="o",Color='r');
+        
+            tNodes = (obj.mesh.nodes - repmat(obj.xEnd, size(obj.mesh.nodes,1), 1)) * prevRot' * rotCut;
+            obj.loadSurfaceNodes = abs(tNodes(:,3)) < 1.0E-4;
+            obj.frameNodes = xEnds;
         end
 
-        function [mesh, elems] = generateSegment2a(obj, R, r, ls, res, phase, Redge, sf)
-            Th=R-r;
-            % resLen=res;
-            % resCirc = ceil(resLen/ls*2*pi*R);
-            % resTh = ceil(resLen/ls*Th);
 
-            resTh=1;
-            resCirc=round(2*pi*R/Th*resTh);
-            resLen=round(ls/Th*resTh);
-            
+        function [mesh, elems] = generateSegment2a(obj, R, r, ls, phase, Redge, sf, resTh, resCirc, resLen)
+            Th = R - r;
+        
             mesh = Mesh();
-            elems = mesh.addRectMesh3D( R-Th, phase, 0, Th, 2*pi, 1, resTh, resCirc, resLen, sf.localNodes );      
-            elems = mesh.transformToCylindrical3D( [0 0] );
-           
-            nodesR1 = [mesh.nodes(:,1) mesh.nodes(:,2) 0*mesh.nodes(:,3)]*Redge;
-            %nodesR2 = [mesh.nodes(:,1) mesh.nodes(:,2) 0*mesh.nodes(:,3)]*Rot2;
-            nodes= [nodesR1(:,1) nodesR1(:,2) mesh.nodes(:,3) .* (nodesR1(:,3)+ls)];
-            mesh.nodes=nodes;   
-            elems=mesh.elems;
+            elems = mesh.addRectMesh3D( ...
+                R - Th, phase, 0, ...
+                Th, 2*pi, 1, ...
+                resTh, resCirc, resLen, sf.localNodes);
+        
+            elems = mesh.transformToCylindrical3D([0 0]);
+        
+            nodesR1 = [mesh.nodes(:,1) mesh.nodes(:,2) 0*mesh.nodes(:,3)] * Redge;
+            nodes   = [nodesR1(:,1), nodesR1(:,2), mesh.nodes(:,3) .* (nodesR1(:,3) + ls)];
+            mesh.nodes = nodes;
+            elems = mesh.elems;
         end
 
-        function [mesh, elems] = generateSegment2b(obj, R, r, ls, res, phase, Redge, sf)
-            Th=R-r;
-            % resLen=res;
-            % resCirc = ceil(resLen/ls*2*pi*R);
-            % resTh = ceil(resLen/ls*Th);
 
-            resTh=1;
-            resCirc=round(2*pi*R/Th*resTh);
-            resLen=round(ls/Th*resTh);
-            
+        function [mesh, elems] = generateSegment2b(obj, R, r, ls, phase, Redge, sf, resTh, resCirc, resLen)
+            Th = R - r;
+        
             mesh = Mesh();
-            elems = mesh.addRectMesh3D( R, phase, 0, -Th, -2*pi, 1, resTh, resCirc, resLen, sf.localNodes );      
-            elems = mesh.transformToCylindrical3D( [0 0] );
-           
-            nodesR1 = [mesh.nodes(:,1) mesh.nodes(:,2) 0*mesh.nodes(:,3)]*Redge';
-            %nodesR2 = [mesh.nodes(:,1) mesh.nodes(:,2) 0*mesh.nodes(:,3)]*Rot2;
-            nodes= [nodesR1(:,1) nodesR1(:,2) (1-mesh.nodes(:,3)) .* (nodesR1(:,3)-ls)];
-            mesh.nodes=nodes; 
-            elems=mesh.elems;
+            elems = mesh.addRectMesh3D( ...
+                R, phase, 0, ...
+                -Th, -2*pi, 1, ...
+                resTh, resCirc, resLen, sf.localNodes);
+        
+            elems = mesh.transformToCylindrical3D([0 0]);
+        
+            nodesR1 = [mesh.nodes(:,1) mesh.nodes(:,2) 0*mesh.nodes(:,3)] * Redge';
+            nodes   = [nodesR1(:,1), nodesR1(:,2), (1 - mesh.nodes(:,3)) .* (nodesR1(:,3) - ls)];
+            mesh.nodes = nodes;
+            elems = mesh.elems;
         end
 
         function xnew=rotatePoints(x0,R,x)
@@ -385,6 +393,11 @@ classdef ManipulatorModel3D < handle
                 x=[x; flip(xOpt); xOpt ];
             end
             x=[x; flip(xOpt)];
+        end
+
+        function saveModelMatrices(obj,filename)
+            obj.analysis.saveMatrices(filename+"_solid");
+            obj.frame_analysis.saveMatrices(filename+"_frame3D");
         end
         
     end
