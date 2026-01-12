@@ -1,5 +1,6 @@
-function xtop_full = plotArmTopOptConfigProjections(pdfFileName,plotTitle,Rfilter, analysis, halfSegmentNelems, nthSegment, xopt, cutTreshold, penal, is_const)
+function xtop_full = plotArmTopOptConfigProjections(filename,plotTitle,Rfilter, analysis, halfSegmentNelems, nthSegment, xopt, cutTreshold, penal, is_const)
 
+    pdfFileName = "figs/"+filename;
     topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.4, is_const );
     xtop_full=xopt;
     analysis.computeElementResults();
