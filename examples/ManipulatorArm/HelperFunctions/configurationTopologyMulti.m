@@ -40,7 +40,7 @@ function [xopt_av, xopt_av_lambda, xoptBuckling_av, xoptBuckling_av_lambda, xopt
      analysesLinear = [];
      analysesBuckling = [];
      for k=1:nSamples
-         model= ManipulatorModel3D(E,nu,segmentLength,R,r,1, alpha, samples(k,:), ShapeFn, false);
+         model= ManipulatorModel3D(E,nu,segmentLength,R,r,res, res_thickness, alpha, samples(k,:), ShapeFn, false);
          mesh=Mesh();
          frameElem=Frame3D(frameElems,E,0.02,0.8*E,0.0004,0.0004,0.003);
          mesh.nodes=model.frameNodes;

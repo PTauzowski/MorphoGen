@@ -57,7 +57,7 @@ load("ManipulatorOpti100000_Rev.mat");
 
 
 R=0.25;
-r=0.210;
+r=0.170;
 alpha=22.5;
 segmentLength=0.3;
 res=15;
@@ -67,6 +67,7 @@ res_thickness=3;
 Rfilter = 1.5*(R-r);
 penal=3;
 cutTreshold = 0.01;
+volFr=0.4;
 
 tic;
 [vN, vTy, vTz, vMs, vMy, vMz, all_forces] = computeAllInternalForces(frameNodes,frameElems,E,nu, samples);
@@ -287,7 +288,7 @@ modelMaxMs.analysis.felems{1}.face_alpha=1;
 % plotArmTopOptConfigProjections("TorsionInitialConfiguration","Torsion initial configuration M_s",Rfilter, modelMaxMs.analysis, modelMaxMs.halfSegmentNelems, max_segments(4), 1, cutTreshold, penal, false);
 % 
 
-% [xopt_av, xopt_av_lambda, xoptBuckling_av, xoptBuckling_av_lambda, xopt_max, xopt_max_lambda, xoptBuckling_max, xoptBuckling_max_lambda, newLoadFactor ] = configurationTopologyMulti(E,nu,R,r,res, res_thickness, segmentLength,ShapeFn,alpha,modeSamples,frameElems, real_max_segments, loadFactor,Rfilter, cutTreshold, penal, 0.4, false, 01);
+% [xopt_av, xopt_av_lambda, xoptBuckling_av, xoptBuckling_av_lambda, xopt_max, xopt_max_lambda, xoptBuckling_max, xoptBuckling_max_lambda, newLoadFactor ] = configurationTopologyMulti(E,nu,R,r,res, res_thickness, segmentLength,ShapeFn,alpha,modeSamples,frameElems, real_max_segments, loadFactor,Rfilter, cutTreshold, penal, volFr, false, 01);
 % 
 % save("ComposedTopologyMultiMaxAvOneRing_Rev.mat");
 % load("ComposedTopologyMultiMaxAvOneRing_Rev.mat");
@@ -307,20 +308,20 @@ modelMaxMs.analysis.felems{1}.face_alpha=1;
 % plotArmTopOptConfigProjections("OneRingAverageLinear","Aaverage topology linear",Rfilter, modelMaxMs.analysis, modelMaxMs.halfSegmentNelems, 2, xopt_av, cutTreshold, penal, false);
 % plotArmTopOptConfigProjections("OneRingEnvelopeLinear","Envelope topology linear",Rfilter, modelMaxMs.analysis, modelMaxMs.halfSegmentNelems, 2, xopt_max, cutTreshold, penal, false);
 
-[xopt_av, xopt_av_lambda, xoptBuckling_av, xoptBuckling_av_lambda, xopt_max, xopt_max_lambda, xoptBuckling_max, xoptBuckling_max_lambda, newLoadFactor, topOptAvLinear, topOptEnvLinear, topOptAvBuckling, topOptEnvBuckling ] = configurationTopologyMulti(E,nu,R,r,res, res_thickness, segmentLength,ShapeFn,alpha,modeSamples,frameElems, real_max_segments, loadFactor,Rfilter, cutTreshold, penal, 0.3, false, 11);
+%[xopt_av, xopt_av_lambda, xoptBuckling_av, xoptBuckling_av_lambda, xopt_max, xopt_max_lambda, xoptBuckling_max, xoptBuckling_max_lambda, newLoadFactor, topOptAvLinear, topOptEnvLinear, topOptAvBuckling, topOptEnvBuckling ] = configurationTopologyMulti(E,nu,R,r,res, res_thickness, segmentLength,ShapeFn,alpha,modeSamples,frameElems, real_max_segments, loadFactor,Rfilter, cutTreshold, penal, volFr, false, 11);
 
-save("ComposedTopologyMultiMaxAvTwoRings_Rev.mat");
-%load("ComposedTopologyMultiMaxAvTwoRings_Rev.mat");
+%save("ComposedTopologyMultiMaxAvTwoRings_Rev.mat");
+load("ComposedTopologyMultiMaxAvTwoRings_Rev.mat");
 
 axisDir   = [0 0 1];
 axisPoint = [R 0 0];  % center in XY
 
 %topOptAvLinear.FEAnalysis.mesh
 
-plotUnwrappedCylMesh(topOptAvLinear.FEAnalysis.mesh.nodes, topOptAvLinear.FEAnalysis.mesh.elems, axisPoint, axisDir, ShapeFn, ...
-    'FieldElem', xopt_av, ...
-    'FaceColor', [0.8 0.8 0.8], ...
-    'FaceAlpha', 1.0);
+% plotUnwrappedCylMesh(topOptAvLinear.FEAnalysis.mesh.nodes, topOptAvLinear.FEAnalysis.mesh.elems, axisPoint, axisDir, ShapeFn, ...
+%     'FieldElem', xopt_av, ...
+%     'FaceColor', [0.8 0.8 0.8], ...
+%     'FaceAlpha', 1.0);
 
 disp(['Average lambda linear = ' num2str(xopt_av_lambda) ' Average  lambda buckling = ' num2str(xoptBuckling_av_lambda)]);
 disp(['Envelope lambda linear   = ' num2str(xopt_max_lambda) ' Envelope lambda buckling   = ' num2str(xoptBuckling_max_lambda)]);
@@ -348,8 +349,6 @@ modelMaxMs.analysis.felems{1}.face_alpha=1;
 % numResults=zeros(2,2,4,6);
 
 ConfigNames = {'N';'T_y';'T_z';'M_s';'M_y'; 'M_z'};
-
-volFr=0.4;
 
 maxHM_dd = zeros(6,1);
 maxDisp_dd = zeros(6,1);
