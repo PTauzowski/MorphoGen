@@ -1,13 +1,13 @@
-function [xopt_av, xopt_av_lambda, xoptBuckling_av, xoptBuckling_av_lambda, xopt_max, xopt_max_lambda , xoptBuckling_max, xoptBuckling_max_lambda, newLoadFactor, topOptAvLinear, topOptEnvLinear, topOptAvBuckling, topOptEnvBuckling ]  = configurationTopologyMulti(E,nu,R,r, res, res_thickness, segmentLength,ShapeFn,alpha,samples,frameElems,max_segments, loadFactor,Rmin,maxais,penal,volFr,is_const,ringMode)
+function [xopt_av, xopt_av_lambda, xoptBuckling_av, xoptBuckling_av_lambda, xopt_max, xopt_max_lambda , xoptBuckling_max, xoptBuckling_max_lambda, newLoadFactor, topOptAvLinear, topOptEnvLinear, topOptAvBuckling, topOptEnvBuckling ]  = configurationTopologyMulti(E,nu,R,r, res, res_thickness, segmentLength,ShapeFn,alpha,samples,frameElems,max_segments, loadFactor,Pz, Rmin,maxais,penal,volFr,is_const,ringMode)
 
      nSamples=size(samples,1);
 
      analysesLinear = [];
      analysesBuckling = [];
      for k=1:nSamples
-         model= ManipulatorModel3D(E,nu,segmentLength,R,r,res, res_thickness, alpha, samples(k,:), ShapeFn, false);
+         model= ManipulatorModel3D(E,nu,segmentLength,R,r,res, res_thickness, alpha, samples(k,:), ShapeFn, false, Pz);
          mesh=Mesh();
-         frameElem=Frame3D(frameElems,E,0.02,0.8*E,0.0004,0.0004,0.003);
+         frameElem=Frame3D(frameElems,E,nu,R,r);
          mesh.nodes=model.frameNodes;
          [Fel, ~] = computeInternalForces(frameElem,mesh);
          N  = Fel(1,max_segments(k))*loadFactor;
@@ -40,9 +40,9 @@ function [xopt_av, xopt_av_lambda, xoptBuckling_av, xoptBuckling_av_lambda, xopt
      analysesLinear = [];
      analysesBuckling = [];
      for k=1:nSamples
-         model= ManipulatorModel3D(E,nu,segmentLength,R,r,res, res_thickness, alpha, samples(k,:), ShapeFn, false);
+         model= ManipulatorModel3D(E,nu,segmentLength,R,r,res, res_thickness, alpha, samples(k,:), ShapeFn, false, Pz);
          mesh=Mesh();
-         frameElem=Frame3D(frameElems,E,0.02,0.8*E,0.0004,0.0004,0.003);
+         frameElem=Frame3D(frameElems,E,nu,R,r);
          mesh.nodes=model.frameNodes;
          barNumber=2;
          [Fel, ~] = computeInternalForces(frameElem,mesh);

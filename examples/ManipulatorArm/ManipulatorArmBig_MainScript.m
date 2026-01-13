@@ -36,11 +36,11 @@ nSamples = size(samples,1);
 % frameNodes = modelRef.computeFrameNodesBatch( segmentLength, alpha, samples );
 
 R=0.14; % m, outer radius
-r=0.13; % m, inner radius
+r=0.105; % m, inner radius
 alpha=22.5; % deg, segment connection inclination
 segmentLength=0.15; % m, segment length
 res=15;
-res_thickness=1;
+res_thickness=3;
 
 Pz = 100; % N -  Vertical force at the end of manipulator;
 
@@ -311,10 +311,10 @@ volFr=0.4;
 % plotArmTopOptConfigProjections("OneRingAverageLinear","Aaverage topology linear",Rfilter, modelMaxMs.analysis, modelMaxMs.halfSegmentNelems, 2, xopt_av, cutTreshold, penal, false);
 % plotArmTopOptConfigProjections("OneRingEnvelopeLinear","Envelope topology linear",Rfilter, modelMaxMs.analysis, modelMaxMs.halfSegmentNelems, 2, xopt_max, cutTreshold, penal, false);
 
-%[xopt_av, xopt_av_lambda, xoptBuckling_av, xoptBuckling_av_lambda, xopt_max, xopt_max_lambda, xoptBuckling_max, xoptBuckling_max_lambda, newLoadFactor, topOptAvLinear, topOptEnvLinear, topOptAvBuckling, topOptEnvBuckling ] = configurationTopologyMulti(E,nu,R,r,res, res_thickness, segmentLength,ShapeFn,alpha,modeSamples,frameElems, real_max_segments, loadFactor,Pz, Rfilter, cutTreshold, penal, volFr, false, 11);
+[xopt_av, xopt_av_lambda, xoptBuckling_av, xoptBuckling_av_lambda, xopt_max, xopt_max_lambda, xoptBuckling_max, xoptBuckling_max_lambda, newLoadFactor, topOptAvLinear, topOptEnvLinear, topOptAvBuckling, topOptEnvBuckling ] = configurationTopologyMulti(E,nu,R,r,res, res_thickness, segmentLength,ShapeFn,alpha,modeSamples,frameElems, real_max_segments, loadFactor,Pz, Rfilter, cutTreshold, penal, volFr, false, 11);
 
-%save("ComposedTopologyMultiMaxAvTwoRings_Rev.mat","xopt_av", "xopt_av_lambda", "xoptBuckling_av", "xoptBuckling_av_lambda", "xopt_max", "xopt_max_lambda", "xoptBuckling_max", "xoptBuckling_max_lambda", "newLoadFactor", "topOptAvLinear", "topOptEnvLinear", "topOptAvBuckling", "topOptEnvBuckling" );
-load("ComposedTopologyMultiMaxAvTwoRings_Rev.mat","xopt_av", "xopt_av_lambda", "xoptBuckling_av", "xoptBuckling_av_lambda", "xopt_max", "xopt_max_lambda", "xoptBuckling_max", "xoptBuckling_max_lambda", "newLoadFactor", "topOptAvLinear", "topOptEnvLinear", "topOptAvBuckling", "topOptEnvBuckling");
+save("ComposedTopologyMultiMaxAvTwoRingsTh3_Rev.mat","xopt_av", "xopt_av_lambda", "xoptBuckling_av", "xoptBuckling_av_lambda", "xopt_max", "xopt_max_lambda", "xoptBuckling_max", "xoptBuckling_max_lambda", "newLoadFactor", "topOptAvLinear", "topOptEnvLinear", "topOptAvBuckling", "topOptEnvBuckling" );
+%load("ComposedTopologyMultiMaxAvTwoRingsTh3_Rev.mat","xopt_av", "xopt_av_lambda", "xoptBuckling_av", "xoptBuckling_av_lambda", "xopt_max", "xopt_max_lambda", "xoptBuckling_max", "xoptBuckling_max_lambda", "newLoadFactor", "topOptAvLinear", "topOptEnvLinear", "topOptAvBuckling", "topOptEnvBuckling");
 
 axisDir   = [0 0 1];
 axisPoint = [R 0 0];  % center in XY
