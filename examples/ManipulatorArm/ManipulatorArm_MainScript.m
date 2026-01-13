@@ -365,17 +365,32 @@ maxDisp_top = zeros(6,1);
 % plotStep5('segment_model_My', 'segment model, configuration max My', R, modelMaxMy, topOptEnvLinear, [0 0 0 0 1 0] );
 % plotStep5('segment_model_Mz', 'segment model, configuration max Mz', R, modelMaxMz, topOptEnvLinear, [0 0 0 0 0 1] );
 
-% plotSegmentResultsStep6('segment_model_AvLin', 'Linear average model', topOptAvLinear, 0.4);
+ plotSegmentResultsStep6('segment_model_AvLin', 'Linear average model', topOptAvLinear, 0.4);
 % plotSegmentResultsStep6('segment_model_EnvLin', 'Linear envelope model', topOptEnvLinear, 0.4);
 % plotSegmentResultsStep6('segment_model_AvBuckling', 'Linear average model', topOptAvBuckling, 0.4);
 % plotSegmentResultsStep6('segment_model_EnvBuckling', 'Linear average model', topOptEnvBuckling, 0.4);
 
-% plotSegmentResultsStep7('segment_topology_AvLin', 'Average linear', topOptAvLinear, newLoadFactor, volFr);
+ plotSegmentResultsStep7('segment_topology_AvLin', 'Average linear', topOptAvLinear, newLoadFactor, volFr);
 % plotSegmentResultsStep7('segment_topology_EnvLin', 'Envelope linear', topOptEnvLinear, newLoadFactor, volFr );
 % plotSegmentResultsStep7('segment_topology_AvBuck', 'Average buckling', topOptAvBuckling, newLoadFactor, volFr);
 % plotSegmentResultsStep7('segment_topology_EnvBuck', 'Envelope buckling', topOptEnvBuckling, newLoadFactor, volFr);
 
-% plotSegmentResultsStep8('arm_topology_AvLin', 'Average linear', modelMaxN, topOptAvLinear, volFr);
+plotSegmentResultsStep8('EnvelopeLinear_maxN',  'Envelope linear, conf. max N',  modelMaxN,  topOptEnvLinear, volFr);
+% plotSegmentResultsStep8('EnvelopeLinear_maxTy', 'Envelope linear, conf. max Ty', modelMaxTy, topOptEnvLinear, volFr);
+% plotSegmentResultsStep8('EnvelopeLinear_maxTy', 'Envelope linear, conf. max Ty', modelMaxTy, topOptEnvLinear, volFr);
+% plotSegmentResultsStep8('EnvelopeLinear_maxTz', 'Envelope linear, conf. max Ms', modelMaxTz, topOptEnvLinear, volFr);
+% plotSegmentResultsStep8('EnvelopeLinear_maxMs', 'Envelope linear, conf. max Ms', modelMaxMs, topOptEnvLinear, volFr);
+% plotSegmentResultsStep8('EnvelopeLinear_maxMy', 'Envelope linear, conf. max My', modelMaxMy, topOptEnvLinear, volFr);
+% plotSegmentResultsStep8('EnvelopeLinear_maxMz', 'Envelope linear, conf. max Mz', modelMaxMz, topOptEnvLinear, volFr);
+% 
+% plotSegmentResultsStep8('EnvelopeBuckling_maxN',  'Envelope buckling, conf. max N',  modelMaxN,  topOptEnvBuckling, volFr);
+% plotSegmentResultsStep8('EnvelopeBuckling_maxTy', 'Envelope buckling, conf. max Ty', modelMaxTy, topOptEnvBuckling, volFr);
+% plotSegmentResultsStep8('EnvelopeBuckling_maxTy', 'Envelope buckling, conf. max Ty', modelMaxTy, topOptEnvBuckling, volFr);
+% plotSegmentResultsStep8('EnvelopeBuckling_maxTz', 'Envelope buckling, conf. max Ms', modelMaxTz, topOptEnvBuckling, volFr);
+% plotSegmentResultsStep8('EnvelopeBuckling_maxMs', 'Envelope buckling, conf. max Ms', modelMaxMs, topOptEnvBuckling, volFr);
+% plotSegmentResultsStep8('EnvelopeBuckling_maxMy', 'Envelope buckling, conf. max My', modelMaxMy, topOptEnvBuckling, volFr);
+% plotSegmentResultsStep8('EnvelopeBuckling_maxMz', 'Envelope buckling, conf. max Mz', modelMaxMz, topOptEnvBuckling, volFr);
+
 
 [maxHM_dd(1), maxDisp_dd(1), maxHM_top(1), maxDisp_top(1)] = prepareResults("linear_average","maxN", modelMaxN, R, r, alpha, res , res_thickness, segmentLength, max_seg_N, xopt_av, topOptAvLinear, sampleMaxN, dispFactor,Rfilter,cutTreshold,penal,Pz);
 [maxHM_dd(2), maxDisp_dd(2), maxHM_top(2), maxDisp_top(2)] = prepareResults("linear_average","maxT_y", modelMaxTy, R, r, alpha, res , res_thickness, segmentLength, max_seg_Ty, xopt_av, topOptAvLinear, sampleMaxTy, dispFactor,Rfilter,cutTreshold,penal,Pz);

@@ -1,5 +1,7 @@
 function [maxHM_solid, maxDisp_solid, maxHM_top, maxDisp_top] =plotSegmentResultsStep8(fileName, scheme_title, model, topOpt, volFr)
     
+    fileName = "figs/step8/"+fileName;
+
     topOpt.setFrame(topOpt.findFrame(volFr)); 
     x = topOpt.x;
    
@@ -37,58 +39,58 @@ function [maxHM_solid, maxDisp_solid, maxHM_top, maxDisp_top] =plotSegmentResult
     % xlabel("x");
     % ylabel("y");
     % zlabel("z");
-    % 
-    % light('Position', [-1 -2 5], 'Style', 'local');
-    % light('Position', [1 1 5], 'Style', 'infinite');
+
+    light('Position', [-1 -2 5], 'Style', 'local');
+    light('Position', [1 1 5], 'Style', 'infinite');
 
     qfem_solid = model.analysis.solveWeighted(xOnes);
     model.analysis.computeElementResults(xOnes);
     maxHM_solid = max(model.fe.results.gp.all(:,13));
     maxDisp_solid = max(abs(qfem_solid));
     
-    % model.analysis.felems{1}.selectedElems=[];
-    % model.analysis.plotMaps(["sHM"],0.0); 
-    % 
-    % view(45,25); 
-    % title("von Mises stress " + ", HM_{max}=" +  sprintf('%.2f',maxHM_solid) + " u_{max} = " + sprintf('%.2G', maxDisp_solid));
-    % 
-    % exportgraphics(gcf, fileName + "_arm_model_HM.png", 'Resolution', 600); 
-    % savefig(gcf, fileName + "__arm_model_HM.fig");
+    model.analysis.felems{1}.selectedElems=[];
+    model.analysis.plotMaps(["sHM"],0.0); 
+
+    view(45,25); 
+    title("von Mises stress " + ", HM_{max}=" +  sprintf('%.2f',maxHM_solid) + " u_{max} = " + sprintf('%.2G', maxDisp_solid));
+
+    exportgraphics(gcf, fileName + "_arm_model_HM.png", 'Resolution', 600); 
+    savefig(gcf, fileName + "__arm_model_HM.fig");
 
 
 
 
-    % topOpt.setFrame(topOpt.findFrame(volFr)); 
-    % 
-    % figure, hold on, axis on; 
-    % daspect([1 1 1]);
-    % xlabel("x");
-    % ylabel("y");
-    % zlabel("z");
-    % 
-    % light('Position', [-1 -2 5], 'Style', 'local');
-    % light('Position', [1 1 5], 'Style', 'infinite');
-    % 
-    % model.analysis.felems{1}.plotSolidSelected(model.mesh.nodes,elemsInTop);
-    % 
-    % view(45,25); 
-    % title( scheme_title + "Topology of manipulator" );
-    % 
-    % exportgraphics(gcf, fileName + "_arm_topology.png", 'Resolution', 600); 
-    % savefig(gcf, fileName + "__arm_topology.fig");
-
-
-
-
+    topOpt.setFrame(topOpt.findFrame(volFr)); 
 
     % figure, hold on, axis on; 
     % daspect([1 1 1]);
     % xlabel("x");
     % ylabel("y");
     % zlabel("z");
-    % 
-    % light('Position', [-1 -2 5], 'Style', 'local');
-    % light('Position', [1 1 5], 'Style', 'infinite');
+
+    light('Position', [-1 -2 5], 'Style', 'local');
+    light('Position', [1 1 5], 'Style', 'infinite');
+
+    model.analysis.felems{1}.plotSolidSelected(model.mesh.nodes,elemsInTop);
+
+    view(45,25); 
+    title( scheme_title + "Topology of manipulator" );
+
+    exportgraphics(gcf, fileName + "_arm_topology.png", 'Resolution', 600); 
+    savefig(gcf, fileName + "__arm_topology.fig");
+
+
+
+
+
+    figure, hold on, axis on; 
+    daspect([1 1 1]);
+    xlabel("x");
+    ylabel("y");
+    zlabel("z");
+
+    light('Position', [-1 -2 5], 'Style', 'local');
+    light('Position', [1 1 5], 'Style', 'infinite');
     
     
     qfem_top = model.analysis.solveWeighted(xoptFull);
@@ -97,15 +99,15 @@ function [maxHM_solid, maxDisp_solid, maxHM_top, maxDisp_top] =plotSegmentResult
     maxDisp_top = max(abs(qfem_top));
 
 
-    % model.analysis.felems{1}.selectedElems=elemsInTop;
-    % model.analysis.plotMaps(["sHM"],0.0); 
-    % 
-    % model.analysis.felems{1}.selectedElems=[];
-    % view(45,25); 
-    % title( scheme_title + "von Mises stress, HM_{max}=" +  sprintf('%.2f',maxHM_top) + " u_{max} = " + sprintf('%.2G', maxDisp_top));
-    % 
-    % exportgraphics(gcf, fileName + "_arm_topologyHM.png", 'Resolution', 600); 
-    % savefig(gcf, fileName + "_arm_topologyHM.fig");
+    model.analysis.felems{1}.selectedElems=elemsInTop;
+    model.analysis.plotMaps(["sHM"],0.0); 
+
+    model.analysis.felems{1}.selectedElems=[];
+    view(45,25); 
+    title( scheme_title + "von Mises stress, HM_{max}=" +  sprintf('%.2f',maxHM_top) + " u_{max} = " + sprintf('%.2G', maxDisp_top));
+
+    exportgraphics(gcf, fileName + "_arm_topologyHM.png", 'Resolution', 600); 
+    savefig(gcf, fileName + "_arm_topologyHM.fig");
 
 
 
@@ -116,36 +118,36 @@ function [maxHM_solid, maxDisp_solid, maxHM_top, maxDisp_top] =plotSegmentResult
     xOnes=x;
     xOnes(:)=1;
 
-    % figure, hold on, axis on; 
-    % daspect([1 1 1]);
-    % xlabel("x");
-    % ylabel("y");
-    % zlabel("z");
-    % 
-    % light('Position', [-1 -2 5], 'Style', 'local');
-    % light('Position', [1 1 5], 'Style', 'infinite');
-    % 
-    % topOpt.x=xOnes;
-    % 
-    % model.fe.edge_color='None';
-    % 
-    % qnodal_solid = model.analysis.fromFEMVector(qfem_solid);
-    % qnodal_top = model.analysis.fromFEMVector(qfem_top);
-    % 
-    % model.analysis.felems{1}.plotSolidDeformed(model.mesh.nodes,qnodal_solid,0.0,1);
-    % model.analysis.felems{1}.face_alpha=0.2;
-    % model.analysis.felems{1}.plotSolidDeformed(model.mesh.nodes,qnodal_solid,0.2,1);
-    % model.analysis.felems{1}.face_color=[0.8 0.0 0.0];
-    % 
-    % model.analysis.felems{1}.selectedElems=elemsInTop;
-    % model.analysis.felems{1}.plotSolidDeformed(model.mesh.nodes,qnodal_top,0.2,elemsInTop);
-    % model.analysis.felems{1}.selectedElems=[];
-    % view(45,25); 
-    % title( scheme_title + "arm model" );
-    % 
-    % model.fe.face_alpha=1.0;
-    % 
-    % exportgraphics(gcf, fileName + "_arm_model_deformed.png", 'Resolution', 600); 
-    % savefig(gcf, fileName + "__arm_model_deformed.fig");
+    figure, hold on, axis on; 
+    daspect([1 1 1]);
+    xlabel("x");
+    ylabel("y");
+    zlabel("z");
+
+    light('Position', [-1 -2 5], 'Style', 'local');
+    light('Position', [1 1 5], 'Style', 'infinite');
+
+    topOpt.x=xOnes;
+
+    model.fe.edge_color='None';
+
+    qnodal_solid = model.analysis.fromFEMVector(qfem_solid);
+    qnodal_top = model.analysis.fromFEMVector(qfem_top);
+
+    model.analysis.felems{1}.plotSolidDeformed(model.mesh.nodes,qnodal_solid,0.0,1);
+    model.analysis.felems{1}.face_alpha=0.2;
+    model.analysis.felems{1}.plotSolidDeformed(model.mesh.nodes,qnodal_solid,0.2,1);
+    model.analysis.felems{1}.face_color=[0.8 0.0 0.0];
+
+    model.analysis.felems{1}.selectedElems=elemsInTop;
+    model.analysis.felems{1}.plotSolidDeformed(model.mesh.nodes,qnodal_top,0.2,elemsInTop);
+    model.analysis.felems{1}.selectedElems=[];
+    view(45,25); 
+    title( scheme_title + "arm model" );
+
+    model.fe.face_alpha=1.0;
+
+    exportgraphics(gcf, fileName + "_arm_model_deformed.png", 'Resolution', 600); 
+    savefig(gcf, fileName + "__arm_model_deformed.fig");
      
 end
