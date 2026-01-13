@@ -12,7 +12,7 @@ classdef LinearElasticityWeighted < FEAnalysis
        end
        function K = globalMatrixAggregationWeighted(obj, fname, x)
             K = [];
-            ei = getElemIndices(obj);
+            ei = obj.getElemIndices();
             if numel(x) == 1
                 x = ones(obj.getTotalElemsNumber() ,1);
             end

@@ -1,11 +1,11 @@
-function [vN, vTy, vTz, vMs, vMy, vMz, all_forces] = computeAllInternalForces(frameNodes,frameElems,E,nu,R,r,betas)
+function [vN, vTy, vTz, vMs, vMy, vMz, all_forces] = computeAllInternalForces(frameNodes,frameElems,E,nu,R,r,betas, Pz)
     mesh=Mesh();
     mesh.nodes=frameNodes(:,:,1);
     frameElem=Frame3D(frameElems,E,nu, R,r);
     nSamples = size( frameNodes, 3 );
     analysis = LinearElasticityWeighted( frameElem, mesh, false );
     analysis.fixClosestNode([0 0 0], ["ux" "uy" "uz" "fix" "fiy" "fiz"], [0 0 0 0 0 0]);
-    analysis.loadClosestNode(mesh.nodes(end,:), ["ux" "uy" "uz" "fix" "fiy" "fiz"], [0 0 -1 0 0 0] );
+    analysis.loadClosestNode(mesh.nodes(end,:), ["ux" "uy" "uz" "fix" "fiy" "fiz"], [0 0 -Pz 0 0 0] );
     x=ones(size(frameElem.elems,1),1);
     vN  = zeros( nSamples, 2, 6 );
     vTz = zeros( nSamples, 2, 6 );
