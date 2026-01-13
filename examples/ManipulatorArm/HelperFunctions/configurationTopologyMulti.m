@@ -9,7 +9,7 @@ function [xopt_av, xopt_av_lambda, xoptBuckling_av, xoptBuckling_av_lambda, xopt
          mesh=Mesh();
          frameElem=Frame3D(frameElems,E,nu,R,r);
          mesh.nodes=model.frameNodes;
-         [Fel, ~] = computeInternalForces(frameElem,mesh);
+         [Fel, ~] = computeInternalForces(frameElem,mesh,Pz);
          N  = Fel(1,max_segments(k))*loadFactor;
          Ty = Fel(2,max_segments(k))*loadFactor;
          Tz = Fel(3,max_segments(k))*loadFactor;
@@ -20,6 +20,9 @@ function [xopt_av, xopt_av_lambda, xoptBuckling_av, xoptBuckling_av_lambda, xopt
          analysesLinear = [ analysesLinear analysisLinear ];
          analysesBuckling = [ analysesBuckling analysisWithBuckling ];
      end
+
+     figure, hold on;
+     analysisLinear.plotFiniteElements();
 
     topOptMultiLinear = StressIntensityMultiAvTopologyOptimization(Rmin,analysesLinear,maxais,penal,volFr,is_const);
     topOptMultiLinear.setConstElems(const_elems);
@@ -45,7 +48,7 @@ function [xopt_av, xopt_av_lambda, xoptBuckling_av, xoptBuckling_av_lambda, xopt
          frameElem=Frame3D(frameElems,E,nu,R,r);
          mesh.nodes=model.frameNodes;
          barNumber=2;
-         [Fel, ~] = computeInternalForces(frameElem,mesh);
+         [Fel, ~] = computeInternalForces(frameElem,mesh,Pz);
          N  = Fel(1,barNumber)*newLoadFactor;
          Ty = Fel(2,barNumber)*newLoadFactor;
          Tz = Fel(3,barNumber)*newLoadFactor;

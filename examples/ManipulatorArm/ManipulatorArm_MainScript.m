@@ -56,10 +56,10 @@ daspect([1 1 1]);
 
 %[~, ~, frameNodes] = computeArmSamples(E, nu, segmentLength, alpha, samples );
 
-%save("ManipulatorFrameConfigurations200K.mat","frameNodes");
+%ave("ManipulatorFrameConfigurations200K.mat","frameNodes");
 load("ManipulatorFrameConfigurations200K.mat","frameNodes");
 
-max(max(max(frameNodes)))
+max(max(max(frameNodes)));
 
 % figure;
 % hold on, axis on; 
@@ -70,7 +70,7 @@ max(max(max(frameNodes)))
 % scatter3(endPoints(:,1),endPoints(:,2),endPoints(:,3),'Marker','.');
 % scatter3(endPoints(:,1),endPoints(:,2),endPoints(:,3)*0-3,'Marker','.','MarkerEdgeColor','r');
 
-%[vN, vTy, vTz, vMs, vMy, vMz, all_forces] = computeAllInternalForces( frameNodes, frameElems, E, nu, R, r, samples);
+%[vN, vTy, vTz, vMs, vMy, vMz, all_forces] = computeAllInternalForces( frameNodes, frameElems, E, nu, R, r, samples, Pz);
 
 %save("ManipulatorFrameForces200K.mat","vN", "vTy", "vTz", "vMs", "vMy", "vMz", "all_forces");
 load("ManipulatorFrameForces200K.mat","vN", "vTy", "vTz", "vMs", "vMy", "vMz", "all_forces");
@@ -314,8 +314,8 @@ modelMaxMs.analysis.felems{1}.face_alpha=1;
 
 [xopt_av, xopt_av_lambda, xoptBuckling_av, xoptBuckling_av_lambda, xopt_max, xopt_max_lambda, xoptBuckling_max, xoptBuckling_max_lambda, newLoadFactor, topOptAvLinear, topOptEnvLinear, topOptAvBuckling, topOptEnvBuckling ] = configurationTopologyMulti(E,nu,R,r,res, res_thickness, segmentLength,ShapeFn,alpha,modeSamples,frameElems, real_max_segments, loadFactor,Pz, Rfilter, cutTreshold, penal, volFr, false, 11);
 
-%save("ComposedTopologyMultiMaxAvTwoRings_Rev.mat","xopt_av", "xopt_av_lambda", "xoptBuckling_av", "xoptBuckling_av_lambda", "xopt_max", "xopt_max_lambda", "xoptBuckling_max", "xoptBuckling_max_lambda", "newLoadFactor", "topOptAvLinear", "topOptEnvLinear", "topOptAvBuckling", "topOptEnvBuckling" );
-load("ComposedTopologyMultiMaxAvTwoRings_Rev.mat","xopt_av", "xopt_av_lambda", "xoptBuckling_av", "xoptBuckling_av_lambda", "xopt_max", "xopt_max_lambda", "xoptBuckling_max", "xoptBuckling_max_lambda", "newLoadFactor", "topOptAvLinear", "topOptEnvLinear", "topOptAvBuckling", "topOptEnvBuckling");
+save("ComposedTopologyMultiMaxAvTwoRings_Rev.mat","xopt_av", "xopt_av_lambda", "xoptBuckling_av", "xoptBuckling_av_lambda", "xopt_max", "xopt_max_lambda", "xoptBuckling_max", "xoptBuckling_max_lambda", "newLoadFactor", "topOptAvLinear", "topOptEnvLinear", "topOptAvBuckling", "topOptEnvBuckling" );
+%load("ComposedTopologyMultiMaxAvTwoRings_Rev.mat","xopt_av", "xopt_av_lambda", "xoptBuckling_av", "xoptBuckling_av_lambda", "xopt_max", "xopt_max_lambda", "xoptBuckling_max", "xoptBuckling_max_lambda", "newLoadFactor", "topOptAvLinear", "topOptEnvLinear", "topOptAvBuckling", "topOptEnvBuckling");
 
 axisDir   = [0 0 1];
 axisPoint = [R 0 0];  % center in XY
@@ -376,7 +376,7 @@ maxDisp_top = zeros(6,1);
 % plotSegmentResultsStep7('segment_topology_AvBuck', 'Average buckling', topOptAvBuckling, newLoadFactor, volFr);
 % plotSegmentResultsStep7('segment_topology_EnvBuck', 'Envelope buckling', topOptEnvBuckling, newLoadFactor, volFr);
 
-plotSegmentResultsStep8('arm_topology_AvLin', 'Average linear', modelMaxN, topOptAvLinear, volFr);
+%plotSegmentResultsStep8('arm_topology_AvLin', 'Average linear', modelMaxN, topOptAvLinear, volFr);
 
 [maxHM_dd(1), maxDisp_dd(1), maxHM_top(1), maxDisp_top(1)] = prepareResults("linear_average","maxN", modelMaxN, R, r, alpha, res , res_thickness, segmentLength, max_seg_N, xopt_av, topOptAvLinear, sampleMaxN, dispFactor,Rfilter,cutTreshold,penal,Pz);
 [maxHM_dd(2), maxDisp_dd(2), maxHM_top(2), maxDisp_top(2)] = prepareResults("linear_average","maxT_y", modelMaxTy, R, r, alpha, res , res_thickness, segmentLength, max_seg_Ty, xopt_av, topOptAvLinear, sampleMaxTy, dispFactor,Rfilter,cutTreshold,penal,Pz);
