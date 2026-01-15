@@ -3,7 +3,7 @@ classdef ManipulatorModel3D < handle
     
     properties
         analysis, frame_analysis, fixedEdgeSelector, alpha, mesh, frame_mesh, elems, fe, xEnd, frameNodes, frameElem
-        const_elems, upper_nodes, loadSurfaceNodes, fixedSurfaceNodes, halfSegmentNelems, use_offset;
+        const_elems, upper_nodes, loadSurfaceNodes, fixedSurfaceNodes, halfSegmentNelems, use_offset, qnodal_solid, qnodal_top;
     end
     
     methods                       
@@ -376,7 +376,7 @@ classdef ManipulatorModel3D < handle
             view(3);                % default 3D
             axis equal;
 
-            title({ description, [' Q_1= ' sprintf('%.2f',genforces(1)) ', Q_2= ' sprintf('%.2f',genforces(2)) ', Q_3= ' sprintf('%.2f',genforces(3)) ', Q_4= ' sprintf('%.2f',genforces(4)) ', Q_5= ' sprintf('%.2f',genforces(5)) ', Q_6= ' sprintf('%.2f',genforces(6))]}, 'FontWeight','bold');
+            title({ description, [' Q_1= ' sprintf('%.2f',genforces(1)) ', Q_2= ' sprintf('%.2f',genforces(2)) ', Q_3= ' sprintf('%.2f',genforces(3)) ', Q_4= ' sprintf('%.2f',genforces(4)) ', Q_5= ' sprintf('%.2f',genforces(5)) ', Q_6= ' sprintf('%.2f',genforces(6))]}, 'FontWeight','bold', 'FontSize', 28);
 
             obj.fe.face_alpha = 1.0;
             obj.fe.edge_color=ec;

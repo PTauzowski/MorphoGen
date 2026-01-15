@@ -42,6 +42,8 @@ segmentLength=0.15; % m, segment length
 res=15;
 res_thickness=1;
 
+A  = pi*(R^2 - r^2);
+
 Pz = 100; % N -  Vertical force at the end of manipulator;
 
 %[~, ~, frameNodes] = computeArmSamples(E, nu, segmentLength, alpha, samples );
@@ -49,7 +51,7 @@ Pz = 100; % N -  Vertical force at the end of manipulator;
 %save("ManipulatorFrameConfigurations200K.mat","frameNodes");
 load("ManipulatorFrameConfigurations200K.mat","frameNodes");
 
-max(max(max(frameNodes)))
+max(max(max(frameNodes)));
 
 % figure;
 % hold on, axis on; 
@@ -64,7 +66,7 @@ modelRef  = ManipulatorModel3D(E, nu, segmentLength, R, r, res, res_thickness, a
 modelRef.fe.plot(modelRef.mesh.nodes);
 daspect([1 1 1]);
 
-%[vN, vTy, vTz, vMs, vMy, vMz, all_forces] = computeAllInternalForces( frameNodes, frameElems, E, nu, R, r, samples);
+%[vN, vTy, vTz, vMs, vMy, vMz, all_forces] = computeAllInternalForces( frameNodes, frameElems, E, nu, R, r, samples, Pz);
 
 %save("ManipulatorFrameForces200K.mat","vN", "vTy", "vTz", "vMs", "vMy", "vMz", "all_forces");
 load("ManipulatorFrameForces200K.mat","vN", "vTy", "vTz", "vMs", "vMy", "vMz", "all_forces");
@@ -124,10 +126,6 @@ sampleMaxMs = samples(max_conf_Ms,:);
 sampleMaxMy = samples(max_conf_My,:);
 sampleMaxMz = samples(max_conf_Mz,:);
 
-% [vMin, imin]=min(maxHM);
-% [vMax, imax]=max(maxHM);
-% [vSort, iSort]=sort(maxHM);
-
 modelMaxN  = ManipulatorModel3D(E,nu,segmentLength,R,r,res, res_thickness, alpha, sampleMaxN,  ShapeFn, true, Pz);
 modelMaxTy = ManipulatorModel3D(E,nu,segmentLength,R,r,res, res_thickness, alpha, sampleMaxTy, ShapeFn, true, Pz);
 modelMaxTz = ManipulatorModel3D(E,nu,segmentLength,R,r,res, res_thickness, alpha, sampleMaxTz, ShapeFn, true, Pz);
@@ -135,29 +133,14 @@ modelMaxMs = ManipulatorModel3D(E,nu,segmentLength,R,r,res, res_thickness, alpha
 modelMaxMy = ManipulatorModel3D(E,nu,segmentLength,R,r,res, res_thickness, alpha, sampleMaxMy, ShapeFn, true, Pz);
 modelMaxMz = ManipulatorModel3D(E,nu,segmentLength,R,r,res, res_thickness, alpha, sampleMaxMz, ShapeFn, true, Pz);
 
-%  modelMaxN.plotConfigurations('max_Q1', 'Configuration for extremal Q_1', gen_forces_maxN,sampleMaxN,max_seg_N);
-%  modelMaxN.plotMesh();
-% % 
-% modelMaxN.compute(1);
-% modelMaxN.plotHM_map(1)
-% % 
-% modelMaxTy.plotConfigurations('max_Q2','Configuration for extremal Q_2',gen_forces_maxTy,sampleMaxTy,max_seg_Ty);
-% modelMaxTz.plotConfigurations('max_Q3','Configuration for extremal Q_3',gen_forces_maxTz,sampleMaxTz,max_seg_Tz);
-% modelMaxMs.plotConfigurations('max_Q4','Configuration for extremal Q_4',gen_forces_maxMs,sampleMaxMs,max_seg_Ms);
-% modelMaxMy.plotConfigurations('max_Q5','Configuration for extremal Q_5',gen_forces_maxMy,sampleMaxMy,max_seg_My);
-% modelMaxMz.plotConfigurations('max_Q6','Configuration for extremal Q_6',gen_forces_maxMz,sampleMaxMz,max_seg_Mz);
-
-modelMaxTy.saveModelMatrices("max_Q2");
+% modelMaxN.plotConfigurations('max_Q1', 'Configuration for extremal Q_1 [N]',gen_forces_maxN,sampleMaxN,max_seg_N);
+% modelMaxTy.plotConfigurations('max_Q2','Configuration for extremal Q_2 [N]',gen_forces_maxTy,sampleMaxTy,max_seg_Ty);
+% modelMaxTz.plotConfigurations('max_Q3','Configuration for extremal Q_3 [N]',gen_forces_maxTz,sampleMaxTz,max_seg_Tz);
+% modelMaxMs.plotConfigurations('max_Q4','Configuration for extremal Q_4 [N]',gen_forces_maxMs,sampleMaxMs,max_seg_Ms);
+% modelMaxMy.plotConfigurations('max_Q5','Configuration for extremal Q_5 [N]',gen_forces_maxMy,sampleMaxMy,max_seg_My);
+% modelMaxMz.plotConfigurations('max_Q6','Configuration for extremal Q_6 [N]',gen_forces_maxMz,sampleMaxMz,max_seg_Mz);
 % 
-% fig = figure;
-% hold on, axis on; 
-% daspect([1 1 1]);
-% xlabel("x");
-% ylabel("y");
-% zlabel("z");
-% light('Position', [-1 -2 5], 'Style', 'local');
-% light('Position', [1 1 5], 'Style', 'infinite');
-% gca.FontSize = 18;
+% modelMaxTy.saveModelMatrices("max_Q2");
 
 % modelMaxTy.plotMesh();
 % modelMaxTz.plotMesh();
@@ -365,30 +348,30 @@ maxDisp_top = zeros(6,1);
 % plotStep5('segment_model_My', 'segment model, configuration max My', R, modelMaxMy, topOptEnvLinear, [0 0 0 0 1 0] );
 % plotStep5('segment_model_Mz', 'segment model, configuration max Mz', R, modelMaxMz, topOptEnvLinear, [0 0 0 0 0 1] );
 
- plotSegmentResultsStep6('segment_model_AvLin', 'Linear average model', topOptAvLinear, 0.4);
-% plotSegmentResultsStep6('segment_model_EnvLin', 'Linear envelope model', topOptEnvLinear, 0.4);
-% plotSegmentResultsStep6('segment_model_AvBuckling', 'Linear average model', topOptAvBuckling, 0.4);
-% plotSegmentResultsStep6('segment_model_EnvBuckling', 'Linear average model', topOptEnvBuckling, 0.4);
+% plotSegmentResultsStep6('segment_model_AvLin', 'Linear average model', topOptAvLinear, volFr);
+% plotSegmentResultsStep6('segment_model_EnvLin', 'Linear envelope model', topOptEnvLinear, volFr);
+% plotSegmentResultsStep6('segment_model_AvBuckling', 'Linear average model', topOptAvBuckling, volFr);
+% plotSegmentResultsStep6('segment_model_EnvBuckling', 'Linear average model', topOptEnvBuckling, volFr);
+% 
+% plotSegmentResultsStep7('segment_topology_AvLin', 'Average linear', topOptAvLinear, newLoadFactor*0+1, volFr);
+% plotSegmentResultsStep7('segment_topology_EnvLin', 'Envelope linear', topOptEnvLinear, newLoadFactor*0+1, volFr );
+% plotSegmentResultsStep7('segment_topology_AvBuck', 'Average buckling', topOptAvBuckling, newLoadFactor*0+1, volFr);
+% plotSegmentResultsStep7('segment_topology_EnvBuck', 'Envelope buckling', topOptEnvBuckling, newLoadFactor*0+1, volFr);
 
- plotSegmentResultsStep7('segment_topology_AvLin', 'Average linear', topOptAvLinear, newLoadFactor, volFr);
-% plotSegmentResultsStep7('segment_topology_EnvLin', 'Envelope linear', topOptEnvLinear, newLoadFactor, volFr );
-% plotSegmentResultsStep7('segment_topology_AvBuck', 'Average buckling', topOptAvBuckling, newLoadFactor, volFr);
-% plotSegmentResultsStep7('segment_topology_EnvBuck', 'Envelope buckling', topOptEnvBuckling, newLoadFactor, volFr);
-
-plotSegmentResultsStep8('EnvelopeLinear_maxN',  'Envelope linear, conf. max N',  modelMaxN,  topOptEnvLinear, volFr);
+% plotSegmentResultsStep8('EnvelopeLinear_maxN',  'Envelope linear, conf. max N',  modelMaxN,  topOptEnvLinear, volFr);
 % plotSegmentResultsStep8('EnvelopeLinear_maxTy', 'Envelope linear, conf. max Ty', modelMaxTy, topOptEnvLinear, volFr);
 % plotSegmentResultsStep8('EnvelopeLinear_maxTy', 'Envelope linear, conf. max Ty', modelMaxTy, topOptEnvLinear, volFr);
 % plotSegmentResultsStep8('EnvelopeLinear_maxTz', 'Envelope linear, conf. max Ms', modelMaxTz, topOptEnvLinear, volFr);
-% plotSegmentResultsStep8('EnvelopeLinear_maxMs', 'Envelope linear, conf. max Ms', modelMaxMs, topOptEnvLinear, volFr);
-% plotSegmentResultsStep8('EnvelopeLinear_maxMy', 'Envelope linear, conf. max My', modelMaxMy, topOptEnvLinear, volFr);
+ % plotSegmentResultsStep8('EnvelopeLinear_maxMs', 'Envelope linear, conf. max Ms ', modelMaxMs, topOptEnvLinear, volFr);
+ % plotSegmentResultsStep8('EnvelopeLinear_maxMy', 'Envelope linear, conf. max My', modelMaxMy, topOptEnvLinear, volFr);
 % plotSegmentResultsStep8('EnvelopeLinear_maxMz', 'Envelope linear, conf. max Mz', modelMaxMz, topOptEnvLinear, volFr);
-% 
+
 % plotSegmentResultsStep8('EnvelopeBuckling_maxN',  'Envelope buckling, conf. max N',  modelMaxN,  topOptEnvBuckling, volFr);
 % plotSegmentResultsStep8('EnvelopeBuckling_maxTy', 'Envelope buckling, conf. max Ty', modelMaxTy, topOptEnvBuckling, volFr);
 % plotSegmentResultsStep8('EnvelopeBuckling_maxTy', 'Envelope buckling, conf. max Ty', modelMaxTy, topOptEnvBuckling, volFr);
 % plotSegmentResultsStep8('EnvelopeBuckling_maxTz', 'Envelope buckling, conf. max Ms', modelMaxTz, topOptEnvBuckling, volFr);
-% plotSegmentResultsStep8('EnvelopeBuckling_maxMs', 'Envelope buckling, conf. max Ms', modelMaxMs, topOptEnvBuckling, volFr);
-% plotSegmentResultsStep8('EnvelopeBuckling_maxMy', 'Envelope buckling, conf. max My', modelMaxMy, topOptEnvBuckling, volFr);
+ % plotSegmentResultsStep8('EnvelopeBuckling_maxMs', 'Envelope buckling, conf. max Ms ', modelMaxMs, topOptEnvBuckling, volFr);
+ % plotSegmentResultsStep8('EnvelopeBuckling_maxMy', 'Envelope buckling, conf. max My', modelMaxMy, topOptEnvBuckling, volFr);
 % plotSegmentResultsStep8('EnvelopeBuckling_maxMz', 'Envelope buckling, conf. max Mz', modelMaxMz, topOptEnvBuckling, volFr);
 
 
@@ -400,7 +383,7 @@ plotSegmentResultsStep8('EnvelopeLinear_maxN',  'Envelope linear, conf. max N', 
 [maxHM_dd(6), maxDisp_dd(6), maxHM_top(6), maxDisp_top(6)] = prepareResults("linear_average","maxM_z", modelMaxMz, R, r, alpha, res , res_thickness, segmentLength, max_seg_Mz, xopt_av, topOptAvLinear, sampleMaxMz, dispFactor,Rfilter,cutTreshold,penal,Pz);
 
 T1 = table(ConfigNames,maxHM_dd,maxDisp_dd,maxHM_top,maxDisp_top);
-T1.Properties.VariableNames = {'Config name' 'max HM design domain'  'u_max design domain'  'max HM topology'  'u_max topology'  };
+T1.Properties.VariableNames = {'Config name' 'max HM design domain [kPa]'  'u_max design domain [mm]'  'max HM topology [kPa]'  'u_max topology [mm]'  };
 T1.Properties.Description = 'Linear analysis, average stress intensity';
 [maxHM_dd(1), maxDisp_dd(1), maxHM_top(1), maxDisp_top(1)] = prepareResults("linear_envelope","maxN", modelMaxN, R, r, alpha, res , res_thickness, segmentLength, max_seg_N, xopt_max, topOptEnvLinear, sampleMaxN, dispFactor,Rfilter,cutTreshold,penal,Pz);
 [maxHM_dd(2), maxDisp_dd(2), maxHM_top(2), maxDisp_top(2)] = prepareResults("linear_envelope","maxT_y", modelMaxTy, R, r, alpha, res , res_thickness, segmentLength, max_seg_Ty, xopt_max, topOptEnvLinear, sampleMaxTy, dispFactor,Rfilter,cutTreshold,penal,Pz);
@@ -410,7 +393,7 @@ T1.Properties.Description = 'Linear analysis, average stress intensity';
 [maxHM_dd(6), maxDisp_dd(6), maxHM_top(6), maxDisp_top(6)] = prepareResults("linear_envelope","maxM_z", modelMaxMz, R, r, alpha, res , res_thickness, segmentLength, max_seg_Mz, xopt_max, topOptEnvLinear, sampleMaxMz, dispFactor,Rfilter,cutTreshold,penal,Pz);
 
 T2 = table(ConfigNames,maxHM_dd,maxDisp_dd,maxHM_top,maxDisp_top);
-T2.Properties.VariableNames = {'Config name' 'max HM design domain'  'u_max design domain'  'max HM topology'  'u_max topology'  };
+T2.Properties.VariableNames = {'Config name' 'max HM design domain [kPa]'  'u_max design domain [mm]'  'max HM topology [kPa]'  'u_max topology [mm]'  };
 T2.Properties.Description = 'Linear analysis, envelope stress intensity';
 
 [maxHM_dd(1), maxDisp_dd(1), maxHM_top(1), maxDisp_top(1)] = prepareResults("buckling_average","maxN", modelMaxN, R, r, alpha, res, res_thickness , segmentLength, max_seg_N, xoptBuckling_av, topOptAvBuckling, sampleMaxN, dispFactor,Rfilter,cutTreshold,penal,Pz);
@@ -421,7 +404,7 @@ T2.Properties.Description = 'Linear analysis, envelope stress intensity';
 [maxHM_dd(6), maxDisp_dd(6), maxHM_top(6), maxDisp_top(6)] = prepareResults("buckling_average","maxM_z", modelMaxMz, R, r, alpha, res, res_thickness , segmentLength, max_seg_Mz, xoptBuckling_av, topOptAvBuckling, sampleMaxMz, dispFactor,Rfilter,cutTreshold,penal,Pz);
 
 T3 = table(ConfigNames,maxHM_dd,maxDisp_dd,maxHM_top,maxDisp_top);
-T3.Properties.VariableNames = {'Config name' 'max HM design domain'  'u_max design domain'  'max HM topology'  'u_max topology'  };
+T3.Properties.VariableNames = {'Config name' 'max HM design domain [kPa]'  'u_max design domain [mm]'  'max HM topology [kPa]'  'u_max topology [mm]'  };
 T3.Properties.Description = 'Linear analysis with buckling, average stress intensity';
 
 [maxHM_dd(1), maxDisp_dd(1), maxHM_top(1), maxDisp_top(1)] = prepareResults("buckling_envelope","maxN", modelMaxN, R, r, alpha, res , res_thickness, segmentLength, max_seg_N, xoptBuckling_max, topOptEnvBuckling, sampleMaxN, dispFactor,Rfilter,cutTreshold,penal,Pz);
@@ -432,17 +415,18 @@ T3.Properties.Description = 'Linear analysis with buckling, average stress inten
 [maxHM_dd(6), maxDisp_dd(6), maxHM_top(6), maxDisp_top(6)] = prepareResults("buckling_envelope","maxM_z", modelMaxMz, R, r, alpha, res , res_thickness, segmentLength, max_seg_Mz, xoptBuckling_max, topOptEnvBuckling, sampleMaxMz, dispFactor,Rfilter,cutTreshold,penal,Pz);
 
 T4 = table(ConfigNames,maxHM_dd,maxDisp_dd,maxHM_top,maxDisp_top);
-T4.Properties.VariableNames = {'Config name' 'max HM design domain'  'u_max design domain'  'max HM topology'  'u_max topology'  };
+T4.Properties.VariableNames = {'Config name' 'max HM design domain [kPa]'  'u_max design domain [mm]'  'max HM topology [kPa]'  'u_max topology [mm]'  };
 T4.Properties.Description = 'Linear analysis with buckling, envelope stress intensity';
 
 % developResultsForTopology("TwoRingsEnvelope","Envelope topology",modelMaxMs, R, r, alpha, res , segmentLength, segmentNo,xoptBuckling_max,sampleMaxMs,dispFactor,Rfilter,cutTreshold,penal);
 % developResultsForTopology("TwoRingsAverageLinear","Average topology linear",modelMaxMs, R, r, alpha, res , segmentLength, segmentNo,xopt_av,sampleMaxMs,dispFactor,Rfilter,cutTreshold,penal);
 % developResultjsForTopology("TwoRingsEnvelopeLinear","Envelope topology linear",modelMaxMs, R, r, alpha, res , segmentLength, segmentNo,xopt_max,sampleMaxMs,dispFactor,Rfilter,cutTreshold,penal);
 % 
-plotArmTopOptConfigProjections("TwoRingsAverage", "Average topology",Rfilter, modelMaxMs.analysis, modelMaxMs.halfSegmentNelems, 2, xoptBuckling_av, cutTreshold, penal, false);
-plotArmTopOptConfigProjections("TwoRingsEnvelope","Envelope topology",Rfilter, modelMaxMs.analysis, modelMaxMs.halfSegmentNelems, 2, xoptBuckling_max, cutTreshold, penal, false);
-plotArmTopOptConfigProjections("TwoRingsAverageLinear", "Average topology linear",Rfilter, modelMaxMs.analysis, modelMaxMs.halfSegmentNelems, 2, xopt_av, cutTreshold, penal, false);
-plotArmTopOptConfigProjections("TwoRingsEnvelopeLinear","Envelope topology linear",Rfilter, modelMaxMs.analysis, modelMaxMs.halfSegmentNelems, 2, xopt_max, cutTreshold, penal, false);
+
+% plotArmTopOptConfigProjections("TwoRingsAverage", "Average topology",Rfilter, modelMaxMs.analysis, modelMaxMs.halfSegmentNelems, 2, xoptBuckling_av, cutTreshold, penal, false);
+% plotArmTopOptConfigProjections("TwoRingsEnvelope","Envelope topology",Rfilter, modelMaxMs.analysis, modelMaxMs.halfSegmentNelems, 2, xoptBuckling_max, cutTreshold, penal, false);
+% plotArmTopOptConfigProjections("TwoRingsAverageLinear", "Average topology linear",Rfilter, modelMaxMs.analysis, modelMaxMs.halfSegmentNelems, 2, xopt_av, cutTreshold, penal, false);
+% plotArmTopOptConfigProjections("TwoRingsEnvelopeLinear","Envelope topology linear",Rfilter, modelMaxMs.analysis, modelMaxMs.halfSegmentNelems, 2, xopt_max, cutTreshold, penal, false);
 
 
 T1.Properties.Description
