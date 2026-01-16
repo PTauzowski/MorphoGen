@@ -534,9 +534,17 @@ classdef Mesh < handle
             obj.transformMesh3DDegXY( x0, 90, [0 0 0] );
             obj.addQuarterCylinder( x0 , R, h, nr, localNodes );
         end
+        
         function addPipe3D(obj,x0,r,R,al1,al2,h1,h2,nr,nc,nz,lnodes)
             mesh=Mesh();
             mesh.addRectMesh3D( r, deg2rad(al1), h1, R-r, deg2rad(al2-al1), h2-h1, nr, nc, nz, lnodes);
+            mesh.transformToCylindrical3D(x0);
+            obj.mergeMesh(mesh);
+        end
+
+        function addRing3D(obj,x0, sf, x, nr, nc, nz, localNodes)
+            mesh=Mesh();
+            mesh.addShapedMesh3D( sf, x, [nr, nc, nz], localNodes);
             mesh.transformToCylindrical3D(x0);
             obj.mergeMesh(mesh);
         end
