@@ -9,10 +9,13 @@ classdef PillarModel < ModelLinear
         bank_h = 0;      % wysokość banku (<= suma "cap" warstw), ustaw w konstruktorze albo tu
         bank_r0 = 0;  
         sf
+        z_corners_coords
+        z_tolerance
     end
 
     methods
         function obj = PillarModel( top_R, pillar_layers, ground_layers, pillar_res, ground_res, pillar_chem, ground_chem, int_th, sf )
+            obj.z_tolerance=0.001;
             obj.top_R = top_R;
             obj.pillar_layers = pillar_layers;
             obj.ground_layers = ground_layers;
@@ -23,6 +26,7 @@ classdef PillarModel < ModelLinear
             obj.int_th = int_th;
             obj.sf = sf;
             obj.generateMesh();
+            obj.computeZNodalCoords();
         end
 
         function obj = generateMesh(obj)
@@ -83,6 +87,8 @@ classdef PillarModel < ModelLinear
                     bank_hres, 12, obj.sf.localNodes );
             end
 
+            
+
 
             Rbank =  1.5 * Rout;
 
@@ -132,6 +138,241 @@ classdef PillarModel < ModelLinear
            
          
 
+        end
+
+
+    function chem = chemFromZ(obj, z)
+        % chemFromZ  Map z-coordinates to per-layer chemistry.
+        %
+        % Input:
+        %   z    : vector/matrix of z-coordinates (any shape)
+        % Output:
+        %   chem : same shape as z, chemistry value per point
+        %
+        % Conventions:
+        %   - pillar occupies z >= 0, stacked upward with obj.pillar_layers
+        %   - ground occupies z < 0, stacked downward with obj.ground_layers
+        %   - if z is outside model range, it is clamped to the nearest layer
+        %
+        % Chemistry vectors:
+        %   - obj.pillar_chem must have length == numel(obj.pillar_layers)
+        %   - obj.ground_chem must have length == numel(obj.ground_layers)
+        %   - chem vectors can be numeric or cell arrays (e.g. strings/structs)
+
+        % ---- validate ----
+        if numel(obj.pillar_layers) ~= numel(obj.pillar_chem)
+            error('pillar_layers (%d) and pillar_chem (%d) must match.', ...
+                numel(obj.pillar_layers), numel(obj.pillar_chem));
+        end
+        if numel(obj.ground_layers) ~= numel(obj.ground_chem)
+            error('ground_layers (%d) and ground_chem (%d) must match.', ...
+                numel(obj.ground_layers), numel(obj.ground_chem));
+        end
+
+        z = double(z);
+        sz = size(z);
+
+        % choose output type
+        outIsCell = iscell(obj.pillar_chem) || iscell(obj.ground_chem);
+        if outIsCell
+            chem = cell(sz);
+        else
+            chem = zeros(sz);
+        end
+
+        tol = 0;
+        if isprop(obj,'z_tolerance') && ~isempty(obj.z_tolerance) && obj.z_tolerance > 0
+            tol = obj.z_tolerance;
+        end
+
+        % ---- pillar part: z >= 0 ----
+        pilMask = (z >= -tol);
+        if any(pilMask(:))
+            Hp = sum(obj.pillar_layers(:));
+            zp = z(pilMask);
+            zp = max(0, min(Hp, zp));                      % clamp
+
+            cumP = cumsum(obj.pillar_layers(:));           % top-down from z=0
+            idxP = arrayfun(@(zz) find(cumP >= zz - tol, 1, 'first'), zp);
+            idxP = max(1, min(numel(cumP), idxP));
+
+            if outIsCell
+                tmp = cell(size(zp));
+                for k = 1:numel(idxP)
+                    tmp{k} = obj.pillar_chem{idxP(k)};
+                end
+                chem(pilMask) = tmp;
+            else
+                chem(pilMask) = obj.pillar_chem(idxP);
+            end
+        end
+
+        % ---- ground part: z < 0 ----
+        grdMask = ~pilMask;
+        if any(grdMask(:))
+            Dg = sum(obj.ground_layers(:));
+            zg = z(grdMask);
+            zg = max(-Dg, min(0, zg));                     % clamp
+            depth = -zg;                                   % 0 at top, increases downward
+
+            cumG = cumsum(obj.ground_layers(:));
+            idxG = arrayfun(@(dd) find(cumG >= dd - tol, 1, 'first'), depth);
+            idxG = max(1, min(numel(cumG), idxG));
+
+            if outIsCell
+                tmp = cell(size(zg));
+                for k = 1:numel(idxG)
+                    tmp{k} = obj.ground_chem{idxG(k)};
+                end
+                chem(grdMask) = tmp;
+            else
+                chem(grdMask) = obj.ground_chem(idxG);
+            end
+        end
+    end
+
+
+
+        %==================================================================
+        % Z corner coords
+        %==================================================================
+        function computeZNodalCoords(obj)
+            zCornersPoints = [ ...
+                obj.mesh.nodes(obj.mesh.elems(:,1),  :); ...
+                obj.mesh.nodes(obj.mesh.elems(:,3),  :); ...
+                obj.mesh.nodes(obj.mesh.elems(:,7),  :); ...
+                obj.mesh.nodes(obj.mesh.elems(:,9),  :); ...
+                obj.mesh.nodes(obj.mesh.elems(:,19), :); ...
+                obj.mesh.nodes(obj.mesh.elems(:,21), :); ...
+                obj.mesh.nodes(obj.mesh.elems(:,25), :); ...
+                obj.mesh.nodes(obj.mesh.elems(:,27), :)  ];
+
+            obj.z_corners_coords = sort(unique(round(zCornersPoints(:,3) / obj.z_tolerance) * obj.z_tolerance), 'descend');
+        end
+
+        %==================================================================
+        % Eksport siatki i danych do pliku FEAP
+        % (bez zmian względem Twojej wersji)
+        %==================================================================
+        function FEAP_Export( obj, filename ) 
+            myfile = fopen(filename, "w");
+            if myfile < 0
+                error('Nie można otworzyć pliku %s do zapisu.', filename);
+            end
+
+            feapNum = [1 3 9 7 19 21 27 25 2 6 8 4 20 24 26 22 10 12 18 16 5 23 13 15 11 17 14];
+
+            tol = 1E-5;
+            nodes = round(obj.mesh.nodes / tol) * tol;
+
+            fprintf(myfile, "feap * * pillar \n  %d %d 0 3 5 27 \n\n", ...
+                size(obj.mesh.nodes,1), size(obj.mesh.elems,1));
+            fprintf(myfile, "COORdinates\n");
+            for k = 1:size(obj.mesh.nodes, 1)
+                fprintf(myfile, "%d   0   %.5E   %.5E   %.5E\n", ...
+                    k, nodes(k,1), nodes(k,2), nodes(k,3));
+            end
+
+            fprintf(myfile, "\n\nELEMents\n");
+            for k = 1:size(obj.mesh.elems,1)
+                felems = obj.mesh.elems(k, feapNum);
+                fprintf(myfile, "%d 0 1", k);
+                for e = 1:numel(feapNum)
+                    fprintf(myfile, " %d", felems(e));
+                    if e == 13
+                        fprintf(myfile, "\n");
+                    end
+                end
+                fprintf(myfile, "\n");
+            end
+            fprintf(myfile, "\n");
+
+            fprintf(myfile, "\n BOUNdary");
+            fprintf(myfile, "\n1 1 0 0 0  -1 -1");
+            fprintf(myfile, "\n %d 1 0 0 0  1  1\n", size(obj.mesh.nodes,1));
+
+            fprintf(myfile, "\ngap 0.001");
+            fprintf(myfile, "\nEBOUndary ADD\n");
+            fprintf(myfile, "1 0.0   1 0 0  1 1 ! plane x = 0  -> fix u_x\n");
+            fprintf(myfile, "2 0.0   0 1 0  1 1 ! plane y = 0  -> fix u_y\n");
+            fprintf(myfile, "3 %7.5E   1 1 1  1 1  ! plane z = min  -> fix u_x,u_y,u_z\n", ...
+                min(obj.mesh.nodes(:,3)));
+
+            fprintf(myfile, "\n EDIS\n");
+            for k = 1:size(obj.zCornersCoords,1)
+                if obj.zCornersCoords(k)>0
+                    fprintf(myfile, "  3  %7.5E  0  0  0  %1.2f 0.0\n", ...
+                     obj.zCornersCoords(k), obj.zTempLoads(k));
+                else
+                    fprintf(myfile, "  3  %7.5E  0  0  0  0.0 %1.2f\n", ...
+                     obj.zCornersCoords(k), obj.zTempLoads(k));
+                end
+            end
+            fprintf(myfile, "\n");
+
+            % dalsza konfiguracja FEAP (jak u Ciebie)
+            fprintf(myfile, "mate,1\n");
+            fprintf(myfile, "user,14\n");
+            fprintf(myfile, "3,2,2,2,30,0.,1.\n");
+            fprintf(myfile, "2 -1 -1 0  0 0 0 1\n");
+            fprintf(myfile, "3.189E-10 5.185E-10\n");
+            fprintf(myfile, "div(sig) -2 1   1\n");
+            fprintf(myfile, "0.\n");
+            fprintf(myfile, "390.0d9,145.0d9,106.0d9,398.0d9,105.0d9\n");
+            fprintf(myfile, "223.0d9,115.0d9,92.0d9,224.0d9,50.0d9\n");
+            fprintf(myfile, "195.0d9, 72.5d9, 53.0d9,199.0d9, 52.5d9\n");
+            fprintf(myfile, "div(x_n) -1 1  -4\n");
+            fprintf(myfile, "3.533E-10   5.693E-10\n");
+            fprintf(myfile, "3.189E-10 5.185E-10\n");
+            fprintf(myfile, "\n");
+            fprintf(myfile, "end\n\n");
+            fprintf(myfile, "TIE\n\n");
+            fprintf(myfile, "BATCh\n");
+            fprintf(myfile, "PROP\n");
+            fprintf(myfile, "DT,,1\n");
+            fprintf(myfile, "END\n");
+            fprintf(myfile, "2 2\n");
+            fprintf(myfile, "0 0 1 1\n\n");
+            fprintf(myfile, "batch\n");
+            fprintf(myfile, "plot,pers,1\n");
+            fprintf(myfile, "plot,hide\n");
+            fprintf(myfile, "plot,fill\n");
+            fprintf(myfile, "plot,defo\n");
+            fprintf(myfile, "plot,mesh\n");
+            fprintf(myfile, "plot,load\n");
+            fprintf(myfile, "plot,axis\n");
+            fprintf(myfile, "end\n");
+            fprintf(myfile, "0\n");
+            fprintf(myfile, "-2000. -4000. 2000.\n");
+            fprintf(myfile, "  0.  0. 2.\n\n");
+            fprintf(myfile, "batch\n");
+            fprintf(myfile, "plot,mesh\n");
+            fprintf(myfile, "plot,defo,1,1\n");
+            fprintf(myfile, "end\n\n");
+            fprintf(myfile, "batch\n");
+            fprintf(myfile, "opti\n\n");
+            fprintf(myfile, "LOOP,,1\n");
+            fprintf(myfile, "TIME\n");
+            fprintf(myfile, "LOOP,,99\n");
+            fprintf(myfile, "utan,,1\n");
+            fprintf(myfile, "plot,cont,4\n");
+            fprintf(myfile, "plot,stre,5\n");
+            fprintf(myfile, "plot,stre,4\n");
+            fprintf(myfile, "plot,stre,3\n");
+            fprintf(myfile, "plot,stre,2\n");
+            fprintf(myfile, "plot,stre,1\n");
+            fprintf(myfile, "!plot,stre,6\n");
+            fprintf(myfile, "NEXT\n");
+            fprintf(myfile, "save\n");
+            fprintf(myfile, "disp,all\n");
+            fprintf(myfile, "stre,all\n");
+            fprintf(myfile, "stre,node,all\n");
+            fprintf(myfile, "NEXT\n\n");
+            fprintf(myfile, "end\n\n");
+            fprintf(myfile, "inte\n");
+            fprintf(myfile, "stop\n");
+
+            fclose(myfile);
         end
     end
 
