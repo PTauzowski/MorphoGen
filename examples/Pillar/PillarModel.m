@@ -29,11 +29,12 @@ classdef PillarModel < ModelLinear
             obj.computeZNodalCoords();
         end
 
+
         function obj = generateMesh(obj)
             obj.mesh = Mesh();
             pillar_height = sum(obj.pillar_layers);
             ground_depth  = sum(obj.ground_layers);
-            nrXY = 6;
+            nrXY = 4;
 
             Rbase = obj.top_R + pillar_height * tan(5*pi/180);
             Rtop  = obj.top_R;
@@ -64,7 +65,7 @@ classdef PillarModel < ModelLinear
             bank_hres = 5;
 
 
-            obj.mesh.addPipe3D([0,0,z_bot], Rin, Rout, 0, 90, z_bot, z_top, bank_hres, 12, obj.ground_res(end), obj.sf.localNodes);
+            obj.mesh.addPipe3D([0,0,z_bot], Rin, Rout, 0, 90, z_bot, z_top, bank_hres, nrXY*2, obj.ground_res(end), obj.sf.localNodes);
 
             % ---- depression applied to ring interior ONLY (boundary nodes fixed) ----
             % depth: how deep the depression is at the TOP surface (z=z_top), positive value.
@@ -84,7 +85,7 @@ classdef PillarModel < ModelLinear
                 obj.mesh = PillarModel.addLayeredPipe3D_noTopInterface( ...
                     obj.mesh, [0 0 0], Rin, Rout, 0, 90, ...
                     z0_deep, deep_layers, deep_res, true, obj.int_th, ...
-                    bank_hres, 12, obj.sf.localNodes );
+                    bank_hres, nrXY*2, obj.sf.localNodes );
             end
 
             
@@ -95,7 +96,7 @@ classdef PillarModel < ModelLinear
             obj.mesh = PillarModel.addLayeredPipe3D( ...
                 obj.mesh, [0 0 0], Rout, Rbank, 0, 90, ...
                 -ground_depth, obj.ground_layers, obj.ground_res, true, obj.int_th, ...
-                bank_hres, 12, obj.sf.localNodes );
+                bank_hres, nrXY*2, obj.sf.localNodes );
 
 
             obj_sf = ShapeFunctionH8();
@@ -103,11 +104,12 @@ classdef PillarModel < ModelLinear
             angle=50;
 
 
-            x = [ Rout, 0,  z_top; Rbank, 0,  z_top; Rout + obj.pillar_layers(1) * tan(deg2rad(angle)), 0,  obj.pillar_layers(1) + z_top; Rbank,  0, obj.pillar_layers(1) + z_top; ...
-                  Rout, deg2rad(90), z_top; Rbank, deg2rad(90), z_top; Rout + obj.pillar_layers(1) * tan(deg2rad(angle)), deg2rad(90), obj.pillar_layers(1) + z_top; Rbank, deg2rad(90), obj.pillar_layers(1) + z_top ];
+            x = [ Rout, 0,  z_top;  Rbank, 0,  z_top;  Rout, deg2rad(90), z_top;  Rbank, deg2rad(90), z_top; ...
+Rout + obj.pillar_layers(1) * tan(deg2rad(angle)), 0,  obj.pillar_layers(1) + z_top;  Rbank,  0, obj.pillar_layers(1) + z_top; Rout + obj.pillar_layers(1) * tan(deg2rad(angle)), deg2rad(90), obj.pillar_layers(1) + z_top; 
+Rbank, deg2rad(90), obj.pillar_layers(1) + z_top  ];
 
             mesh1 = Mesh();
-            mesh1.addRing3D( [0 0 0], obj_sf, x, bank_hres, obj.pillar_res(1),12 , obj.sf.localNodes);
+            mesh1.addRing3D( [0 0 0], obj_sf, x, bank_hres, nrXY*2, obj.pillar_res(1) , obj.sf.localNodes);
 
             obj.mesh.mergeMesh(mesh1);
 
@@ -118,27 +120,138 @@ classdef PillarModel < ModelLinear
             angle=60;
             layer2=2*obj.pillar_layers(1);
 
-            x = [ Rout, 0,  z_top; Rbank, 0,  z_top; Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top; Rbank,  0, layer2 + z_top; ...
-                  Rout, deg2rad(90), z_top; Rbank, deg2rad(90), z_top; Rout + layer2 * tan(deg2rad(angle)), deg2rad(90), layer2 + z_top; Rbank, deg2rad(90), layer2 + z_top ];
+            x = [ Rout, 0,  z_top;  Rbank, 0,  z_top; Rout, deg2rad(90), z_top; Rbank, deg2rad(90), z_top; ...
+Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_top; Rout + layer2 * tan(deg2rad(angle)), deg2rad(90), layer2 + z_top; Rbank, deg2rad(90), layer2 + z_top ];
 
             mesh1 = Mesh();
-            mesh1.addRing3D( [0 0 0], obj_sf, x, bank_hres, 2, 12 , obj.sf.localNodes);
+            mesh1.addRing3D( [0 0 0], obj_sf, x, bank_hres,  nrXY*2, 2 , obj.sf.localNodes);
 
             obj.mesh.mergeMesh(mesh1);
 
             % ---- final circle -> square tile transition (preserve layering) ----
             Rtr   = Rbank;        % end of your cylindrical ground (already working)
             Rtile = 1.2*Rbank;    % size of square tile (tune)
-            nThetaSeg = 12;        % 6..16 is typical
+            nThetaSeg = nrXY*2;        % 6..16 is typical
 
             obj.mesh = PillarModel.addLayeredTransitionCircleToSquare( ...
                 obj.mesh, Rtr, Rtile, -ground_depth, [ obj.ground_layers obj.pillar_layers(1) layer2 ], [obj.ground_res obj.pillar_res(1) 2 ], ...
                 true, obj.int_th, nThetaSeg, bank_hres, obj.sf );
-
-           
+           % 
+           % obj.smoothRectEdges(Rtile, Rtr, 12, 0.35);
          
-
+           mesh1= Mesh();
+           mesh1.mergeMesh(obj.mesh);
+           obj.mesh=mesh1;
         end
+
+        
+    
+    function smoothRectEdges(obj, Rtile, Rtr, nIter, alpha)
+        % smoothRectEdges  Straighten and smooth the OUTER square boundary.
+        %
+        % Rtile : target square half-width (outer boundary)
+        % Rtr   : inner radius of transition band (where circle ends)
+        % nIter : smoothing iterations (e.g. 5..20)  [optional, default 10]
+        % alpha : relaxation (e.g. 0.2..0.6)        [optional, default 0.35]
+        %
+        % Effect:
+        %   (1) Snap outer boundary nodes to x=Rtile or y=Rtile
+        %   (2) Laplacian smooth XY in transition band only, keeping boundary fixed
+        %       (z is never changed)
+
+        if nargin < 4 || isempty(nIter),  nIter = 10; end
+        if nargin < 5 || isempty(alpha),  alpha = 0.35; end
+
+        nodes = obj.mesh.nodes;
+        x = nodes(:,1); y = nodes(:,2); z = nodes(:,3);
+        r = hypot(x,y);
+
+        % -----------------------------
+        % (A) SNAP outer boundary to exact square
+        % -----------------------------
+        tol = 1e-6 * max(1, Rtile);
+
+        % outer boundary nodes: near max(x,y)=Rtile in the quarter
+        outer = (x >= -tol) & (y >= -tol) & (max(x,y) >= (Rtile - 50*tol));
+
+        % decide which side a node belongs to
+        onX = outer & (x >= y);   % closer to x-wall
+        onY = outer & (y >  x);   % closer to y-wall
+
+        x(onX) = Rtile;
+        y(onY) = Rtile;
+
+        % make corner exact (optional but helps)
+        corner = outer & (abs(x - Rtile) <= 100*tol) & (abs(y - Rtile) <= 100*tol);
+        x(corner) = Rtile;
+        y(corner) = Rtile;
+
+        nodes(:,1) = x; nodes(:,2) = y;
+        obj.mesh.nodes = nodes;
+
+        % -----------------------------
+        % (B) Build node adjacency from hex elements (for Laplacian smoothing)
+        % -----------------------------
+        elems = obj.mesh.elems;
+        nN = size(nodes,1);
+        adj = cell(nN,1);
+
+        % connect nodes that share an element (cheap, good enough)
+        for e = 1:size(elems,1)
+            en = unique(elems(e,:));
+            for ii = 1:numel(en)
+                ni = en(ii);
+                adj{ni} = [adj{ni}, en]; %#ok<AGROW>
+            end
+        end
+        for i = 1:nN
+            adj{i} = unique(adj{i}(adj{i} ~= i));
+        end
+
+        % -----------------------------
+        % (C) Smooth only interior nodes of transition band (XY only)
+        % -----------------------------
+        nodes = obj.mesh.nodes;
+        x = nodes(:,1); y = nodes(:,2); z = nodes(:,3); %#ok<NASGU>
+        r = hypot(x,y);
+
+        % band to smooth: between circle end and square boundary
+        band = (r >= Rtr - 1e-9*Rtile) & (max(x,y) <= Rtile - 1e-9*Rtile);
+
+        % fixed nodes: symmetry planes and snapped outer boundary
+        fixed = (abs(x) <= tol) | (abs(y) <= tol) | outer;
+
+        move = band & ~fixed;
+
+        for it = 1:nIter
+            xNew = x;
+            yNew = y;
+
+            idx = find(move);
+            for k = 1:numel(idx)
+                i = idx(k);
+                nb = adj{i};
+                if isempty(nb), continue; end
+                mx = mean(x(nb));
+                my = mean(y(nb));
+                xNew(i) = (1-alpha)*x(i) + alpha*mx;
+                yNew(i) = (1-alpha)*y(i) + alpha*my;
+            end
+
+            x = xNew;
+            y = yNew;
+
+            % keep fixed nodes exact
+            x(onX) = Rtile;
+            y(onY) = Rtile;
+            x(abs(x) <= tol) = 0;
+            y(abs(y) <= tol) = 0;
+        end
+
+        nodes(:,1) = x;
+        nodes(:,2) = y;
+        obj.mesh.nodes = nodes;
+    end
 
 
     function chem = chemFromZ(obj, z)
@@ -269,7 +382,7 @@ classdef PillarModel < ModelLinear
                 size(obj.mesh.nodes,1), size(obj.mesh.elems,1));
             fprintf(myfile, "COORdinates\n");
             for k = 1:size(obj.mesh.nodes, 1)
-                fprintf(myfile, "%d   0   %.5E   %.5E   %.5E\n", ...
+                fprintf(myfile, "%d   0   %.6f   %.6f   %.5f\n", ...
                     k, nodes(k,1), nodes(k,2), nodes(k,3));
             end
 
@@ -298,14 +411,15 @@ classdef PillarModel < ModelLinear
             fprintf(myfile, "3 %7.5E   1 1 1  1 1  ! plane z = min  -> fix u_x,u_y,u_z\n", ...
                 min(obj.mesh.nodes(:,3)));
 
+            chem_from_z = obj.chemFromZ(obj.z_corners_coords);
             fprintf(myfile, "\n EDIS\n");
-            for k = 1:size(obj.zCornersCoords,1)
-                if obj.zCornersCoords(k)>0
+            for k = 1:size(obj.z_corners_coords,1)
+                if obj.z_corners_coords(k)>0
                     fprintf(myfile, "  3  %7.5E  0  0  0  %1.2f 0.0\n", ...
-                     obj.zCornersCoords(k), obj.zTempLoads(k));
+                     obj.z_corners_coords(k), chem_from_z(k));
                 else
                     fprintf(myfile, "  3  %7.5E  0  0  0  0.0 %1.2f\n", ...
-                     obj.zCornersCoords(k), obj.zTempLoads(k));
+                     obj.z_corners_coords(k), chem_from_z(k));
                 end
             end
             fprintf(myfile, "\n");
@@ -373,6 +487,259 @@ classdef PillarModel < ModelLinear
             fprintf(myfile, "stop\n");
 
             fclose(myfile);
+        end
+
+        function report = checkMeshIntegrity(obj, tol)
+            % checkMeshIntegrity  Basic integrity checks for hex meshes (L27 supported).
+            %
+            % report fields:
+            %   .nNodes, .nElems
+            %   .hasNaNInf
+            %   .badElemIndexCount
+            %   .unusedNodeCount
+            %   .duplicateNodePairsCount
+            %   .zeroCornerEdgeCount
+            %   .degenerateElemCount
+            %   .invertedElemCount
+            %   .nComponents
+            %   .largestComponentFrac
+            %
+            % Usage:
+            %   r = model.checkMeshIntegrity(1e-6);
+            %   disp(r)
+    
+            if nargin < 2 || isempty(tol)
+                tol = 1e-9;
+            end
+    
+            X = obj.mesh.nodes;
+            E = obj.mesh.elems;
+    
+            report = struct();
+            report.nNodes = size(X,1);
+            report.nElems = size(E,1);
+    
+            % ---------------------------------
+            % 0) NaN/Inf coordinates
+            % ---------------------------------
+            report.hasNaNInf = any(~isfinite(X(:)));
+    
+            % ---------------------------------
+            % 1) Element connectivity index validity
+            % ---------------------------------
+            minIdx = min(E(:));
+            maxIdx = max(E(:));
+            badIdxMask = (E(:) < 1) | (E(:) > report.nNodes) | ~isfinite(E(:));
+            report.badElemIndexCount = nnz(badIdxMask);
+            report.elemIndexRange = [minIdx, maxIdx];
+    
+            % ---------------------------------
+            % 2) Unused nodes
+            % ---------------------------------
+            used = false(report.nNodes,1);
+            if report.badElemIndexCount == 0
+                used(unique(E(:))) = true;
+            end
+            report.unusedNodeCount = nnz(~used);
+    
+            % ---------------------------------
+            % 3) Duplicate nodes (within tolerance)
+            %    Uses rounding grid; counts duplicates (approx).
+            % ---------------------------------
+            t = tol;
+            if isprop(obj,'z_tolerance') && ~isempty(obj.z_tolerance)
+                t = min(t, obj.z_tolerance);
+            end
+            key = round(X ./ t);
+            [~, ia, ic] = unique(key, 'rows', 'stable');
+            report.duplicateNodePairsCount = report.nNodes - numel(ia);
+    
+            % ---------------------------------
+            % 4) Degenerate / inverted elements (corner-based signed volume)
+            %    Works for L27 as long as corner indices are [1 3 7 9 19 21 25 27]
+            % ---------------------------------
+            if size(E,2) < 8
+                report.degenerateElemCount = NaN;
+                report.invertedElemCount   = NaN;
+            else
+                if size(E,2) >= 27
+                    c = [1 3 7 9 19 21 25 27];     % your L27 corner pattern
+                else
+                    c = 1:8;                       % fallback
+                end
+    
+                Ec = E(:,c);
+                bad = false(report.nElems,1);
+                inv = false(report.nElems,1);
+    
+                % tetra split of hex corners (gives signed volume)
+                tets = [1 2 4 5;
+                        2 3 4 7;
+                        2 4 7 5;
+                        2 7 6 5;
+                        4 7 8 5];
+    
+                vols = zeros(report.nElems,1);
+    
+                for e = 1:report.nElems
+                    idx = Ec(e,:);
+                    if any(idx < 1) || any(idx > report.nNodes)
+                        bad(e) = true;
+                        continue;
+                    end
+                    xe = X(idx,:);
+    
+                    v = 0;
+                    for k = 1:size(tets,1)
+                        a = xe(tets(k,1),:);
+                        b = xe(tets(k,2),:);
+                        c2= xe(tets(k,3),:);
+                        d = xe(tets(k,4),:);
+                        v = v + det([b-a; c2-a; d-a]) / 6;
+                    end
+                    vols(e) = v;
+    
+                    if abs(v) <= 1e-14 * max(1, max(abs(xe(:))))
+                        bad(e) = true;
+                    elseif v < 0
+                        inv(e) = true;
+                    end
+                end
+    
+                report.degenerateElemCount = nnz(bad);
+                report.invertedElemCount   = nnz(inv);
+                report.minSignedVolume     = min(vols);
+                report.maxSignedVolume     = max(vols);
+            end
+    
+            % ---------------------------------
+            % 5) Zero-length corner edges (quick indicator of collapse)
+            % ---------------------------------
+            report.zeroCornerEdgeCount = 0;
+            if size(E,2) >= 8 && report.badElemIndexCount == 0
+                if size(E,2) >= 27
+                    c = [1 3 7 9 19 21 25 27];
+                else
+                    c = 1:8;
+                end
+                Ec = E(:,c);
+    
+                % corner edges of a hex (in corner ordering)
+                edges = [1 2; 2 3; 3 4; 4 1;   % bottom loop
+                         5 6; 6 7; 7 8; 8 5;   % top loop
+                         1 5; 2 6; 3 7; 4 8];  % verticals
+    
+                Xc = X; %#ok<NASGU>
+                zc = 0;
+                for e = 1:report.nElems
+                    idx = Ec(e,:);
+                    xe = X(idx,:);
+                    for k = 1:size(edges,1)
+                        a = xe(edges(k,1),:);
+                        b = xe(edges(k,2),:);
+                        if norm(a-b) <= tol
+                            zc = zc + 1;
+                        end
+                    end
+                end
+                report.zeroCornerEdgeCount = zc;
+            end
+    
+            % ---------------------------------
+            % 6) Connected components (node adjacency via elements)
+            % ---------------------------------
+            if report.badElemIndexCount == 0
+                n = report.nNodes;
+                adj = cell(n,1);
+                for e = 1:report.nElems
+                    en = unique(E(e,:));
+                    en = en(en >= 1 & en <= n);
+                    for ii = 1:numel(en)
+                        ni = en(ii);
+                        adj{ni} = [adj{ni}, en]; %#ok<AGROW>
+                    end
+                end
+                for i = 1:n
+                    adj{i} = unique(adj{i}(adj{i} ~= i));
+                end
+    
+                comp = zeros(n,1);
+                cid = 0;
+                for i = 1:n
+                    if ~used(i) || comp(i) ~= 0
+                        continue
+                    end
+                    cid = cid + 1;
+                    q = i;
+                    comp(i) = cid;
+                    while ~isempty(q)
+                        u = q(end); q(end) = [];
+                        nb = adj{u};
+                        nb = nb(used(nb));
+                        nb = nb(comp(nb) == 0);
+                        comp(nb) = cid;
+                        q = [q; nb(:)]; %#ok<AGROW>
+                    end
+                end
+    
+                report.nComponents = cid;
+                if cid == 0
+                    report.largestComponentFrac = 0;
+                else
+                    counts = accumarray(comp(comp>0), 1);
+                    report.largestComponentFrac = max(counts) / nnz(used);
+                end
+            else
+                report.nComponents = NaN;
+                report.largestComponentFrac = NaN;
+            end
+    
+            % ---------------------------------
+            % Summary flag
+            % ---------------------------------
+            report.ok = ...
+                ~report.hasNaNInf && ...
+                report.badElemIndexCount == 0 && ...
+                report.invertedElemCount == 0 && ...
+                report.degenerateElemCount == 0 && ...
+                (isnan(report.nComponents) || report.nComponents <= 1);
+    
+            % Print concise summary (optional)
+            fprintf("Mesh integrity:\n");
+            fprintf("  Nodes: %d, Elems: %d\n", report.nNodes, report.nElems);
+            fprintf("  NaN/Inf coords: %d\n", report.hasNaNInf);
+            fprintf("  Bad elem indices: %d (range [%g..%g])\n", report.badElemIndexCount, report.elemIndexRange(1), report.elemIndexRange(2));
+            fprintf("  Unused nodes: %d\n", report.unusedNodeCount);
+            fprintf("  Duplicate nodes (approx): %d\n", report.duplicateNodePairsCount);
+            fprintf("  Degenerate elems: %d, Inverted elems: %d\n", report.degenerateElemCount, report.invertedElemCount);
+            fprintf("  Components: %g, Largest component frac: %g\n", report.nComponents, report.largestComponentFrac);
+            fprintf("  Zero-length corner edges: %d\n", report.zeroCornerEdgeCount);
+            fprintf("  OK: %d\n", report.ok);
+        end
+
+        function plotBadHexFaces(obj, badE, faceAlpha)
+            if nargin < 3, faceAlpha = 0.25; end
+            E = obj.mesh.elems(badE,:);
+            X = obj.mesh.nodes;
+        
+            c = [1 3 7 9 19 21 25 27];   % L27 corners
+            Ec = E(:,c);
+        
+            % faces in terms of the 8 corners (hex)
+            F = [1 2 3 4;
+                 5 6 7 8;
+                 1 2 6 5;
+                 2 3 7 6;
+                 3 4 8 7;
+                 4 1 5 8];
+        
+            faces = zeros(size(Ec,1)*6, 4);
+            for i = 1:6
+                faces( (i-1)*size(Ec,1)+ (1:size(Ec,1)), : ) = Ec(:,F(i,:));
+            end
+        
+            patch('Vertices', X, 'Faces', faces, ...
+                  'FaceAlpha', faceAlpha, 'EdgeAlpha', 0.4);
         end
     end
 
@@ -738,11 +1105,11 @@ classdef PillarModel < ModelLinear
                 x = [
                     Rin,  thA, z1;
                     RoutA,thA, z1;
+		            Rin,  thB, z1;
+                    RoutB,thB, z1;
+
                     Rin,  thA, z2;
                     RoutA,thA, z2;
-        
-                    Rin,  thB, z1;
-                    RoutB,thB, z1;
                     Rin,  thB, z2;
                     RoutB,thB, z2;
                 ];
@@ -750,7 +1117,7 @@ classdef PillarModel < ModelLinear
                 m = Mesh();
                 % NOTE: adjust argument order to match YOUR Mesh.addRing3D signature.
                 % Your earlier call suggests: addRing3D(x0, obj_sf, x, nr, nz, nc, localNodes)
-                m.addRing3D([0 0 0], obj_sf, x, nr, nz, 1, sf.localNodes);
+                m.addRing3D([0 0 0], obj_sf, x, nr, 1, nz, sf.localNodes);
         
                 mesh.mergeMesh(m);
             end

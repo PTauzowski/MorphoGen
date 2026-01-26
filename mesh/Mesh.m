@@ -33,8 +33,23 @@ classdef Mesh < handle
                 obj.elems = [ obj.elems; el2 ];
           end
         end
-        function el2 = mergeMesh( obj, newMesh )
+        function el2 = mergeMesh( obj, newMesh, sf )
+            % Merge another mesh into this one
+            % Optional sf (shape function) enables post-merge quality check
             el2 = obj.merge(newMesh.nodes, newMesh.elems );
+
+            % Post-merge quality validation if shape function provided
+            if nargin >= 3 && ~isempty(sf) && ~isempty(el2)
+                nElemBefore = size(obj.elems, 1) - size(el2, 1);
+                newElemIdx = (nElemBefore + 1) : size(obj.elems, 1);
+                [badE, ~] = obj.findNegativeJacobian(sf, 1e-12);
+                badInNew = intersect(badE, newElemIdx);
+                if ~isempty(badInNew)
+                    warning('Mesh:mergeMesh', ...
+                        '%d inverted elements detected in newly merged region (elements %d-%d)', ...
+                        numel(badInNew), min(badInNew), max(badInNew));
+                end
+            end
         end
         function el2 = append( obj, newNodes, newElems )
             nnodes=size(obj.nodes,1);
@@ -355,21 +370,21 @@ classdef Mesh < handle
                     [nr(1) nr(1) nr(2)], pattern );
             
                 sfL2 = ShapeFunctionQ4();
-                sl1 = ShapeObjectRectangular(sfL2, x0 + [0   R/2 0;
+                sl1 = ShapeObjectRectangular(sfL2, x0 + [a   a   0; 
+                                                        0   R/2 0;
+                                                        a   a   h; 
+                                                        0   R/2 h ]);
+                sl2 = ShapeObjectRectangular(sfL2, x0 + [R/2 0   0;
                                                         a   a   0;
-                                                        0   R/2 h;
+                                                        R/2 0   h;
                                                         a   a   h]);
-                sl2 = ShapeObjectRectangular(sfL2, x0 + [a   a   0;
-                                                        R/2 0   0;
-                                                        a   a   h;
-                                                        R/2 0   h]);
             
                 % --- IMPORTANT: use absolute z-range for cylinder ---
                 z0 = x0(3);
                 z1 = x0(3) + h;
             
-                sc1 = CylinderObject(x0, R, 90, 45, z0, z1);
-                sc2 = CylinderObject(x0, R, 45, 0,  z0, z1);
+                sc1 = CylinderObject(x0, R, 45, 90, z0, z1);
+                sc2 = CylinderObject(x0, R, 0, 45, z0, z1);
             
                 ms1 = MorphSpace(sl1, sc1);
                 ms2 = MorphSpace(sl2, sc2);
@@ -828,6 +843,215 @@ classdef Mesh < handle
             
             % Remove duplicate nodes (since a node can belong to multiple upward-facing facets)
             downward_facing_nodes = unique(downward_facing_nodes);
+        end
+
+         function [badE, minDetJ] = findNegativeJacobian(obj, sf, tol)
+             if nargin < 3 || isempty(tol), tol = 0; end
+
+                X = obj.nodes;
+                E = obj.elems;
+                
+                % --- connectivity sanity ---
+                if ~isnumeric(E)
+                error("Mesh.elems must be numeric, got %s", class(E));
+                end
+                E = double(E);
+                
+                nN = size(X,1);
+                
+                badRow = any(~isfinite(E),2) | any(E < 1,2) | any(E > nN,2) | any(abs(E - round(E)) > 0,2);
+                badConnE = find(badRow);
+                
+                if ~isempty(badConnE)
+                e0 = badConnE(1);
+                fprintf("Invalid connectivity in element %d\n", e0);
+                disp(E(e0,:));
+                badE = [];
+                minDetJ = [];
+                return;
+                end
+            % findNegativeJacobian  Detect elements with negative Jacobian determinant.
+            %
+            % Returns:
+            %   badE     : indices of elements with min(detJ) < -tol
+            %   minDetJ  : per-element minimum determinant over sampling points
+        
+            if nargin < 3 || isempty(tol), tol = 0; end
+        
+            % 2x2x2 Gauss points
+            a = 1/sqrt(3);
+            gp = [
+                -a -a -a;
+                 a -a -a;
+                 a  a -a;
+                -a  a -a;
+                -a -a  a;
+                 a -a  a;
+                 a  a  a;
+                -a  a  a
+            ];
+        
+            ne = size(obj.elems, 1);
+            minDetJ = inf(ne, 1);
+        
+            for e = 1:ne
+                en = obj.elems(e, :);
+                xe = obj.nodes(en, :);              % (nNodes x 3)
+        
+                md = inf;
+                for q = 1:size(gp,1)
+                    dN = sf.computeGradient(gp(q,:)); % expected: (nNodes x 3 x 1) or (nNodes x 3)
+                    if ndims(dN) == 3
+                        dN = dN(:,:,1);
+                    end
+                    % dN must be (nNodes x 3)
+                    if size(dN,1) ~= size(xe,1) || size(dN,2) ~= 3
+                        error("findNegativeJacobian: dN has wrong size: %dx%d, expected %dx3", ...
+                            size(dN,1), size(dN,2), size(xe,1));
+                    end
+        
+                    J = xe.' * dN;                  % (3x nNodes)*(nNodes x 3) = (3x3)
+                    dj = det(J);
+                    md = min(md, dj);
+                end
+        
+                minDetJ(e) = md;
+            end
+        
+            badE = find(minDetJ < -tol);
+         end
+
+         function r = fixNegativeJacobianByRenumbering(obj, sf, tol)
+            % fixNegativeJacobianByRenumbering
+            % Reorders node numbering inside elements to make det(J) positive.
+            %
+            % Strategy:
+            %   - compute min detJ for each element
+            %   - for elements with min detJ < -tol, try a set of parametric
+            %     permutations derived from sf.localNodes (flip/swap axes)
+            %   - accept the permutation that maximizes min detJ and makes it > 0
+        
+            if nargin < 3 || isempty(tol), tol = 0; end
+        
+            % candidate permutations (for H27 these are valid and consistent)
+            P = Mesh.buildH27Permutations(sf);
+        
+            % baseline
+            [badE0, minDet0] = obj.findNegativeJacobian(sf, tol);
+        
+            elems0 = obj.elems;
+            minDet = minDet0;
+            badE   = badE0;
+        
+            fixed = false(size(obj.elems,1),1);
+        
+            for ii = 1:numel(badE0)
+                e = badE0(ii);
+        
+                en0 = elems0(e,:);
+                bestEn   = en0;
+                bestMin  = minDet0(e);
+        
+                % try all candidate permutations
+                for k = 1:numel(P)
+                    en1 = en0(P{k});                 % reorder connectivity only
+                    % evaluate min detJ for this single element
+                    md = Mesh.minDetJ_singleElement(obj.nodes(en1,:), sf);
+                    if md > bestMin
+                        bestMin = md;
+                        bestEn  = en1;
+                    end
+                    if bestMin > tol
+                        break; % good enough
+                    end
+                end
+        
+                if bestMin > tol
+                    obj.elems(e,:) = bestEn;
+                    minDet(e) = bestMin;
+                    fixed(e) = true;
+                end
+            end
+        
+            % re-check after modification
+            [badE2, minDet2] = obj.findNegativeJacobian(sf, tol);
+        
+            r = struct();
+            r.tol = tol;
+            r.badE_before = badE0;
+            r.minDet_before = minDet0;
+            r.fixed_mask = fixed;
+            r.fixed_count = nnz(fixed);
+            r.badE_after = badE2;
+            r.minDet_after = minDet2;
+            r.ok = isempty(badE2);
+        end
+    end
+
+    methods(Static)
+        function P = buildH27Permutations(sf)
+            % buildH27Permutations
+            % Build consistent node permutations from sf.localNodes for H27.
+            %
+            % localNodes are expected at {-1,0,1}^3, ordered as in ShapeFunctionH27.
+        
+            LN = sf.localNodes;           % (27 x 3)
+        
+            % helper: find index of a transformed node
+            function perm = map(transformFn)
+                T = transformFn(LN);      % (27 x 3)
+                perm = zeros(1, size(LN,1));
+                for i = 1:size(LN,1)
+                    j = find( abs(LN(:,1)-T(i,1))<1e-12 & abs(LN(:,2)-T(i,2))<1e-12 & abs(LN(:,3)-T(i,3))<1e-12, 1 );
+                    perm(i) = j;
+                end
+            end
+        
+            % flips change orientation (det sign)
+            flipX = map(@(A) [-A(:,1),  A(:,2),  A(:,3)]);
+            flipY = map(@(A) [ A(:,1), -A(:,2),  A(:,3)]);
+            flipZ = map(@(A) [ A(:,1),  A(:,2), -A(:,3)]);
+        
+            % swaps also change orientation
+            swapXY = map(@(A) [A(:,2), A(:,1), A(:,3)]);
+            swapXZ = map(@(A) [A(:,3), A(:,2), A(:,1)]);
+            swapYZ = map(@(A) [A(:,1), A(:,3), A(:,2)]);
+        
+            % some composed permutations (often needed in practice)
+            flipXY = flipX(flipY);
+            flipXZ = flipX(flipZ);
+            flipYZ = flipY(flipZ);
+        
+            % store as cell array
+            P = {
+                flipX, flipY, flipZ, ...
+                swapXY, swapXZ, swapYZ, ...
+                flipXY, flipXZ, flipYZ
+            };
+        end
+        
+        function md = minDetJ_singleElement(xe, sf)
+            % xe: (nNodes x 3)
+            a = 1/sqrt(3);
+            gp = [
+                -a -a -a;
+                 a -a -a;
+                 a  a -a;
+                -a  a -a;
+                -a -a  a;
+                 a -a  a;
+                 a  a  a;
+                -a  a  a
+            ];
+            md = inf;
+            for q = 1:size(gp,1)
+                dN = sf.computeGradient(gp(q,:));
+                if ndims(dN) == 3
+                    dN = dN(:,:,1);
+                end
+                J = xe.' * dN;
+                md = min(md, det(J));
+            end
         end
     end
 end
