@@ -10,12 +10,13 @@ classdef PillarModel < ModelLinear
         bank_r0 = 0;  
         sf
         z_corners_coords
+        z_coords
         z_tolerance
     end
 
     methods
         function obj = PillarModel( top_R, pillar_layers, ground_layers, pillar_res, ground_res, pillar_chem, ground_chem, int_th, sf )
-            obj.z_tolerance=0.001;
+            obj.z_tolerance=0.00001;
             obj.top_R = top_R;
             obj.pillar_layers = pillar_layers;
             obj.ground_layers = ground_layers;
@@ -361,6 +362,7 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
                 obj.mesh.nodes(obj.mesh.elems(:,27), :)  ];
 
             obj.z_corners_coords = sort(unique(round(zCornersPoints(:,3) / obj.z_tolerance) * obj.z_tolerance), 'descend');
+            obj.z_coords = sort(unique(round(obj.mesh.nodes(:,3) / obj.z_tolerance) * obj.z_tolerance), 'descend');
         end
 
         %==================================================================
@@ -411,15 +413,15 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
             fprintf(myfile, "3 %7.5E   1 1 1  1 1  ! plane z = min  -> fix u_x,u_y,u_z\n", ...
                 min(obj.mesh.nodes(:,3)));
 
-            chem_from_z = obj.chemFromZ(obj.z_corners_coords);
+            chem_from_z = obj.chemFromZ(obj.z_coords);
             fprintf(myfile, "\n EDIS\n");
-            for k = 1:size(obj.z_corners_coords,1)
-                if obj.z_corners_coords(k)>0
-                    fprintf(myfile, "  3  %7.5E  0  0  0  %1.2f 0.0\n", ...
-                     obj.z_corners_coords(k), chem_from_z(k));
+            for k = 1:size(obj.z_coords,1)
+                if obj.z_coords(k)>0
+                    fprintf(myfile, "  3   %.5f  0  0  0  %1.2f 0.0\n", ...
+                     obj.z_coords(k), chem_from_z(k));
                 else
-                    fprintf(myfile, "  3  %7.5E  0  0  0  0.0 %1.2f\n", ...
-                     obj.z_corners_coords(k), chem_from_z(k));
+                    fprintf(myfile, "  3   %.5f  0  0  0  0.0 %1.2f\n", ...
+                     obj.z_coords(k), chem_from_z(k));
                 end
             end
             fprintf(myfile, "\n");
