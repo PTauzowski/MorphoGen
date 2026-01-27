@@ -16,7 +16,7 @@ classdef PillarModel < ModelLinear
 
     methods
         function obj = PillarModel( top_R, pillar_layers, ground_layers, pillar_res, ground_res, pillar_chem, ground_chem, int_th, sf )
-            obj.z_tolerance=0.00001;
+            obj.z_tolerance=0.000001;
             obj.top_R = top_R;
             obj.pillar_layers = pillar_layers;
             obj.ground_layers = ground_layers;
@@ -40,19 +40,20 @@ classdef PillarModel < ModelLinear
             Rbase = obj.top_R + pillar_height * tan(5*pi/180);
             Rtop  = obj.top_R;
 
-                        % ground matches pillar base
-            obj.mesh.addLayeredQuarterCylinder([0, 0, -ground_depth], ...
+            % ground matches pillar base, ends at z = -int_th/2 (bottom of centered interface)
+            obj.mesh.addLayeredQuarterCylinder([0, 0, -ground_depth - obj.int_th/2], ...
                 Rbase, obj.ground_layers, obj.ground_res, nrXY, true, obj.int_th, obj.sf.localNodes);
             
             % --- interface layer (between ground top and pillar bottom) ---
-            % thickness = obj.int_th, placed as a thin layer just below z=0
+            % Interface is CENTERED at z=0, spanning z in [-int_th/2, +int_th/2]
+            % This takes int_th/2 from ground and int_th/2 from pillar nominal regions
             int_layers = obj.int_th;                       % single layer
-            int_res    = max(1, obj.ground_res(end));      % or: max(1, obj.pillar_res(1)) / or dedicated parameter
-            obj.mesh.addLayeredQuarterCylinder([0, 0, -obj.int_th], ...
+            int_res    = 1;                                % interface layers have exactly 1 element in z-direction
+            obj.mesh.addLayeredQuarterCylinder([0, 0, -obj.int_th/2], ...
                 Rbase, int_layers, int_res, nrXY, true, obj.int_th, obj.sf.localNodes);
-            
-            % pillar then taper upwards
-            obj.mesh.addLayeredQuarterCylinder([0, 0, 0], ...
+
+            % pillar starts at top of interface (z = +int_th/2)
+            obj.mesh.addLayeredQuarterCylinder([0, 0, obj.int_th/2], ...
                 Rbase, obj.pillar_layers, obj.pillar_res, nrXY, true, obj.int_th, obj.sf.localNodes);
             
             obj.mesh.nodes = obj.mesh.coneTransformationX(pillar_height, Rbase, Rtop, obj.mesh.nodes);
@@ -255,95 +256,317 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
     end
 
 
-    function chem = chemFromZ(obj, z)
-        % chemFromZ  Map z-coordinates to per-layer chemistry.
+    function [chem, lays_between_layers] = chemFromZ(obj, z)
+        % chemFromZ  Map z-coordinates to chemistry with explicit interface slabs.
         %
-        % Input:
-        %   z    : vector/matrix of z-coordinates (any shape)
-        % Output:
-        %   chem : same shape as z, chemistry value per point
+        % Rules:
+        % 1. Decide if in pillar (z>=0) or ground (z<0).
+        % 2. Locate which segment (nominal vs interface).
+        % 3. Return chemistry:
+        %    - nominal segment → constant chem(layer)
+        %    - interface slab → linear interpolation between chem_below and chem_above
+        % 4. lays_between_layers:
+        %    - true ONLY on planes that are boundaries between nominal and interface slabs
+        %    - excluding global top and global bottom
+        %    - false for interior points of interface slabs (including H27 mid-plane nodes)
         %
-        % Conventions:
-        %   - pillar occupies z >= 0, stacked upward with obj.pillar_layers
-        %   - ground occupies z < 0, stacked downward with obj.ground_layers
-        %   - if z is outside model range, it is clamped to the nearest layer
-        %
-        % Chemistry vectors:
-        %   - obj.pillar_chem must have length == numel(obj.pillar_layers)
-        %   - obj.ground_chem must have length == numel(obj.ground_layers)
-        %   - chem vectors can be numeric or cell arrays (e.g. strings/structs)
+        % Note: The mesh generator builds ground layers from z=-depth upward, so
+        % ground_layers(1) is at the bottom (most negative z) and ground_layers(end)
+        % is at the top (closest to z=0). The special interface slab z in [-int_th, 0]
+        % connects ground layer L (topmost) to pillar layer 1.
 
-        % ---- validate ----
-        if numel(obj.pillar_layers) ~= numel(obj.pillar_chem)
-            error('pillar_layers (%d) and pillar_chem (%d) must match.', ...
-                numel(obj.pillar_layers), numel(obj.pillar_chem));
-        end
-        if numel(obj.ground_layers) ~= numel(obj.ground_chem)
-            error('ground_layers (%d) and ground_chem (%d) must match.', ...
-                numel(obj.ground_layers), numel(obj.ground_chem));
-        end
+            % ---- validate ----
+            if numel(obj.pillar_layers) ~= numel(obj.pillar_chem)
+                error('pillar_layers (%d) and pillar_chem (%d) must match.', ...
+                    numel(obj.pillar_layers), numel(obj.pillar_chem));
+            end
+            if numel(obj.ground_layers) ~= numel(obj.ground_chem)
+                error('ground_layers (%d) and ground_chem (%d) must match.', ...
+                    numel(obj.ground_layers), numel(obj.ground_chem));
+            end
 
-        z = double(z);
-        sz = size(z);
+            z  = double(z);
+            sz = size(z);
 
-        % choose output type
-        outIsCell = iscell(obj.pillar_chem) || iscell(obj.ground_chem);
-        if outIsCell
-            chem = cell(sz);
-        else
-            chem = zeros(sz);
-        end
-
-        tol = 0;
-        if isprop(obj,'z_tolerance') && ~isempty(obj.z_tolerance) && obj.z_tolerance > 0
-            tol = obj.z_tolerance;
-        end
-
-        % ---- pillar part: z >= 0 ----
-        pilMask = (z >= -tol);
-        if any(pilMask(:))
-            Hp = sum(obj.pillar_layers(:));
-            zp = z(pilMask);
-            zp = max(0, min(Hp, zp));                      % clamp
-
-            cumP = cumsum(obj.pillar_layers(:));           % top-down from z=0
-            idxP = arrayfun(@(zz) find(cumP >= zz - tol, 1, 'first'), zp);
-            idxP = max(1, min(numel(cumP), idxP));
-
+            outIsCell = iscell(obj.pillar_chem) || iscell(obj.ground_chem);
             if outIsCell
-                tmp = cell(size(zp));
-                for k = 1:numel(idxP)
-                    tmp{k} = obj.pillar_chem{idxP(k)};
+                chem = cell(sz);
+            else
+                chem = zeros(sz);
+            end
+            lays_between_layers = false(sz);
+
+            % strict tolerance for classification
+            if isprop(obj,'z_tolerance') && ~isempty(obj.z_tolerance) && obj.z_tolerance > 0
+                tol = obj.z_tolerance;
+            else
+                tol = 1e-9;
+            end
+
+            i_th = obj.int_th;
+
+            % ---- helper: build 1D stack segments for nominal layers ----
+            % Returns segment boundaries and interface planes in stack coordinate s
+            % where s=0 is the start (bottom for pillar, TOP for ground after flip).
+            function [segS0, segS1, segType, segK, segBelow, segAbove, planesBetween, totalH] = buildStack(h)
+                h = h(:);
+                L = numel(h);
+                totalH = sum(h);
+
+                if L == 0
+                    segS0=[]; segS1=[]; segType=[]; segK=[]; segBelow=[]; segAbove=[]; planesBetween=[]; totalH=0;
+                    return;
+                end
+
+                add_interface = (L >= 2) && (isscalar(i_th) && i_th > 0);
+
+                % effective heights (must mirror mesh generator logic)
+                if add_interface
+                    h_eff = h;
+                    for kk = 1:L
+                        if kk > 1, h_eff(kk) = h_eff(kk) - i_th/2; end
+                        if kk < L, h_eff(kk) = h_eff(kk) - i_th/2; end
+                    end
+                    if any(h_eff <= 0)
+                        error('chemFromZ: interface thickness too large -> some effective heights <= 0.');
+                    end
+                else
+                    h_eff = h;
+                end
+
+                segS0 = []; segS1 = []; segType = []; segK = [];
+                segBelow = []; segAbove = [];
+                planesBetween = [];
+
+                s = 0;
+                for kk = 1:L
+                    % nominal kk
+                    s0 = s; s1 = s + h_eff(kk);
+                    segS0(end+1,1) = s0; %#ok<AGROW>
+                    segS1(end+1,1) = s1;
+                    segType(end+1,1) = 0;
+                    segK(end+1,1) = kk;
+                    segBelow(end+1,1) = 0;
+                    segAbove(end+1,1) = 0;
+
+                    s = s1;
+
+                    % interface between kk and kk+1
+                    if add_interface && kk < L
+                        planesBetween(end+1,1) = s; %#ok<AGROW>  % nominal->interface face
+
+                        s0 = s; s1 = s + i_th;
+                        segS0(end+1,1) = s0;
+                        segS1(end+1,1) = s1;
+                        segType(end+1,1) = 1;
+                        segK(end+1,1) = 0;
+                        segBelow(end+1,1) = kk;
+                        segAbove(end+1,1) = kk + 1;
+
+                        s = s1;
+
+                        planesBetween(end+1,1) = s; %#ok<AGROW>  % interface->nominal face
+                    end
+                end
+
+                % exclude global ends (not "between layers")
+                if ~isempty(planesBetween)
+                    planesBetween = planesBetween(planesBetween > tol & planesBetween < (totalH - tol));
+                end
+            end
+
+            % build stacks
+            % Pillar: layers go from z=0 upward, layer 1 at bottom - natural order
+            [pS0,pS1,pType,pK,pBelow,pAbove,pPlanes,Hp] = buildStack(obj.pillar_layers);
+
+            % Ground: layers go from z=-depth upward, so layer 1 is at BOTTOM (most negative z)
+            % and layer L is at TOP (closest to z=0). We use sg = -z so sg=0 at z=0.
+            % To make sg=0 correspond to the TOP layer (L), we flip the arrays.
+            ground_layers_flipped = flip(obj.ground_layers(:));
+            ground_chem_flipped = flip(obj.ground_chem(:));
+            [gS0,gS1,gType,gK,gBelow,gAbove,gPlanes,Dg] = buildStack(ground_layers_flipped);
+
+            % ------------------------------------------------------------
+            % Special interface slab between ground top layer and pillar layer 1
+            % Interface is CENTERED at z=0, spanning z in [-i_th/2, +i_th/2]
+            % This matches the rule: interface takes i_th/2 from each adjacent nominal layer
+            % ------------------------------------------------------------
+            hasTopInterface = isscalar(i_th) && i_th > 0 && ~isempty(obj.pillar_layers) && ~isempty(obj.ground_layers);
+
+            if hasTopInterface
+                z_top = i_th/2;      % top of interface (boundary with pillar layer 1)
+                z_bot = -i_th/2;     % bottom of interface (boundary with ground top layer)
+
+                inTopIf = (z >= (z_bot - tol)) & (z <= (z_top + tol));
+
+                if any(inTopIf(:))
+                    % Chemistry interpolated from ground top layer (at z=-i_th/2) to pillar layer 1 (at z=+i_th/2)
+                    % ground_chem(end) is the topmost ground layer (closest to z=0)
+                    cG = obj.ground_chem(end);  % topmost ground layer
+                    cP = obj.pillar_chem(1);    % bottom pillar layer
+
+                    if outIsCell
+                        % cannot interpolate cells; pick nearest side
+                        for ii = find(inTopIf(:))'
+                            zi = z(ii);
+                            u = (zi - z_bot) / max(1e-15, (z_top - z_bot)); % 0 at bottom, 1 at top
+                            if u >= 0.5
+                                chem{ii} = cP;
+                            else
+                                chem{ii} = cG;
+                            end
+                        end
+                    else
+                        u = (z(inTopIf) - z_bot) ./ max(1e-15, (z_top - z_bot)); % 0..1
+                        u = max(0, min(1, u));
+                        chem(inTopIf) = (1-u).*cG + u.*cP;
+                    end
+
+                    % lays_between_layers: true on BOTH boundary faces of top interface
+                    % z=+i_th/2 is boundary between top interface and pillar layer 1
+                    % z=-i_th/2 is boundary between top interface and ground top layer
+                    zTopIf = z(inTopIf);
+                    onTopFace = abs(zTopIf - z_top) <= tol;
+                    onBotFace = abs(zTopIf - z_bot) <= tol;
+
+                    lays_between_layers(inTopIf) = onTopFace | onBotFace;
+                end
+            end
+
+            % masks for the remaining points (excluding the special top-interface slab)
+            doneMask = false(sz);
+            if hasTopInterface
+                % Top interface is centered at z=0, spanning [-i_th/2, +i_th/2]
+                doneMask = doneMask | ((z >= (-i_th/2 - tol)) & (z <= (i_th/2 + tol)));
+            end
+
+            % Pillar: z > i_th/2 (strictly above top interface)
+            % Ground: everything else not in top interface
+            pilMask = (z > (i_th/2 + tol)) & ~doneMask;
+            grdMask = ~pilMask & ~doneMask;
+
+            % =========================
+            % PILLAR (z > i_th/2)
+            % =========================
+            if any(pilMask(:))
+                zp = z(pilMask);
+                % Pillar mesh starts at z = +i_th/2, stack coordinate s = z - i_th/2
+                % s=0 corresponds to z = +i_th/2 (bottom of pillar layer 1)
+                sp = zp - i_th/2;
+                sp = max(0, min(Hp, sp));  % clamp to valid stack range [0, Hp]
+
+                % Detect boundary planes (strict tolerance)
+                if ~isempty(pPlanes)
+                    onPlane = false(size(sp));
+                    for j = 1:numel(pPlanes)
+                        onPlane = onPlane | (abs(sp - pPlanes(j)) <= tol);
+                    end
+                    lays_between_layers(pilMask) = onPlane;
+                end
+
+                if outIsCell
+                    tmp = cell(size(sp));
+                else
+                    tmp = zeros(size(sp));
+                end
+
+                for ii = 1:numel(sp)
+                    s = sp(ii);
+                    j = find((s >= pS0 - tol) & (s <= pS1 + tol), 1, 'first');
+
+                    if isempty(j)
+                        k = numel(obj.pillar_layers);
+                        if outIsCell, tmp{ii} = obj.pillar_chem{k}; else, tmp(ii) = obj.pillar_chem(k); end
+                        continue;
+                    end
+
+                    if pType(j) == 0
+                        % nominal layer
+                        k = pK(j);
+                        if outIsCell, tmp{ii} = obj.pillar_chem{k}; else, tmp(ii) = obj.pillar_chem(k); end
+                    else
+                        % interface slab - interpolate
+                        k0 = pBelow(j); k1 = pAbove(j);
+                        u  = (s - pS0(j)) / max(1e-15, (pS1(j) - pS0(j)));
+                        u  = max(0, min(1, u));
+                        if outIsCell
+                            if u >= 0.5
+                                tmp{ii} = obj.pillar_chem{k1};
+                            else
+                                tmp{ii} = obj.pillar_chem{k0};
+                            end
+                        else
+                            c0 = obj.pillar_chem(k0);
+                            c1 = obj.pillar_chem(k1);
+                            tmp(ii) = (1-u)*c0 + u*c1;
+                        end
+                    end
                 end
                 chem(pilMask) = tmp;
-            else
-                chem(pilMask) = obj.pillar_chem(idxP);
             end
-        end
 
-        % ---- ground part: z < 0 ----
-        grdMask = ~pilMask;
-        if any(grdMask(:))
-            Dg = sum(obj.ground_layers(:));
-            zg = z(grdMask);
-            zg = max(-Dg, min(0, zg));                     % clamp
-            depth = -zg;                                   % 0 at top, increases downward
+            % =========================
+            % GROUND (z < -i_th/2)
+            % =========================
+            if any(grdMask(:))
+                zg = z(grdMask);
+                % Ground mesh extends from z = -Dg - i_th/2 to z = -i_th/2
+                % Stack coordinate: s=0 at z = -i_th/2 (top of ground), s=Dg at z = -Dg - i_th/2
+                sg = -zg - i_th/2;  % s=0 at z=-i_th/2, s=Dg at z=-Dg-i_th/2
+                sg = max(0, min(Dg, sg));  % clamp to valid stack range [0, Dg]
 
-            cumG = cumsum(obj.ground_layers(:));
-            idxG = arrayfun(@(dd) find(cumG >= dd - tol, 1, 'first'), depth);
-            idxG = max(1, min(numel(cumG), idxG));
+                % Detect boundary planes (strict tolerance)
+                if ~isempty(gPlanes)
+                    onPlane = false(size(sg));
+                    for j = 1:numel(gPlanes)
+                        onPlane = onPlane | (abs(sg - gPlanes(j)) <= tol);
+                    end
+                    lays_between_layers(grdMask) = onPlane;
+                end
 
-            if outIsCell
-                tmp = cell(size(zg));
-                for k = 1:numel(idxG)
-                    tmp{k} = obj.ground_chem{idxG(k)};
+                if outIsCell
+                    tmp = cell(size(sg));
+                else
+                    tmp = zeros(size(sg));
+                end
+
+                for ii = 1:numel(sg)
+                    s = sg(ii);
+                    j = find((s >= gS0 - tol) & (s <= gS1 + tol), 1, 'first');
+
+                    if isempty(j)
+                        % fallback to deepest layer (layer 1 in original = last in flipped)
+                        k = numel(ground_chem_flipped);
+                        if outIsCell, tmp{ii} = ground_chem_flipped{k}; else, tmp(ii) = ground_chem_flipped(k); end
+                        continue;
+                    end
+
+                    if gType(j) == 0
+                        % nominal layer - use flipped chem array
+                        k = gK(j);
+                        if outIsCell, tmp{ii} = ground_chem_flipped{k}; else, tmp(ii) = ground_chem_flipped(k); end
+                    else
+                        % interface slab - interpolate using flipped chem
+                        kBelow = gBelow(j);  % layer index below (smaller s)
+                        kAbove = gAbove(j);  % layer index above (larger s)
+                        u  = (s - gS0(j)) / max(1e-15, (gS1(j) - gS0(j)));
+                        u  = max(0, min(1, u));
+                        if outIsCell
+                            if u >= 0.5
+                                tmp{ii} = ground_chem_flipped{kAbove};
+                            else
+                                tmp{ii} = ground_chem_flipped{kBelow};
+                            end
+                        else
+                            cBelow = ground_chem_flipped(kBelow);
+                            cAbove = ground_chem_flipped(kAbove);
+                            tmp(ii) = (1-u)*cBelow + u*cAbove;
+                        end
+                    end
                 end
                 chem(grdMask) = tmp;
-            else
-                chem(grdMask) = obj.ground_chem(idxG);
             end
         end
-    end
 
 
 
@@ -351,6 +574,7 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
         % Z corner coords
         %==================================================================
         function computeZNodalCoords(obj)
+            z_tolerance=1.0E-5;
             zCornersPoints = [ ...
                 obj.mesh.nodes(obj.mesh.elems(:,1),  :); ...
                 obj.mesh.nodes(obj.mesh.elems(:,3),  :); ...
@@ -361,8 +585,8 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
                 obj.mesh.nodes(obj.mesh.elems(:,25), :); ...
                 obj.mesh.nodes(obj.mesh.elems(:,27), :)  ];
 
-            obj.z_corners_coords = sort(unique(round(zCornersPoints(:,3) / obj.z_tolerance) * obj.z_tolerance), 'descend');
-            obj.z_coords = sort(unique(round(obj.mesh.nodes(:,3) / obj.z_tolerance) * obj.z_tolerance), 'descend');
+            obj.z_corners_coords = sort(unique(round(zCornersPoints(:,3) / z_tolerance) * z_tolerance), 'descend');
+            obj.z_coords = sort(unique(round(obj.mesh.nodes(:,3) / z_tolerance) * z_tolerance), 'descend');
         end
 
         %==================================================================
@@ -377,8 +601,9 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
 
             feapNum = [1 3 9 7 19 21 27 25 2 6 8 4 20 24 26 22 10 12 18 16 5 23 13 15 11 17 14];
 
-            tol = 1E-5;
-            nodes = round(obj.mesh.nodes / tol) * tol;
+            % tol = 1E-5;
+            %  nodes = round(obj.mesh.nodes / tol) * tol;
+            nodes = obj.mesh.nodes;
 
             fprintf(myfile, "feap * * pillar \n  %d %d 0 3 5 27 \n\n", ...
                 size(obj.mesh.nodes,1), size(obj.mesh.elems,1));
@@ -413,15 +638,19 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
             fprintf(myfile, "3 %7.5E   1 1 1  1 1  ! plane z = min  -> fix u_x,u_y,u_z\n", ...
                 min(obj.mesh.nodes(:,3)));
 
-            chem_from_z = obj.chemFromZ(obj.z_coords);
+            [chem_from_z, lays_between_layers] = obj.chemFromZ(obj.z_coords);
             fprintf(myfile, "\n EDIS\n");
             for k = 1:size(obj.z_coords,1)
+                str_layer="";
+                if lays_between_layers(k)
+                    str_layer=" ! ------layer surface --------------------------------";
+                end
                 if obj.z_coords(k)>0
-                    fprintf(myfile, "  3   %.5f  0  0  0  %1.2f 0.0\n", ...
-                     obj.z_coords(k), chem_from_z(k));
+                    fprintf(myfile, "  3   %.5f  0  0  0  %1.2f 0.0   %s\n", ...
+                     obj.z_coords(k), chem_from_z(k),str_layer);
                 else
-                    fprintf(myfile, "  3   %.5f  0  0  0  0.0 %1.2f\n", ...
-                     obj.z_coords(k), chem_from_z(k));
+                    fprintf(myfile, "  3   %.5f  0  0  0  0.0 %1.2f   %s\n", ...
+                     obj.z_coords(k), chem_from_z(k),str_layer);
                 end
             end
             fprintf(myfile, "\n");
@@ -457,6 +686,7 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
             fprintf(myfile, "plot,mesh\n");
             fprintf(myfile, "plot,load\n");
             fprintf(myfile, "plot,axis\n");
+            fprintf(myfile, "plot,cont,4\n");
             fprintf(myfile, "end\n");
             fprintf(myfile, "0\n");
             fprintf(myfile, "-2000. -4000. 2000.\n");
@@ -464,6 +694,7 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
             fprintf(myfile, "batch\n");
             fprintf(myfile, "plot,mesh\n");
             fprintf(myfile, "plot,defo,1,1\n");
+            fprintf(myfile, "plot,cont,4\n");
             fprintf(myfile, "end\n\n");
             fprintf(myfile, "batch\n");
             fprintf(myfile, "opti\n\n");

@@ -19,7 +19,7 @@ scl_old = 1;
 p = 6;lmd = 100;
 iter = 1;maxiter = 500;
 objVr5 = 1.0;
-alpha = 1le-6; mid_num = 30; rank = 1; ini = 0.1; ep_old = 0.2;
+alpha = 1e-6; mid_num = 30; rank = 1; ini = 0.1; ep_old = 0.2;
 loop = [];var_obj = [];Lamb_wi=[];Lamb_w2=[];
 % hh ---- 7-7-7 o-oo %SEC 2): SETTING OF FE DISCRETIZATION
 nEle = nelx*nely*nelz;

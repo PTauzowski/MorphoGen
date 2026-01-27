@@ -19,29 +19,30 @@ model.checkMeshIntegrity(0.001);
 [badE, minDetJ] = model.mesh.findNegativeJacobian(sf, 1e-12);
 fprintf("Bad elements before: %d (min detJ = %.3e)\n", numel(badE), min(minDetJ));
 
-% fix by renumbering
-res = model.mesh.fixNegativeJacobianByRenumbering(sf, 1e-12);
-disp(res)
-
-% re-check
-[badE2, minDetJ2] = model.mesh.findNegativeJacobian(sf, 1e-12);
-fprintf("Bad elements after: %d (min detJ = %.3e)\n", numel(badE2), min(minDetJ2));
-model.checkMeshIntegrity(0.001);
+% % fix by renumbering
+% res = model.mesh.fixNegativeJacobianByRenumbering(sf, 1e-12);
+% disp(res)
+% 
+% % re-check
+% [badE2, minDetJ2] = model.mesh.findNegativeJacobian(sf, 1e-12);
+% fprintf("Bad elements after: %d (min detJ = %.3e)\n", numel(badE2), min(minDetJ2));
+% model.checkMeshIntegrity(0.001);
 
 figure;
 fe = SolidElasticElem( sf, model.mesh.elems );
 fe.plotWithSettings(model.mesh.nodes);
 
-figure;
-detJ = fe.computeDets( model.mesh.nodes ,[] );
-bad_elems=find(detJ(1,1,:,14)<0);
-feb = SolidElasticElem( sf, model.mesh.elems(bad_elems,:) );
-feb.plot(model.mesh.nodes, [0.8,0,0]);
+% figure;
+% detJ = fe.computeDets( model.mesh.nodes ,[] );
+% bad_elems=find(detJ(1,1,:,14)<0);
+% feb = SolidElasticElem( sf, model.mesh.elems(bad_elems,:) );
+% feb.plot(model.mesh.nodes, [0.8,0,0]);
 
-filename = "Pillar11.i";
+filename = "Pillar12.i";
 model.FEAP_Export(filename);
 
-[nodes, elements] = readFEAPFile(filename);
-fe1 = SolidElasticElem( sf, elements );
-figure;
-fe1.plot(nodes);
+% Reading and displaying mesh from FEAP file
+% [nodes, elements] = readFEAPFile(filename);
+% fe1 = SolidElasticElem( sf, elements );
+% figure;
+% fe1.plot(nodes);
