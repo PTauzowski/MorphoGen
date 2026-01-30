@@ -292,6 +292,9 @@ while objRelativeChange > convergenceTol && iter <= maxIterations
     % Compute element densities from global TDF
     heavisideH     = smoothHeaviside(globalTDF, minDensity, epsilon);
     elementDensity = sum(heavisideH(elementNodeIDs), 2) / 4;
+    if ~isempty(fixedElements)
+        elementDensity(fixedElements) = 1;  % enforce solid pads at supports
+    end
 
     % Initialize eigenvector
     modeShape = zeros(numDofs, 1);
@@ -568,9 +571,46 @@ switch type
         fixedElements = union(1:nely, (nelx-1)*nely+1 : nely*nelx);
 
     case 'simply-supported-both'
-        fixedDofs = [2*leftNodes, 2*rightNodes];           % Vertical DOFs on both edges
-        fixedDofs = unique([fixedDofs, 2*leftNodes(1)-1]); % Anchor horizontal motion
-        fixedElements = union(1:nely, (nelx-1)*nely+1 : nely*nelx);
+        % Hinged supports at mid-height on left/right edges (Table 3)
+        jMid = nely/2 + 1;  % requires even nely
+        fixNd = [jMid, nelx*(nely+1) + jMid];
+
+        % Constrain both translational DOFs at hinge nodes
+        fixedDofs = [2*fixNd - 1, 2*fixNd];
+
+        % Non-design pads: two elements per hinge (column 1 and column nelx)
+        eL1 = nely/2;
+        eL2 = nely/2 + 1;
+        eR1 = (nelx-1)*nely + nely/2;
+        eR2 = (nelx-1)*nely + nely/2 + 1;
+        fixedElements = [eL1, eL2, eR1, eR2];
+
+        % Sanity check for the benchmark mesh used in Fig. 8(g)
+        if nelx == 400 && nely == 100
+            assert(fixNd(1) == 51 && fixNd(2) == 400*(101) + 51, ...
+                   'Hinge nodes not at mid-height boundaries for 400x100 mesh');
+            expectedPads = [50 51 39950 39951];
+            assert(isequal(sort(unique(fixedElements(:)))', expectedPads), ...
+                   'Fixed element pads should be two per hinge for 400x100 mesh');
+        end
+
+
+    % % hinge nodes: mid-height on left and right edges
+    % jMid = round(nely/2) + 1;              % node row index on left edge (1..nely+1)
+    % fixNd = [ jMid,  nelx*(nely+1) + jMid ];
+    % 
+    % % constrain BOTH DOFs at BOTH hinges (exactly as Table 3)
+    % fixedDofs = [2*fixNd-1, 2*fixNd];      % u and v at each hinge node
+    % fixedDofs = unique(fixedDofs(:));
+    % 
+    % % small non-design "pads" at supports (exactly as Table 3)
+    % fixedElements = [ ...
+    %     round(nely/2), ...
+    %     round(nely/2)+1, ...
+    %     nely*nelx - round(nely/2), ...
+    %     nely*nelx - round(nely/2) + 1 ...
+    % ];
+    % fixedElements = unique(fixedElements(:));
 
     otherwise
         error('Unknown boundaryType: %s', type);
