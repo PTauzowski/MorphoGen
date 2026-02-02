@@ -1,82 +1,90 @@
 %% ========================================================================
-%  MMC Topology Optimization for Natural Frequency Maximization
+%  MMC Topology Optimization for Natural Frequency (Reusable Helper)
 %  ========================================================================
 %
 %  Description:
-%    Maximizes the first natural frequency of a 2D structure using the
-%    Moving Morphable Components (MMC) method. The structure has fixed
-%    supports at both ends and a concentrated mass at the center.
+%    Shared solver used by the case-specific scripts for maximizing the
+%    first natural frequency of a 2D structure with MMC. Geometry,
+%    boundary conditions, and mass placement are provided via `cfg`.
 %
-%  Reference:
-%    Huang, X. et al. - Topology optimization using MMC method
-%    (Appendix F/G of the original paper)
-%
-%  Method Overview:
-%    1. Components are represented as super-ellipsoids with 6 design vars:
-%       [x0, y0, L, t1, t2, theta] = [center_x, center_y, half-length,
-%                                      half-width1, half-width2, angle]
-%    2. Component shapes are aggregated using KS (Kreisselmeier-Steinhauser)
-%    3. Density field derived via smoothed Heaviside function
-%    4. Design updated using MMA (Method of Moving Asymptotes)
+%  Usage:
+%    results = mmc_nfreq_2d_common(cfg);
+%    Mandatory cfg fields:
+%      - L, H                        : Design domain size [m]
+%      - nelx, nely                  : Mesh resolution
+%      - boundaryType                : 'clamped-left' | 'clamped-both' | 'simply-supported-both'
+%      - volfrac                     : Target volume fraction (0<volfrac<1)
+%    All other fields fall back to defaults through applyDefaults(cfg).
 %
 % =========================================================================
+function results = mmc_nfreq_2d_common(cfg)
 
-clear; clc; close all;
+if nargin < 1 || isempty(cfg)
+    cfg = struct();
+end
+
+cfg = applyDefaults(cfg);
+validateConfig(cfg);
+
+% allow reproducibility control
+if ~isempty(cfg.seed)
+    rng(cfg.seed);
+end
 
 %% ========================================================================
-%  1. PROBLEM PARAMETERS
+%  0. CONFIGURATION
 % =========================================================================
 
 % --- Geometry ---
-domainWidth  = 4;       % [m] Width of design domain
-domainHeight = 1;       % [m] Height of design domain
-thickness    = 0.01;    % [m] Out-of-plane thickness
+domainWidth  = cfg.L;
+domainHeight = cfg.H;
+thickness    = cfg.t;
 
 % --- Mesh ---
-numElemX = 400;         % Number of elements in x-direction
-numElemY = 100;         % Number of elements in y-direction
+numElemX = cfg.nelx;
+numElemY = cfg.nely;
 
 % --- Material Properties ---
-youngsModulus = 2e11;   % [Pa] Young's modulus (steel)
-poissonsRatio = 0.3;    % [-] Poisson's ratio
-density       = 7800;   % [kg/m^3] Material density
-concentratedMass = 1e5; % [kg] Concentrated mass at center
+youngsModulus = cfg.E0;
+poissonsRatio = cfg.nu;
+density       = cfg.rho0;
+concentratedMass = cfg.m_lumped;
 
 % --- MMC Component Parameters ---
-componentSpacingX = 0.25;   % [m] Initial x-spacing between component centers
-componentSpacingY = 0.25;   % [m] Initial y-spacing between component centers
-initialHalfLength = 0.4;    % [m] Initial half-length of components
-initialHalfWidth1 = 0.04;   % [m] Initial half-width (end 1)
-initialHalfWidth2 = 0.04;   % [m] Initial half-width (end 2)
-initialAngle      = pi/4;   % [rad] Initial inclination angle
+componentSpacingX = cfg.componentSpacingX;
+componentSpacingY = cfg.componentSpacingY;
+initialHalfLength = cfg.initialHalfLength;
+initialHalfWidth1 = cfg.initialHalfWidth1;
+initialHalfWidth2 = cfg.initialHalfWidth2;
+initialAngle      = cfg.initialAngle;
 
 % --- Optimization Parameters ---
-volumeFraction     = 0.3;   % [-] Target volume fraction (upper bound)
-superEllipsoidPower = 6;    % [-] Power for super-ellipsoid shape
-ksParameter        = 100;   % [-] KS aggregation parameter
+volumeFraction      = cfg.volfrac;
+superEllipsoidPower = cfg.superEllipsoidPower;
+ksParameter         = cfg.ksParameter;
 
 % --- Convergence Settings ---
-maxIterations    = 500;     % Maximum optimization iterations
-convergenceTol   = 1e-4;    % Convergence tolerance (relative change)
-moveLimit        = 0.1;     % Maximum move per iteration (relative)
+maxIterations  = cfg.maxIterations;
+convergenceTol = cfg.convergenceTol;
+moveLimit      = cfg.moveLimit;
 
 % --- Epsilon Schedule (Heaviside sharpness) ---
-eps_initial = 0.02;         % Initial epsilon value
-eps_final   = 0.3;          % Final epsilon value
-eps_midIter = 30;           % Iteration at sigmoid midpoint
-eps_rate    = 0.5;          % Sigmoid rate parameter
+eps_initial = cfg.eps_initial;
+eps_final   = cfg.eps_final;
+eps_midIter = cfg.eps_midIter;
+eps_rate    = cfg.eps_rate;
 
 % --- Eigenvalue Analysis ---
-targetMode      = 1;        % Which eigenmode to optimize (1 = fundamental)
-numModesCompute = 6;        % Number of modes to compute
+targetMode      = cfg.targetMode;
+numModesCompute = cfg.numModesCompute;
 
 % --- Numerical Parameters ---
-minDensity        = 1e-6;   % Minimum density (void)
-sensitivityDigits = 5;      % Significant digits for sensitivity truncation
-objScaleFactor    = 100;    % Initial objective scaling factor
+minDensity        = cfg.rho_min;
+sensitivityDigits = cfg.sensitivityDigits;
+objScaleFactor    = cfg.objScaleFactor;
 
 %% ========================================================================
-%  2. FINITE ELEMENT MESH SETUP
+%  1. FINITE ELEMENT MESH SETUP
 % =========================================================================
 
 % Helper function for sparse matrix assembly
@@ -88,8 +96,8 @@ numNodes    = (numElemX + 1) * (numElemY + 1);
 numDofs     = 2 * numNodes;
 
 % Element dimensions
-elemWidth  = domainWidth / numElemX;
-elemHeight = domainHeight / numElemY;
+elemWidth   = domainWidth / numElemX;
+elemHeight  = domainHeight / numElemY;
 minElemSize = min(elemWidth, elemHeight);
 
 % Element stiffness and mass matrices
@@ -130,30 +138,23 @@ gridCoords.y = nodeY(:);
 volumeWeight = sparse(double(elementNodeIDs(:)), 1, 1/4);
 
 %% ========================================================================
-%  3. BOUNDARY CONDITIONS & LOADS
+%  2. BOUNDARY CONDITIONS & LOADS
 % =========================================================================
 
-% Fixed nodes: left and right edges (clamped-clamped beam)
-fixedNodes = union(1:numElemY+1, ...
-                   numElemX*(numElemY+1)+1 : (numElemX+1)*(numElemY+1));
-fixedDofs  = [2*fixedNodes-1, 2*fixedNodes];
-freeDofs   = setdiff(1:numDofs, fixedDofs);
+% Boundary conditions (fixed DOFs and supporting elements)
+[fixedDofs, fixedElements] = buildBoundaryConditions(cfg.boundaryType, numElemX, numElemY);
+freeDofs = setdiff(1:numDofs, fixedDofs);
 
-% Elements at fixed boundaries (for connectivity check)
-fixedElements = union(1:numElemY, (numElemX-1)*numElemY+1 : numElemY*numElemX);
-
-% Concentrated mass location: center of domain
-massNodeID  = (numElemY+1) * numElemX/2 + numElemY/2 + 1;
-massDofs    = 2*massNodeID-1 : 2*massNodeID;
+% Mass placement
+massCoords = clampMassLocation(cfg.massLocation, domainWidth, domainHeight, minElemSize);
+massNodeID = findNearestNode(massCoords, gridCoords);
+massDofs   = 2*massNodeID-1 : 2*massNodeID;
 
 % Elements near mass location (for connectivity check)
-massElements = [(numElemX-1)*numElemY/2, ...
-                (numElemX-1)*numElemY/2+1, ...
-                (numElemX+1)*numElemY/2, ...
-                (numElemX+1)*numElemY/2+1];
+[massElements, massColRow] = massNeighborElements(massNodeID, numElemX, numElemY);
 
 %% ========================================================================
-%  4. MMC COMPONENT INITIALIZATION
+%  3. MMC COMPONENT INITIALIZATION
 % =========================================================================
 
 % Generate initial component center coordinates
@@ -195,7 +196,7 @@ nonDesignTDF = [];
 componentTDF = zeros(numNodes, numComponents);
 
 %% ========================================================================
-%  5. MMA OPTIMIZER SETUP
+%  4. MMA OPTIMIZER SETUP
 % =========================================================================
 
 % MMA parameters
@@ -229,7 +230,7 @@ xval_best  = xval;
 bestFrequency = 0;
 
 %% ========================================================================
-%  6. OPTIMIZATION LOOP
+%  5. OPTIMIZATION LOOP
 % =========================================================================
 
 % History storage
@@ -238,7 +239,10 @@ constraintHistory  = zeros(1, maxIterations);
 objRelativeChange  = 1.0;
 iter = 1;
 
-fprintf('\n=== Starting Optimization ===\n');
+fprintf('\n=== Starting Optimization (%s) ===\n', cfg.boundaryType);
+fprintf('Domain: %.1f m x %.1f m | Mesh: %d x %d\n', domainWidth, domainHeight, numElemX, numElemY);
+fprintf('Mass location: [%.3f, %.3f] (node %d | node col %d row %d)\n', ...
+        massCoords(1), massCoords(2), massNodeID, massColRow(1), massColRow(2));
 fprintf('Target volume fraction: %.2f\n', volumeFraction);
 fprintf('Number of components: %d\n', numComponents);
 fprintf('Number of design variables: %d\n\n', numDesignVars);
@@ -290,8 +294,11 @@ while objRelativeChange > convergenceTol && iter <= maxIterations
     % =====================================================================
 
     % Compute element densities from global TDF
-    heavisideH    = smoothHeaviside(globalTDF, minDensity, epsilon);
+    heavisideH     = smoothHeaviside(globalTDF, minDensity, epsilon);
     elementDensity = sum(heavisideH(elementNodeIDs), 2) / 4;
+    if ~isempty(fixedElements)
+        elementDensity(fixedElements) = 1;  % enforce solid pads at supports
+    end
 
     % Initialize eigenvector
     modeShape = zeros(numDofs, 1);
@@ -441,8 +448,8 @@ while objRelativeChange > convergenceTol && iter <= maxIterations
     end
 
     % Print iteration info
-    fprintf('It.: %4d  |  Freq: %8.2f  |  Vol: %+7.4f  |  Change: %.4f\n', ...
-            iter, frequency, volumeConstraint, objRelativeChange);
+    fprintf('It.: %4d  |  Freq: %8.2f  |  Vol: %+7.4f  |  Change: %.4f | Connected: %d\n', ...
+            iter, frequency, volumeConstraint, objRelativeChange, isConnected);
 
     iter = iter + 1;
 end
@@ -451,9 +458,230 @@ fprintf('\n=== Optimization Complete ===\n');
 fprintf('Final frequency: %.2f\n', bestFrequency);
 fprintf('Total iterations: %d\n', iter-1);
 
+% Return a concise results struct
+results.bestFrequency    = bestFrequency;
+results.designVariables  = xval_best;
+results.history.objective   = objectiveHistory(1:iter-1);
+results.history.constraint  = constraintHistory(1:iter-1);
+results.config = cfg;
+
+end
+
 %% ========================================================================
 %  HELPER FUNCTIONS
 % =========================================================================
+
+function cfg = applyDefaults(cfg)
+% APPLYDEFAULTS Fill in missing fields with historical defaults.
+
+% Geometry and mesh
+defaults.L    = 4;          % [m] domain length (x)
+defaults.H    = 1;          % [m] domain height (y)
+defaults.t    = 0.01;       % [m] out-of-plane thickness
+defaults.nelx = 400;        % elements along x
+defaults.nely = 100;        % elements along y
+
+% Material and lumped mass
+defaults.E0        = 2e11;   % [Pa]
+defaults.nu        = 0.3;    % [-]
+defaults.rho0      = 7800;   % [kg/m^3]
+defaults.rho_min   = 1e-6;   % floor density
+defaults.m_lumped  = 1e5;    % [kg] concentrated mass
+
+% MMC initialization
+defaults.componentSpacingX = 0.25; % [m]
+defaults.componentSpacingY = 0.25; % [m]
+defaults.initialHalfLength = 0.4;  % [m]
+defaults.initialHalfWidth1 = 0.04; % [m]
+defaults.initialHalfWidth2 = 0.04; % [m]
+defaults.initialAngle      = pi/4; % [rad]
+
+% Optimization / aggregation
+defaults.volfrac            = 0.3;
+defaults.superEllipsoidPower= 6;
+defaults.ksParameter        = 100;
+defaults.maxIterations      = 500;
+defaults.convergenceTol     = 1e-5;
+defaults.moveLimit          = 0.1;
+
+% Heaviside schedule
+defaults.eps_initial = 0.02;
+defaults.eps_final   = 0.3;
+defaults.eps_midIter = 30;
+defaults.eps_rate    = 0.5;
+
+% Eigen analysis
+defaults.targetMode      = 1;
+defaults.numModesCompute = 6;
+
+% Numerical stabilization
+defaults.sensitivityDigits = 5;
+defaults.objScaleFactor    = 100;
+
+% Supports and mass placement
+defaults.boundaryType = 'clamped-both';
+defaults.massLocation = [0, 0];   % [x,y] domain-centered
+
+% Misc
+defaults.seed      = [];
+defaults.verbosity = 1;
+
+% Legacy aliases for backward compatibility
+alias.domainWidth   = 'L';
+alias.domainHeight  = 'H';
+alias.thickness     = 't';
+alias.numElemX      = 'nelx';
+alias.numElemY      = 'nely';
+alias.youngsModulus = 'E0';
+alias.poissonsRatio = 'nu';
+alias.density       = 'rho0';
+alias.minDensity    = 'rho_min';
+alias.concentratedMass = 'm_lumped';
+alias.volumeFraction   = 'volfrac';
+
+% Promote alias fields if present
+legacyFields = fieldnames(alias);
+for i = 1:numel(legacyFields)
+    legacy = legacyFields{i};
+    modern = alias.(legacy);
+    if isfield(cfg, legacy) && ~isfield(cfg, modern)
+        cfg.(modern) = cfg.(legacy);
+    end
+end
+
+% Apply defaults
+defFields = fieldnames(defaults);
+for i = 1:numel(defFields)
+    fname = defFields{i};
+    if ~isfield(cfg, fname) || isempty(cfg.(fname))
+        cfg.(fname) = defaults.(fname);
+    end
+end
+end
+
+
+function validateConfig(cfg)
+% VALIDATECONFIG Basic sanity checks on configuration
+
+required = {'L','H','nelx','nely','volfrac','boundaryType'};
+for k = 1:numel(required)
+    assert(isfield(cfg, required{k}), 'cfg.%s is required', required{k});
+end
+
+assert(cfg.L > 0 && cfg.H > 0, 'Geometry L,H must be positive');
+assert(all([cfg.nelx, cfg.nely] > 0) && all(mod([cfg.nelx, cfg.nely],1)==0), ...
+    'nelx and nely must be positive integers');
+assert(cfg.volfrac > 0 && cfg.volfrac < 1, 'volfrac must be in (0,1)');
+assert(cfg.t > 0, 'thickness t must be positive');
+assert(cfg.E0 > 0, 'E0 must be positive');
+assert(cfg.rho0 > 0, 'rho0 must be positive');
+assert(cfg.rho_min >= 0, 'rho_min must be non-negative');
+assert(ismember(cfg.boundaryType, {'clamped-left','clamped-both','simply-supported-both'}), ...
+    'boundaryType must be clamped-left | clamped-both | simply-supported-both');
+end
+
+
+function coords = clampMassLocation(coords, width, height, minElemSize)
+% CLAMPMASSLOCATION Keep mass coordinates inside the domain with a margin
+
+    marginX = minElemSize/10;
+    marginY = minElemSize/10;
+    coords(1) = max(-width/2 + marginX, min(width/2 - marginX, coords(1)));
+    coords(2) = max(-height/2 + marginY, min(height/2 - marginY, coords(2)));
+end
+
+
+function nodeID = findNearestNode(target, grid)
+% FINDNEARESTNODE Nearest node to a target coordinate
+
+[~, nodeID] = min((grid.x - target(1)).^2 + (grid.y - target(2)).^2);
+end
+
+
+function [fixedDofs, fixedElements] = buildBoundaryConditions(type, nelx, nely)
+% BUILDBOUNDARYCONDITIONS Supported boundary condition presets
+
+leftNodes  = 1:nely+1;
+rightNodes = nelx*(nely+1)+1 : (nelx+1)*(nely+1);
+
+switch type
+    case 'clamped-left'
+        fixedDofs = [2*leftNodes-1, 2*leftNodes];
+        fixedElements = 1:nely;
+
+    case 'clamped-both'
+        fixedDofs = [2*leftNodes-1, 2*leftNodes, 2*rightNodes-1, 2*rightNodes];
+        fixedElements = union(1:nely, (nelx-1)*nely+1 : nely*nelx);
+
+    case 'simply-supported-both'
+        % Hinged supports at mid-height on left/right edges (Table 3)
+        jMid = nely/2 + 1;  % requires even nely
+        fixNd = [jMid, nelx*(nely+1) + jMid];
+
+        % Constrain both translational DOFs at hinge nodes
+        fixedDofs = [2*fixNd - 1, 2*fixNd];
+
+        % Non-design pads: two elements per hinge (column 1 and column nelx)
+        eL1 = nely/2;
+        eL2 = nely/2 + 1;
+        eR1 = (nelx-1)*nely + nely/2;
+        eR2 = (nelx-1)*nely + nely/2 + 1;
+        fixedElements = [eL1, eL2, eR1, eR2];
+
+        % Sanity check for the benchmark mesh used in Fig. 8(g)
+        if nelx == 400 && nely == 100
+            assert(fixNd(1) == 51 && fixNd(2) == 400*(101) + 51, ...
+                   'Hinge nodes not at mid-height boundaries for 400x100 mesh');
+            expectedPads = [50 51 39950 39951];
+            assert(isequal(sort(unique(fixedElements(:)))', expectedPads), ...
+                   'Fixed element pads should be two per hinge for 400x100 mesh');
+        end
+
+
+    % % hinge nodes: mid-height on left and right edges
+    % jMid = round(nely/2) + 1;              % node row index on left edge (1..nely+1)
+    % fixNd = [ jMid,  nelx*(nely+1) + jMid ];
+    % 
+    % % constrain BOTH DOFs at BOTH hinges (exactly as Table 3)
+    % fixedDofs = [2*fixNd-1, 2*fixNd];      % u and v at each hinge node
+    % fixedDofs = unique(fixedDofs(:));
+    % 
+    % % small non-design "pads" at supports (exactly as Table 3)
+    % fixedElements = [ ...
+    %     round(nely/2), ...
+    %     round(nely/2)+1, ...
+    %     nely*nelx - round(nely/2), ...
+    %     nely*nelx - round(nely/2) + 1 ...
+    % ];
+    % fixedElements = unique(fixedElements(:));
+
+    otherwise
+        error('Unknown boundaryType: %s', type);
+end
+
+fixedDofs = unique(fixedDofs);
+end
+
+
+function [massElements, colRow] = massNeighborElements(massNodeID, nelx, nely)
+% MASSNEIGHELEMENTS Elements sharing the mass node (up to 4 neighbors)
+
+    rowNode = mod(massNodeID-1, nely+1) + 1;
+    colNode = floor((massNodeID-1)/(nely+1)) + 1;
+
+cols = max(1, colNode-1) : min(nelx, colNode);
+rows = max(1, rowNode-1) : min(nely, rowNode);
+
+massElements = [];
+for c = cols
+    for r = rows
+        massElements(end+1) = (c-1)*nely + r; %#ok<AGROW>
+    end
+end
+
+colRow = [colNode, rowNode];
+end
+
 
 function [TDF, TDFderiv, xval, activeComp, activeVars] = ...
     computeComponentTDF(TDF, TDFderiv, xval, compIdx, grid, p, varsPerComp, ...

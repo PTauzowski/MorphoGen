@@ -11,9 +11,9 @@
     "mesh": {"nelx": 100, "nely": 300},
     "passive_regions": {
       "flange": {
-        "top_relative_height": 0.05,
+        "top_relative_height": 0.03,
         "is_top_passive_flag": true,
-        "bottom_relative_height": 0.05,
+        "bottom_relative_height": 0.03,
         "is_bottom_passive_flag": true
       }
     }
@@ -36,7 +36,7 @@
     "volume_fraction": 0.4,
     "method": "SIMP",
     "penalization": 3.0,
-    "filter_radius": 0.04,
+    "filter_radius": 0.1,
     "cut_threshold": 0.02,
     "move_limit": 0.2,
     "max_iters": 2000,
