@@ -18,12 +18,12 @@ cfg.eps_midIter     = 30;
 cfg.eps_rate        = 0.50;
 
 % --- Material ---
-cfg.E0      = 2e11;
+cfg.E0      = 1e7;
 cfg.nu      = 0.3;
-cfg.rho0    = 7800;
+cfg.rho0    = 1;
 cfg.rho_min = 1e-6;
-cfg.t       = 0.01;
-cfg.m_lumped = 1e5;
+cfg.t       = 1;
+cfg.m_lumped = 8;
 
 % --- Geometry / mesh ---
 cfg.L    = 8;

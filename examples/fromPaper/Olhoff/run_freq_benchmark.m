@@ -8,13 +8,27 @@
 
 clear; clc; close all;
 
-L = 8; H = 1;
-nelx = 240; nely = 30;
-volFrac = 0.5;
-penal = 3.0;
-rmin  = 2*L/nelx;
-maxiter = 300;    % enough for time-based beta continuation to reach beta=32
-J = 3;
+% Task parameters (easy to tweak in one spot)
+baseCfg = struct();
+baseCfg.L    = 8;
+baseCfg.H    = 1;
+baseCfg.nelx = 240;
+baseCfg.nely = 30;
+baseCfg.volfrac = 0.5;
+baseCfg.penal   = 3.0;
+baseCfg.rmin    = 2 * baseCfg.L / baseCfg.nelx;
+baseCfg.maxiter = 300;   % enough for beta continuation to reach 32
+baseCfg.J       = 3;
+
+% Material (same for all three cases)
+baseCfg.E0      = 1e7;
+baseCfg.Emin    = max(1e-6*baseCfg.E0, 1e-3);
+baseCfg.rho0    = 1.0;
+baseCfg.rho_min = 1e-6;
+baseCfg.nu      = 0.3;
+baseCfg.t       = 1.0;
+
+opts = struct('doDiagnostic', true, 'diagnosticOnly', false, 'diagModes', 5);
 
 % Paper reference values
 paper = struct();
@@ -23,22 +37,23 @@ paper.CS = struct('init', 104.1, 'opt', 288.7);
 paper.SS = struct('init', 68.7,  'opt', 174.7);
 
 cases = { ...
-    struct('code',"CC", 'label','Clamped–Clamped'); ...
-    struct('code',"CS", 'label','Clamped–Simply'); ...
-    struct('code',"SS", 'label','Simply–Simply'); ...
+    struct('code',"CC", 'label','Clamped-Clamped'); ...
+    struct('code',"CS", 'label','Clamped-Simply'); ...
+    struct('code',"SS", 'label','Simply-Simply'); ...
 };
 
 results = cell(numel(cases), 1);
 for k = 1:numel(cases)
     c = cases{k};
+    cfg = baseCfg;
+    cfg.supportType = c.code;
+
     fprintf('\n================== %s ==================\n', c.label);
     fprintf('Paper: init=%.1f, opt=%.1f\n', paper.(c.code).init, paper.(c.code).opt);
     fprintf('=========================================\n');
 
-    opts = struct('doDiagnostic',true,'diagnosticOnly',false,'diagModes',5);
     tic;
-    [omega_best, xPhys_best, diag_out] = topFreqOptimization_MMA( ...
-        L, H, nelx, nely, volFrac, penal, rmin, maxiter, c.code, J, opts);
+    [omega_best, xPhys_best, diag_out] = topFreqOptimization_MMA(cfg, opts);
     elapsed = toc;
 
     results{k} = struct('code', c.code, 'label', c.label, ...
@@ -47,15 +62,15 @@ for k = 1:numel(cases)
     fprintf('\n--- %s Summary ---\n', c.label);
     print_block('Initial', diag_out.initial);
     print_block('Final',   diag_out.final);
-    fprintf('Volume: %.4f (target 0.5)\n', mean(xPhys_best));
+    fprintf('Volume: %.4f (target %.2f)\n', mean(xPhys_best), cfg.volfrac);
     fprintf('Grayness: %.4f\n', mean(4*xPhys_best.*(1-xPhys_best)));
     fprintf('Time: %.1f sec\n', elapsed);
 
     % Plot topology
     figure('Position', [100+300*(k-1), 100, 400, 100]);
-    imagesc(1 - reshape(xPhys_best, nely, nelx));
+    imagesc(1 - reshape(xPhys_best, cfg.nely, cfg.nelx));
     axis equal tight off; colormap(gray(256));
-    title(sprintf('%s: ω₁=%.1f (paper: %.1f)', c.code, omega_best, paper.(c.code).opt));
+    title(sprintf('%s: omega1=%.1f (paper: %.1f)', c.code, omega_best, paper.(c.code).opt));
 end
 
 % Final summary table

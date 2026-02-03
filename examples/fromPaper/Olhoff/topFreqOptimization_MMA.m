@@ -1,54 +1,62 @@
-function [omega_best, xPhys_best, diagnostics] = topFreqOptimization_MMA(L,H,nelx,nely,volfrac,penal,rmin,maxiter,supportType,J,varargin)
+function [omega_best, xPhys_best, diagnostics] = topFreqOptimization_MMA(cfg, varargin)
 
 % ==============================================================
 % Frequency maximization via MMA (BOUND formulation)
-% Maximize min_{j=1..J} lambda_j  using variable Eb = E/lambda_ref
-% ==============================================================
+% Maximize min_{j=1..J} lambda_j using variable Eb = E/lambda_ref.
 %
-% Inputs:
-%   L, H       - domain dimensions (physical units)
-%   nelx, nely - number of elements in x and y directions
-%   volfrac    - target volume fraction (0 < volfrac < 1)
-%   penal      - SIMP penalization power (typically 3)
-%   rmin       - filter radius in PHYSICAL units
-%                For 2 element widths: rmin = 2*(L/nelx)
-%                Minimum ~1.5 element widths to avoid checkerboard
-%   maxiter    - maximum number of iterations
-%   supportType - boundary condition type (CC, CS, SS, CF)
-%   J          - number of eigenvalues to constrain (default 2)
+% Task parameters (geometry, mesh, materials, continuation schedule, etc.)
+% are supplied in struct `cfg` so each example script can tweak them in one
+% place (see Huang cases for the pattern). Legacy positional arguments are
+% still accepted for backwards compatibility.
+% ==============================================================
 %
 % Output:
 %   omega_best  [rad/s]
 %   xPhys_best  physical density field
-%
-% Support types (in-plane):
-%   CC : clamped-clamped (both edges x=0 and x=L fixed u,v)
-%   CS : clamped-simply (left clamped, right roller: v=0)
-%   SS : simply-supported (both ends roller: v=0; one ref u fixed)
-%   CF : clamped-free (cantilever)
 % ==============================================================
 
-if nargin < 10 || isempty(J), J = 2; end   % J=2 is safest
-opts = struct('doDiagnostic',true,'diagnosticOnly',false,'diagModes',max(3,J),'plotBinary',false);
-diagnostics = struct();
-if ~isempty(varargin)
-    if isstruct(varargin{1})
-        fn = fieldnames(varargin{1});
-        for k = 1:numel(fn), opts.(fn{k}) = varargin{1}.(fn{k}); end
-    else
-        for k = 1:2:numel(varargin)
-            opts.(varargin{k}) = varargin{k+1};
-        end
-    end
+% Handle legacy positional usage: (L,H,nelx,nely,volfrac,penal,rmin,maxiter,supportType,J,opts)
+legacyOpts = struct();
+if nargin >= 1 && ~isstruct(cfg)
+    [cfg, legacyOpts] = legacyArgsToCfg(cfg, varargin{:});
+    varargin = {};  % legacy opts already captured
 end
 
-%% --- material -------------------------------------------------
-E0   = 1e7;
-Emin = max(1e-6*E0,1e-3);   % slight increase to avoid near-singular K
-rho0 = 1.0;
-rho_min = 1e-6;
-nu   = 0.3;
-t    = 1.0;
+if nargin < 1 || isempty(cfg), cfg = struct(); end
+if isempty(varargin)
+    opts = struct();
+else
+    if isstruct(varargin{1})
+        opts = varargin{1};
+    else
+        opts = struct(varargin{:});
+    end
+end
+opts = mergeStructs(opts, legacyOpts);  % legacy opts win if provided
+
+cfg  = applyDefaults(cfg);
+opts = applyDefaultOpts(opts, cfg);
+diagnostics = struct();
+
+% Shorthand locals (keeps the algorithm body intact)
+L          = cfg.L;
+H          = cfg.H;
+nelx       = cfg.nelx;
+nely       = cfg.nely;
+volfrac    = cfg.volfrac;
+penal      = cfg.penal;
+rmin       = cfg.rmin;
+maxiter    = cfg.maxiter;
+supportType= cfg.supportType;
+J          = cfg.J;
+
+% --- material -------------------------------------------------
+E0      = cfg.E0;
+Emin    = cfg.Emin;
+rho0    = cfg.rho0;
+rho_min = cfg.rho_min;
+nu      = cfg.nu;
+t       = cfg.t;
 
 %% --- mesh -----------------------------------------------------
 dx = L/nelx; dy = H/nely;
@@ -83,27 +91,27 @@ fwd  = @(x) imfilter(x,h,'symmetric')./Hs;
 bwd  = @(g) imfilter(g./Hs,h,'symmetric');
 
 %% --- projection ----------------------------------------------
-eta = 0.5;
-betaMax = 64;
+eta = cfg.eta;
+betaMax = cfg.betaMax;
 beta_prev = -inf;  % track changes for continuation
 % TIME-BASED beta schedule: advance every beta_interval iterations
 % Start at beta=1, go more aggressively to higher values
-beta_list = [1 2 4 8 16 32 64];
-beta_interval = 40;   % advance beta every 40 iterations
-beta_idx = 1;
-Nsafe = 5;            % safe iterations after beta jump
-move_safe = 0.05;     % safe move limit during Nsafe iters (increased)
+beta_list = cfg.beta_schedule(:).';  % ensure row vector
+beta_interval = cfg.beta_interval;   % advance beta every N iterations
+beta_idx = cfg.beta_start_idx;
+Nsafe = cfg.beta_safe_iters;         % safe iterations after beta jump
+move_safe = cfg.move_safe;           % safe move limit during Nsafe iters
 safe_counter = 0;
-gray_tol = 0.10;      % relaxed threshold for grayness check
+gray_tol = cfg.gray_tol;             % relaxed threshold for grayness check
 reduce_counter = 0;   % move reduction when eigs fails
-move_reduce = 0.02;   % increased from 0.01
+move_reduce = cfg.move_reduce;       % increased from 0.01
 prev_V_low = [];
-Npolish = 40;         % minimum iterations at max beta
+Npolish = cfg.Npolish;               % minimum iterations at max beta
 
 % Grayness penalty parameters (adaptive with beta)
 % gray_penalty_weight increases with beta to push toward discrete values
 % Higher penalty helps drive discreteness for frequency optimization
-gray_penalty_base = 0.5;  % base penalty weight (scaled by beta/betaMax)
+gray_penalty_base = cfg.gray_penalty_base;  % base penalty weight (scaled by beta/betaMax)
 
 %% --- assembly indices ----------------------------------------
 cVec = 2*nodeNrs(1:nely,1:nelx)+1;
@@ -122,14 +130,14 @@ evalModes = @(xPhys,numModes) evalEigen(xPhys,numModes,penal,E0,Emin,rho0,rho_mi
                                        Ke_l,Me_l,iK,jK,nDof,free);
 
 %% --- MMA setup -----------------------------------------------
-lambda_ref = 2e4;         % scaling reference
+lambda_ref = cfg.lambda_ref;         % scaling reference
 n = nEl + 1;
 m = J + 2;                % J eig constraints + two-sided volume constraint
 
-xmin = [1e-3*ones(nEl,1); 0];
-xmax = [ones(nEl,1);  50];     % Eb upper bound raised for target ω ≈ 456 rad/s
+xmin = [1e-3*ones(nEl,1); cfg.Eb_min];
+xmax = [ones(nEl,1);  cfg.Eb_max];     % Eb upper bound raised for target ω ≈ 456 rad/s
 
-xval  = [volfrac*ones(nEl,1); 1];
+xval  = [volfrac*ones(nEl,1); cfg.Eb0];
 xold1 = xval;
 xold2 = xval;
 low   = xmin;
@@ -142,8 +150,8 @@ d  = 1e-3*ones(m,1);
 
 omega_best = -inf;
 xPhys_best = xval(1:nEl);
-move = 0.2;
-move_hist_len = 10;  % for convergence checks
+move = cfg.move;
+move_hist_len = cfg.move_hist_len;  % for convergence checks
 omega_hist = [];
 dx_hist = [];
 
@@ -477,6 +485,96 @@ if abs(mean(xPhys_best)-volfrac) > 0.002
 end
 end
 
+
+function cfg = applyDefaults(cfg)
+    defaults = struct( ...
+        'L', 8, ...
+        'H', 1, ...
+        'nelx', 240, ...
+        'nely', 30, ...
+        'volfrac', 0.5, ...
+        'penal', 3.0, ...
+        'rmin', [], ...                      % if empty: 2*L/nelx
+        'maxiter', 300, ...
+        'supportType', "CC", ...
+        'J', 3, ...
+        'E0', 1e7, ...
+        'Emin', [], ...                      % if empty: max(1e-6*E0,1e-3)
+        'rho0', 1.0, ...
+        'rho_min', 1e-6, ...
+        'nu', 0.3, ...
+        't', 1.0, ...
+        'eta', 0.5, ...
+        'betaMax', 64, ...
+        'beta_schedule', [1 2 4 8 16 32 64], ...
+        'beta_interval', 40, ...
+        'beta_start_idx', 1, ...
+        'beta_safe_iters', 5, ...
+        'move_safe', 0.05, ...
+        'gray_tol', 0.10, ...
+        'move_reduce', 0.02, ...
+        'Npolish', 40, ...
+        'gray_penalty_base', 0.5, ...
+        'lambda_ref', 2e4, ...
+        'Eb0', 1, ...
+        'Eb_min', 0, ...
+        'Eb_max', 50, ...
+        'move', 0.2, ...
+        'move_hist_len', 10);
+
+    cfg = mergeStructs(defaults, cfg);
+
+    if isempty(cfg.rmin)
+        cfg.rmin = 2 * cfg.L / cfg.nelx;
+    end
+    if isempty(cfg.Emin)
+        cfg.Emin = max(1e-6 * cfg.E0, 1e-3);
+    end
+    if isempty(cfg.beta_schedule)
+        cfg.beta_schedule = [1 2 4 8 16 32 64];
+    end
+    cfg.supportType = string(cfg.supportType);
+end
+
+function opts = applyDefaultOpts(opts, cfg)
+    defaults = struct( ...
+        'doDiagnostic', true, ...
+        'diagnosticOnly', false, ...
+        'diagModes', max(3, cfg.J), ...
+        'plotBinary', false);
+    opts = mergeStructs(defaults, opts);
+end
+
+function out = mergeStructs(base, override)
+    out = base;
+    if isempty(override)
+        return;
+    end
+    fn = fieldnames(override);
+    for k = 1:numel(fn)
+        out.(fn{k}) = override.(fn{k});
+    end
+end
+
+function [cfg, legacyOpts] = legacyArgsToCfg(L,H,nelx,nely,volfrac,penal,rmin,maxiter,supportType,J,varargin)
+    if nargin < 10 || isempty(J), J = 2; end
+    cfg = struct('L',L,'H',H,'nelx',nelx,'nely',nely,'volfrac',volfrac, ...
+                 'penal',penal,'rmin',rmin,'maxiter',maxiter, ...
+                 'supportType',supportType,'J',J);
+    legacyOpts = struct();
+    if ~isempty(varargin)
+        if isstruct(varargin{1})
+            legacyOpts = varargin{1};
+        else
+            try
+                legacyOpts = struct(varargin{:});
+            catch
+                warning('Could not parse legacy optional arguments; using default opts.');
+                legacyOpts = struct();
+            end
+        end
+    end
+end
 
 % ---------------- helpers ---------------------------------------
 function [xPhys, dH] = heavisideProjection(xTilde, beta, eta)
