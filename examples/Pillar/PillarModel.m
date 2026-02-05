@@ -16,7 +16,7 @@ classdef PillarModel < ModelLinear
 
     methods
         function obj = PillarModel( top_R, pillar_layers, ground_layers, pillar_res, ground_res, pillar_chem, ground_chem, int_th, sf )
-            obj.z_tolerance=0.000001;
+            obj.z_tolerance=1e-9;
             obj.top_R = top_R;
             obj.pillar_layers = pillar_layers;
             obj.ground_layers = ground_layers;
@@ -64,7 +64,8 @@ classdef PillarModel < ModelLinear
             z_top = 0.0;
             Rin   = Rbase;
             Rout  = 1.2*Rbase;
-            bank_hres = 5;
+            bank_hres = 5
+  
 
 
             obj.mesh.addPipe3D([0,0,z_bot], Rin, Rout, 0, 90, z_bot, z_top, bank_hres, nrXY*2, obj.ground_res(end), obj.sf.localNodes);
@@ -141,9 +142,14 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
            % 
            % obj.smoothRectEdges(Rtile, Rtr, 12, 0.35);
          
+           obj.mesh.nodes = obj.snapCriticalZCoordinates(obj.mesh.nodes);
+           obj.snapAllCoordinates();
+
            mesh1= Mesh();
            mesh1.mergeMesh(obj.mesh);
            obj.mesh=mesh1;
+           
+
         end
 
         
@@ -171,7 +177,7 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
         % -----------------------------
         % (A) SNAP outer boundary to exact square
         % -----------------------------
-        tol = 1e-6 * max(1, Rtile);
+        tol = 1e-9 * max(1, Rtile);
 
         % outer boundary nodes: near max(x,y)=Rtile in the quarter
         outer = (x >= -tol) & (y >= -tol) & (max(x,y) >= (Rtile - 50*tol));
@@ -574,7 +580,7 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
         % Z corner coords
         %==================================================================
         function computeZNodalCoords(obj)
-            z_tolerance=1.0E-5;
+            z_tolerance=1.0E-9;
             zCornersPoints = [ ...
                 obj.mesh.nodes(obj.mesh.elems(:,1),  :); ...
                 obj.mesh.nodes(obj.mesh.elems(:,3),  :); ...
@@ -601,7 +607,7 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
 
             feapNum = [1 3 9 7 19 21 27 25 2 6 8 4 20 24 26 22 10 12 18 16 5 23 13 15 11 17 14];
 
-            % tol = 1E-5;
+            % tol = 1E-9;
             %  nodes = round(obj.mesh.nodes / tol) * tol;
             nodes = obj.mesh.nodes;
 
@@ -936,6 +942,9 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
                 report.invertedElemCount == 0 && ...
                 report.degenerateElemCount == 0 && ...
                 (isnan(report.nComponents) || report.nComponents <= 1);
+
+            [dmin, pair] = obj.mesh.minNodeDistance();
+
     
             % Print concise summary (optional)
             fprintf("Mesh integrity:\n");
@@ -946,6 +955,9 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
             fprintf("  Duplicate nodes (approx): %d\n", report.duplicateNodePairsCount);
             fprintf("  Degenerate elems: %d, Inverted elems: %d\n", report.degenerateElemCount, report.invertedElemCount);
             fprintf("  Components: %g, Largest component frac: %g\n", report.nComponents, report.largestComponentFrac);
+            fprintf("  Minimal distance: %g between nodes: %d, %d \n", dmin, pair(1), pair(2));      
+            obj.mesh.nodes(pair(2),:)
+            obj.mesh.nodes(pair(1),:)
             fprintf("  Zero-length corner edges: %d\n", report.zeroCornerEdgeCount);
             fprintf("  OK: %d\n", report.ok);
         end
@@ -974,12 +986,125 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
             patch('Vertices', X, 'Faces', faces, ...
                   'FaceAlpha', faceAlpha, 'EdgeAlpha', 0.4);
         end
+
+        function nodes = snapCriticalZCoordinates(obj, nodes)
+            % Snap nodes to exact z-coordinates at layer boundaries
+            tol = obj.z_tolerance;
+            
+            % Critical z-values
+            ground_depth = sum(obj.ground_layers);
+            pillar_height = sum(obj.pillar_layers);
+            
+            critical_z = [
+                -ground_depth - obj.int_th/2;  % bottom of ground
+                -obj.int_th/2;                  % bottom of interface
+                0.0;                            % center (NOT a boundary)
+                obj.int_th/2;                   % top of interface
+                pillar_height + obj.int_th/2;  % top of pillar
+            ];
+            
+            % Add layer boundaries
+            z_ground = -obj.int_th/2;
+            for i = numel(obj.ground_layers):-1:1
+                z_ground = z_ground - obj.ground_layers(i);
+                critical_z = [critical_z; z_ground]; %#ok<AGROW>
+            end
+            
+            z_pillar = obj.int_th/2;
+            for i = 1:numel(obj.pillar_layers)
+                z_pillar = z_pillar + obj.pillar_layers(i);
+        critical_z = [critical_z; z_pillar]; %#ok<AGROW>
+    end
+    
+    critical_z = unique(critical_z);
+    
+    % Snap nodes near critical z-values
+    z = nodes(:,3);
+    for i = 1:numel(critical_z)
+        mask = abs(z - critical_z(i)) < tol;
+        nodes(mask, 3) = critical_z(i);
+    end
+end
+
+        function nodes = snapCriticalRCoordinates(obj, nodes, critical_radii, tol)
+            if nargin < 4, tol = obj.z_tolerance; end
+            
+            x = nodes(:,1);
+            y = nodes(:,2);
+            r = hypot(x, y);
+            
+            for i = 1:numel(critical_radii)
+                R_crit = critical_radii(i);
+                mask = abs(r - R_crit) < tol;
+                if any(mask)
+                    % Scale x,y to exact radius
+                    r_mask = r(mask);
+                    scale = R_crit ./ r_mask;
+                    nodes(mask, 1) = x(mask) .* scale;
+                    nodes(mask, 2) = y(mask) .* scale;
+                end
+            end
+        end
+
+        function nodes = snapSymmetryPlanes(obj, nodes)
+            tol = obj.z_tolerance;
+            
+            % Snap to x=0 plane (theta = 90°)
+            mask_x = abs(nodes(:,1)) < tol;
+            nodes(mask_x, 1) = 0.0;
+            
+            % Snap to y=0 plane (theta = 0°)
+            mask_y = abs(nodes(:,2)) < tol;
+            nodes(mask_y, 2) = 0.0;
+        end
+
+         function obj = snapAllCoordinates(obj)
+            % Snap all coordinates to ensure conformity
+            
+            % 1. Z-coordinates
+            obj.mesh.nodes = obj.snapCriticalZCoordinates(obj.mesh.nodes);
+            
+            % 2. Symmetry planes
+            obj.mesh.nodes = obj.snapSymmetryPlanes(obj.mesh.nodes);
+            
+            % 3. Critical radii
+            pillar_height = sum(obj.pillar_layers);
+            Rbase = obj.top_R + pillar_height * tan(5*pi/180);
+            Rout = 1.2*Rbase;
+            Rbank = 1.5*Rout;
+            Rtile = 1.2*Rbank;
+            
+            critical_radii = [obj.top_R, Rbase, Rout, Rbank, Rtile];
+            obj.mesh.nodes = obj.snapCriticalRCoordinates(obj.mesh.nodes, critical_radii, obj.z_tolerance);
+        end
     end
 
     methods(Static)
 
-        
+       
 
+        function X = snapR(X, R, tol)
+            x = X(:,1); y = X(:,2);
+            r = hypot(x,y);
+            m = abs(r - R) <= tol & r > 0;
+            s = R ./ r(m);
+            x(m) = x(m).*s;
+            y(m) = y(m).*s;
+            X(:,1)=x; X(:,2)=y;
+        end
+
+        function reportSeamNearRadius(mesh, r0, tol)
+            X = mesh.nodes;
+            r = hypot(X(:,1), X(:,2));
+            idx = find(abs(r - r0) < tol);
+            XY = X(idx,1:2);
+            key = round(XY / tol);
+            [~,~,ic] = unique(key,'rows');
+            counts = accumarray(ic,1);
+            fprintf("r=%.6g: nodes=%d, clustered=%d, duplicates=%d\n", ...
+                r0, numel(idx), numel(counts), nnz(counts>1));
+        end
+        
         function nodes = warpCircleToSquareTileQuarter(nodes, x0_xy, Rtr, Rout)
             % Warp outer region from circular boundary to square tile (quarter domain),
             % preserving layered structure by keeping z unchanged.
@@ -1149,56 +1274,71 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
 
         function nodes = applyRingDepressionZ(nodes, x0_xy, Rin, Rout, z_bot, z_top, depth)
             % Apply smooth "bowl" depression on a cylindrical ring volume.
-            % Boundary is NOT moved:
-            %   - r == Rin  (inner boundary)
-            %   - r == Rout (outer boundary)
+            % Guarantees ZERO influence on:
+            %   - r == Rin  (inner boundary ring)
+            %   - r == Rout (outer boundary ring)
             %   - z == z_bot (bottom of the ring)
             %
             % Deformation acts strongest at z_top and fades to 0 at z_bot.
+            
+                x = nodes(:,1) - x0_xy(1);
+                y = nodes(:,2) - x0_xy(2);
+                z = nodes(:,3);
+            
+                r = hypot(x,y);
+            
+                % --- tolerances (scale-aware) ---
+                % Use something meaningful for your geometry scale, not 1e-9*R only.
+                % This must be >= typical floating noise from your generators/transforms.
+                epsR = max(1e-10*max(1,Rout), 1e-8);              % radial tol
+                epsZ = max(1e-10*max(1,abs(z_top-z_bot)), 1e-8);  % z tol
+            
+                % --- select ring volume ---
+                inR = (r >= Rin - epsR) & (r <= Rout + epsR);
+                inZ = (z >= z_bot - epsZ) & (z <= z_top + epsZ);
+            
+                if ~any(inR & inZ)
+                    return;
+                end
+            
+                % --- identify boundaries to freeze (STRICT) ---
+                onInner = abs(r - Rin)  <= epsR;
+                onOuter = abs(r - Rout) <= epsR;
+                onBot   = abs(z - z_bot) <= epsZ;
+            
+                % --- ONLY deform interior nodes (exclude Rin/Rout/bottom exactly) ---
+                mask = inR & inZ & ~(onInner | onOuter | onBot);
+            
+                if ~any(mask)
+                    return;
+                end
+            
+                % normalized radius in [0,1]
+                t = (r(mask) - Rin) ./ max(1e-15, (Rout - Rin));
+                t = max(0, min(1, t));
+            
+                % radial bowl shape: 0 at t=0 and t=1, max at t=0.5
+                bowl = 4 .* t .* (1 - t);     % in [0,1]
+            
+                % normalized height in [0,1] (0 at bottom, 1 at top)
+                s = (z(mask) - z_bot) ./ max(1e-15, (z_top - z_bot));
+                s = max(0, min(1, s));
 
-            x = nodes(:,1) - x0_xy(1);
-            y = nodes(:,2) - x0_xy(2);
-            z = nodes(:,3);
-
-            r = hypot(x,y);
-
-            % select ring volume (quarter is okay; we just use r,z)
-            epsR = 1e-9 * max(1, Rout);
-            epsZ = 1e-9 * max(1, abs(z_top - z_bot));
-
-            inR = (r >= Rin - epsR) & (r <= Rout + epsR);
-            inZ = (z >= z_bot - epsZ) & (z <= z_top + epsZ);
-            mask = inR & inZ;
-
-            if ~any(mask)
-                return;
+                % smoothstep to avoid kinks
+                s = s .* s .* (3 - 2 .* s);
+            
+                dz = -depth .* bowl .* s;
+            
+                % apply
+                nodes(mask,3) = nodes(mask,3) + dz;
+            
+                % --- absolute safety: hard-freeze exact boundary rings (no-op but explicit) ---
+                % (prevents any accidental modification if future edits change code above)
+                nodes(onInner,3) = nodes(onInner,3);
+                nodes(onOuter,3) = nodes(onOuter,3);
+                nodes(onBot,  3) = nodes(onBot,  3);
             end
 
-            % normalized radius in [0,1]
-            t = (r(mask) - Rin) ./ (Rout - Rin);
-            t = max(0, min(1, t));
-
-            % radial bowl shape: 0 at t=0 and t=1, min at t=0.5
-            bowl = 4 .* t .* (1 - t);     % in [0,1]
-
-            % normalized height in [0,1] (0 at bottom, 1 at top)
-            s = (z(mask) - z_bot) ./ (z_top - z_bot);
-            s = max(0, min(1, s));
-
-            % smoothstep to avoid kinks
-            s = s.*s.*(3 - 2.*s);
-
-            dz = -depth .* bowl .* s;
-
-            % Freeze boundary nodes explicitly:
-            isInner = abs(r(mask) - Rin)  <= 10*epsR;
-            isOuter = abs(r(mask) - Rout) <= 10*epsR;
-            isBot   = abs(z(mask) - z_bot) <= 10*epsZ;
-
-            dz(isInner | isOuter | isBot) = 0;
-
-            nodes(mask,3) = nodes(mask,3) + dz;
-        end
 
         function mesh = addLayeredCapBank(mesh, r0, r1, th0, th1, z0, bank_h, layer_th, layer_res, nr, nt, localNodes)
             % Tworzy "cap bank" jako wiele cienkich pipe'ów (po jednej warstwie),

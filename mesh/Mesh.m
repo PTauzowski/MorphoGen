@@ -2,37 +2,40 @@ classdef Mesh < handle
     
     properties
         nodes, elems;
-        tolerance = 10000;
+        tolerance = 1e-9;
         convex_hull_nodes;
     end
     
     methods
-        function el2 = merge( obj, newNodes, newElems )
-            [~,si1,si2] = unique( round(newNodes .* obj.tolerance), 'rows', 'stable' );
-            newNodes = newNodes( si1, : );
-            newElems = si2(newElems);
-            if  size(newElems,2)==1
-                newElems=newElems';
+        function el2 = merge(obj, newNodes, newElems)
+            tol = obj.tolerance;
+            
+            % --- deduplicate new nodes internally ---
+            [newNodes, newElemMap] = obj.deduplicateNodes(newNodes, tol);
+            newElems = newElemMap(newElems);
+            
+            if size(newElems,2) == 1
+                newElems = newElems';
             end
-           if size( obj.nodes, 1 ) == 0 
-                  obj.nodes = newNodes;
-                  obj.elems = newElems;
-                  el2 = newElems;
-           else
-                [~,i1,i2] = intersect( round(obj.nodes .* obj.tolerance), round(newNodes.*obj.tolerance), 'rows' );
-                nidx  = 1:size(newNodes,1);
-                nidx( i2 ) = [];
-                noi   = 1:size(nidx,2);
-                noi = noi + size(obj.nodes,1);
-                obj.nodes = [ obj.nodes; newNodes(nidx,:) ];
-                ninds = zeros( size(newNodes,1), 1);
-                ninds(i2)=i1;
-                ninds(nidx)=noi;
+            
+            % --- first mesh ---
+            if isempty(obj.nodes)
+                obj.nodes = newNodes;
+                obj.elems = newElems;
                 el2 = newElems;
-                el2(:) = ninds( newElems(:) );
-                obj.elems = [ obj.elems; el2 ];
-          end
+                return;
+            end
+            
+            % --- merge with existing nodes ---
+            [obj.nodes, newMap] = mergeNodeLists(obj.nodes, newNodes, tol);
+            
+            % --- remap element connectivity ---
+            el2 = newElems;
+            el2(:) = newMap(newElems(:));
+            
+            obj.elems = [obj.elems; el2];
         end
+
         function el2 = mergeMesh( obj, newMesh, sf )
             % Merge another mesh into this one
             % Optional sf (shape function) enables post-merge quality check
@@ -58,7 +61,11 @@ classdef Mesh < handle
             
         end
         function el2 = connect( obj, sel, newNodes, newElems )
-            [~,si1,si2] = unique( round(newNodes .* obj.tolerance), 'rows', 'stable' );
+            % --- quantization helper (stable) ---
+            q = @(X) floor(X ./ obj.tolerance );
+        
+            % --- deduplicate new nodes internally ---
+            [~, si1, si2] = unique( q(newNodes), 'rows', 'stable' );
             newNodes = newNodes( si1, : );
             newElems = si2(newElems);
            if size( obj.nodes, 1 ) == 0 
@@ -66,7 +73,7 @@ classdef Mesh < handle
                   obj.elems = newElems;
                   el2 = newElems;
            else
-                [~,i1,i2] = intersect( round(obj.nodes .* obj.tolerance), round(newNodes.*obj.tolerance), 'rows' );
+                [~,i1,i2] = intersect( q(obj.nodes), q(newNodes), 'rows' );
                 sn1 = find(sel.select( obj.nodes ));
                 sn2 = find(sel.select( newNodes ));
                 [C,ia] = setdiff( i2, sn2 );
@@ -701,13 +708,21 @@ classdef Mesh < handle
         end
         function obj = transformToPolar2D( obj, x0, y0 )
              newNodes = [ x0+obj.nodes(:,1).*cos( obj.nodes(:,2) ) y0+obj.nodes(:,1).*sin( obj.nodes(:,2) ) ];
-             [~,si1,si2] = unique( round(newNodes .* obj.tolerance), 'rows', 'stable' );
+             % --- quantization helper (stable) ---
+            q = @(X) floor(X ./ obj.tolerance );
+        
+            % --- deduplicate new nodes internally ---
+            [~, si1, si2] = unique( q(newNodes), 'rows', 'stable' );
             obj.nodes = newNodes( si1, : );
             obj.elems = si2(obj.elems);
         end
         function obj = transformToCylindrical3D( obj, x0 )
              newNodes = [ x0(1)+obj.nodes(:,1).*cos( obj.nodes(:,2) ) x0(2)+obj.nodes(:,1).*sin( obj.nodes(:,2) ) obj.nodes(:,3) ];
-             [~,si1,si2] = unique( round(newNodes .* obj.tolerance), 'rows', 'stable' );
+             % --- quantization helper (stable) ---
+            q = @(X) floor(X ./ obj.tolerance );
+        
+            % --- deduplicate new nodes internally ---
+            [~, si1, si2] = unique( q(newNodes), 'rows', 'stable' );
             obj.nodes = newNodes( si1, : );
             obj.elems = si2(obj.elems);
         end
@@ -985,10 +1000,238 @@ classdef Mesh < handle
             r.badE_after = badE2;
             r.minDet_after = minDet2;
             r.ok = isempty(badE2);
-        end
+         end
+
+         function [dmin, pair] = minNodeDistance(obj)
+            % minNodeDistance  Find minimal distance between any two distinct nodes.
+            %
+            % INPUT
+            %   nodes : (N x 3) array of node coordinates
+            %
+            % OUTPUT
+            %   dmin  : minimal Euclidean distance
+            %   pair  : [i j] indices of the closest node pair
+            
+                X = double(obj.nodes);
+                N = size(X,1);
+            
+                if N < 2
+                    dmin = inf;
+                    pair = [];
+                    return;
+                end
+            
+                % --- heuristic cell size ---
+                % Start with a rough estimate based on bounding box
+                bbox = max(X) - min(X);
+                h = norm(bbox) / max(10, N^(1/3));   % adaptive cell size
+            
+                % --- spatial hash ---
+                key = floor(X / h);
+                [keys, ~, ic] = unique(key, 'rows');
+            
+                dmin = inf;
+                pair = [];
+            
+                % --- check neighbors only (same or adjacent cells) ---
+                offsets = combvec(-1:1, -1:1, -1:1)';
+                
+                for k = 1:size(keys,1)
+                    idxA = find(ic == k);
+                    if numel(idxA) < 1, continue; end
+            
+                    for o = 1:size(offsets,1)
+                        neighKey = keys(k,:) + offsets(o,:);
+                        j = find(ismember(keys, neighKey, 'rows'), 1);
+                        if isempty(j), continue; end
+            
+                        idxB = find(ic == j);
+            
+                        % pairwise distances
+                        XA = X(idxA,:);
+                        XB = X(idxB,:);
+            
+                        D = pdist2(XA, XB);
+            
+                        % avoid zero self-distance
+                        if j == k
+                            D(1:size(D,1)+1:end) = inf;
+                        end
+            
+                        [dloc, id] = min(D(:));
+                        if dloc < dmin
+                            dmin = dloc;
+                            [ia, ib] = ind2sub(size(D), id);
+                            pair = [idxA(ia), idxB(ib)];
+                        end
+                    end
+                end
+            end
+
     end
 
     methods(Static)
+
+        function [uniqueNodes, oldToNew] = deduplicateNodes(nodes, tol)
+            n = size(nodes, 1);
+            if n == 0
+                uniqueNodes = [];
+                oldToNew = [];
+                return;
+            end
+            
+            bucketSize = tol;
+            tolSq = tol * tol;
+            
+            % Build hash map: bucket key -> list of UNIQUE node indices (representatives)
+            bucketMap = containers.Map('KeyType', 'char', 'ValueType', 'any');
+            
+            uniqueNodes = [];
+            oldToNew = zeros(n, 1);
+            
+            for i = 1:n
+                if oldToNew(i) > 0
+                    continue;  % Already assigned
+                end
+                
+                nodePos = nodes(i,:);
+                bucketKey = obj.getBucketKey(nodePos, bucketSize);
+                
+                % Search in this bucket and 26 neighbors
+                matched = false;
+                for neighborKey = getNeighborBuckets(bucketKey)
+                    if ~bucketMap.isKey(neighborKey{1})
+                        continue;
+                    end
+                    
+                    % Candidates are unique-node indices
+                    candidates = bucketMap(neighborKey{1});
+                    for uid = candidates
+                        distSq = sum((nodePos - uniqueNodes(uid,:)).^2);
+                        if distSq < tolSq
+                            oldToNew(i) = uid;
+                            matched = true;
+                            break;
+                        end
+                    end
+                    
+                    if matched
+                        break;
+                    end
+                end
+                
+                % No match - create new unique node
+                if ~matched
+                    uniqueNodes = [uniqueNodes; nodePos];
+                    uid = size(uniqueNodes, 1);
+                    oldToNew(i) = uid;
+                    
+                    % Add unique id to bucket
+                    if bucketMap.isKey(bucketKey)
+                        bucketMap(bucketKey) = [bucketMap(bucketKey), uid];
+                    else
+                        bucketMap(bucketKey) = uid;
+                    end
+                end
+            end
+        end
+        
+        function [mergedNodes, newMap] = mergeNodeLists(oldNodes, newNodes, tol)
+            nOld = size(oldNodes, 1);
+            nNew = size(newNodes, 1);
+            
+            if nNew == 0
+                mergedNodes = oldNodes;
+                newMap = [];
+                return;
+            end
+            
+            bucketSize = tol;
+            tolSq = tol * tol;
+            
+            % Build hash map for old nodes: bucket key -> list of node indices
+            bucketMap = containers.Map('KeyType', 'char', 'ValueType', 'any');
+            for i = 1:nOld
+                bucketKey = obj.getBucketKey(oldNodes(i,:), bucketSize);
+                if bucketMap.isKey(bucketKey)
+                    bucketMap(bucketKey) = [bucketMap(bucketKey), i];
+                else
+                    bucketMap(bucketKey) = i;
+                end
+            end
+            
+            mergedNodes = oldNodes;
+            newMap = zeros(nNew, 1);
+            
+            for i = 1:nNew
+                nodePos = newNodes(i,:);
+                bucketKey = obj.getBucketKey(nodePos, bucketSize);
+                
+                % Search in neighboring buckets
+                matched = false;
+                for neighborKey = getNeighborBuckets(bucketKey)
+                    if ~bucketMap.isKey(neighborKey{1})
+                        continue;
+                    end
+                    
+                    candidates = bucketMap(neighborKey{1});
+                    for j = candidates
+                        % CRITICAL: compare against mergedNodes, not oldNodes
+                        distSq = sum((nodePos - mergedNodes(j,:)).^2);
+                        if distSq < tolSq
+                            newMap(i) = j;
+                            matched = true;
+                            break;
+                        end
+                    end
+                    
+                    if matched
+                        break;
+                    end
+                end
+                
+                % No match - add as new node
+                if ~matched
+                    mergedNodes = [mergedNodes; nodePos];
+                    newIdx = size(mergedNodes, 1);
+                    newMap(i) = newIdx;
+                    
+                    % Add to bucket map for future searches within this merge
+                    if bucketMap.isKey(bucketKey)
+                        bucketMap(bucketKey) = [bucketMap(bucketKey), newIdx];
+                    else
+                        bucketMap(bucketKey) = newIdx;
+                    end
+                end
+            end
+        end
+        
+        function key = getBucketKey(pos, bucketSize)
+            % Convert 3D position to bucket indices
+            bucket = floor(pos ./ bucketSize);
+            key = sprintf('%d_%d_%d', bucket(1), bucket(2), bucket(3));
+        end
+        
+        function neighbors = getNeighborBuckets(centerKey)
+            % Parse center bucket coordinates
+            parts = strsplit(centerKey, '_');
+            cx = str2double(parts{1});
+            cy = str2double(parts{2});
+            cz = str2double(parts{3});
+            
+            % Generate all 27 neighbors (including center)
+            neighbors = cell(27, 1);
+            idx = 1;
+            for dx = -1:1
+                for dy = -1:1
+                    for dz = -1:1
+                        neighbors{idx} = sprintf('%d_%d_%d', cx+dx, cy+dy, cz+dz);
+                        idx = idx + 1;
+                    end
+                end
+            end
+        end
+
         function P = buildH27Permutations(sf)
             % buildH27Permutations
             % Build consistent node permutations from sf.localNodes for H27.
