@@ -1,5 +1,5 @@
 %% ========================================================================
-%  Olhoff & Du (2014) - Clamped-Clamped beam (CC)
+%  Olhoff & Du (2014) - Simply-Simply beam (SS)
 %  Natural frequency maximization with SIMP + MMA
 %  ========================================================================
 clear; clc; close all;
@@ -9,8 +9,8 @@ cfg = struct();
 % Geometry / mesh
 cfg.L    = 8;
 cfg.H    = 1;
-cfg.nelx = 400;
-cfg.nely = 50;
+cfg.nelx = 240;
+cfg.nely = 30;
 
 % Material
 cfg.E0      = 1e7;
@@ -21,26 +21,26 @@ cfg.nu      = 0.3;
 cfg.t       = 1.0;
 
 % Optimization controls
-cfg.volfrac  = 0.4;
+cfg.volfrac  = 0.5;
 cfg.penal    = 3.0;
 cfg.rmin     = 2 * cfg.L / cfg.nelx;
 cfg.maxiter  = 300;
 cfg.J        = 3;
-cfg.supportType = "CC";
+cfg.supportType = "SS";
 
 % Projection / continuation (optional tweaks)
 cfg.beta_schedule = [1 2 4 8 16 32 64];
 cfg.beta_interval = 40;
 
 opts = struct('doDiagnostic', true, 'diagnosticOnly', false, 'diagModes', 5);
-paper = struct('init', 146.1, 'opt', 456.4);
+paper = struct('init', 68.7, 'opt', 174.7);
 
 [omega_best, xPhys_best, diag_out] = topFreqOptimization_MMA(cfg, opts);
 
-fprintf('CC case: omega1 initial=%.1f (paper %.1f) | optimized=%.1f (paper %.1f)\n', ...
+fprintf('SS case: omega1 initial=%.1f (paper %.1f) | optimized=%.1f (paper %.1f)\n', ...
     diag_out.initial.omega(1), paper.init, omega_best, paper.opt);
 
-figure('Name', 'Olhoff CC topology'); hold on;
+figure('Name', 'Olhoff SS topology'); hold on;
 imagesc(1 - reshape(xPhys_best, cfg.nely, cfg.nelx));
 axis equal tight off; colormap(gray(256));
-title(sprintf('CC: omega1=%.1f (paper: %.1f)', omega_best, paper.opt));
+title(sprintf('SS: omega1=%.1f (paper: %.1f)', omega_best, paper.opt));
