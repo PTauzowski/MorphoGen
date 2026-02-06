@@ -37,7 +37,7 @@
     "method": "SIMP",
     "penalization": 3.0,
     "filter_radius": 0.04,
-    "cut_threshold": 0.02,
+    "cut_threshold": 0.0005,
     "move_limit": 0.2,
     "max_iters": 2000,
     "change_treshold": 0.01,

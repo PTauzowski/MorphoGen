@@ -11,7 +11,7 @@ classdef Mesh < handle
             tol = obj.tolerance;
             
             % --- deduplicate new nodes internally ---
-            [newNodes, newElemMap] = obj.deduplicateNodes(newNodes, tol);
+            [newNodes, newElemMap] = Mesh.deduplicateNodes(newNodes, tol);
             newElems = newElemMap(newElems);
             
             if size(newElems,2) == 1
@@ -27,7 +27,7 @@ classdef Mesh < handle
             end
             
             % --- merge with existing nodes ---
-            [obj.nodes, newMap] = mergeNodeLists(obj.nodes, newNodes, tol);
+            [obj.nodes, newMap] = Mesh.mergeNodeLists(obj.nodes, newNodes, tol);
             
             % --- remap element connectivity ---
             el2 = newElems;
@@ -1095,11 +1095,11 @@ classdef Mesh < handle
                 end
                 
                 nodePos = nodes(i,:);
-                bucketKey = obj.getBucketKey(nodePos, bucketSize);
+                bucketKey = Mesh.getBucketKey(nodePos, bucketSize);
                 
                 % Search in this bucket and 26 neighbors
                 matched = false;
-                for neighborKey = getNeighborBuckets(bucketKey)
+                for neighborKey = Mesh.getNeighborBuckets(bucketKey)
                     if ~bucketMap.isKey(neighborKey{1})
                         continue;
                     end
@@ -1152,7 +1152,7 @@ classdef Mesh < handle
             % Build hash map for old nodes: bucket key -> list of node indices
             bucketMap = containers.Map('KeyType', 'char', 'ValueType', 'any');
             for i = 1:nOld
-                bucketKey = obj.getBucketKey(oldNodes(i,:), bucketSize);
+                bucketKey = Mesh.getBucketKey(oldNodes(i,:), bucketSize);
                 if bucketMap.isKey(bucketKey)
                     bucketMap(bucketKey) = [bucketMap(bucketKey), i];
                 else
@@ -1165,11 +1165,11 @@ classdef Mesh < handle
             
             for i = 1:nNew
                 nodePos = newNodes(i,:);
-                bucketKey = obj.getBucketKey(nodePos, bucketSize);
+                bucketKey = Mesh.getBucketKey(nodePos, bucketSize);
                 
                 % Search in neighboring buckets
                 matched = false;
-                for neighborKey = getNeighborBuckets(bucketKey)
+                for neighborKey = Mesh.getNeighborBuckets(bucketKey)
                     if ~bucketMap.isKey(neighborKey{1})
                         continue;
                     end
@@ -1207,7 +1207,13 @@ classdef Mesh < handle
         end
         
         function key = getBucketKey(pos, bucketSize)
-            % Convert 3D position to bucket indices
+            % Convert 2D/3D position to 3D bucket indices.
+            if numel(pos) == 2
+                pos = [pos, 0];
+            elseif numel(pos) ~= 3
+                error('Mesh:getBucketKey', ...
+                    'Expected node position with 2 or 3 coordinates, got %d.', numel(pos));
+            end
             bucket = floor(pos ./ bucketSize);
             key = sprintf('%d_%d_%d', bucket(1), bucket(2), bucket(3));
         end
@@ -1298,4 +1304,3 @@ classdef Mesh < handle
         end
     end
 end
-
