@@ -23,7 +23,7 @@ cfg.nu      = 0.3;
 cfg.rho0    = 7800;
 cfg.rho_min = 1e-6;
 cfg.t       = 0.01;
-cfg.m_lumped = 1e5;
+cfg.m_lumped = 10; 1e5;
 
 % --- Geometry / mesh ---
 cfg.L    = 4;

@@ -1,7 +1,7 @@
 classdef LinearNaturalVibration < FEAnalysis
 
     properties
-        omegas, frequencies, qforms, freedofs, fixeddofs;
+        omegas, frequencies, qforms, freedofs, fixeddofs, Mnodal;
     end
 
    methods
@@ -20,6 +20,11 @@ classdef LinearNaturalVibration < FEAnalysis
                     error("Class " + class(obj.felems{k}) + " or its predecessors not implements function :"+fname);
                 end
             end
+       end
+
+       function massClosestNode(obj, x, dofnames, values )
+           obj.load
+           obj.Mnodal( obj.mesh.findClosestNode(x), obj.findDOFsIndices( dofnames ) ) = obj.Mnodal( obj.mesh.findClosestNode(x), obj.findDOFsIndices( dofnames ) ) + values;
         end
        
        function solve(obj, num_eigenvalues, x)

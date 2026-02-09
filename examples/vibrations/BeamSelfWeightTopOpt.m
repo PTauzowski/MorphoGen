@@ -99,18 +99,18 @@ if enforce_topology_computation || ~exist(results_filename, "file")
 
     % Enable optional Woodbury reanalysis:
     % args: (useFlag, rankMax, eigTol, fallbackMode, verbose, monitorPrint)
-    topOpt.configureWoodburyReanalysis(true, 300, 1e-10, 'direct', true, true);
-    
-    % Optional tuning:
-    topOpt.woodburyRebaseOnFallback = true;  % reset base matrix after fallback
-    topOpt.woodburyFallbackMode = 'pcg';    % optional PCG fallback
+    % topOpt.configureWoodburyReanalysis(true, 300, 1e-10, 'direct', true, true);
+    % 
+    % % Optional tuning:
+    % topOpt.woodburyRebaseOnFallback = true;  % reset base matrix after fallback
+    % topOpt.woodburyFallbackMode = 'pcg';    % optional PCG fallback
     
     
     % Uncomment if topology result have to be computed
     tic;
     [objF, xopt]  = topOpt.solve();
     toc
-    topOpt.printWoodburyMonitorSummary(20);
+    %topOpt.printWoodburyMonitorSummary(20);
 
     close all;
     save(results_filename);
