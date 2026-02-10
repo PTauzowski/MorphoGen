@@ -19,7 +19,7 @@ results_filename = 'BeamSelfWeightTopOptConst.mat';
 
 % If true: always compute topology (ignore existing results)
 % If false: compute only if the results file defined in results_filename does not exist
-enforce_topology_computation = true;
+enforce_topology_computation = false;
 
 if enforce_topology_computation || ~exist(results_filename, "file")
 
@@ -169,7 +169,6 @@ filename_predictor = fullfile( folderName,"topology_eigen");
 fol_fr_text = "Vol. fr. = " + num2str(volumeFractions + " ");
   
 
-
 multi_forms_results_filename='BeamMultiFormsTopOptConst.mat';
 
 vibrations.plotNaturalForms(folderName+"/self_weight_optimal_topology",1:10,topOpt.x>0.5,"Self weight topology, ",0.02,'k','k');
@@ -179,7 +178,7 @@ vibrations.printCorrelationTable(folderName+"/self_weight_topology_correlation_t
 
 % If true: always compute topology (ignore existing results)
 % If false: compute only if the results file defined in results_filename does not exist
-enforce_topology_computation = false;
+enforce_topology_computation = true;
 
 load_modes_number=3;
 
@@ -192,10 +191,13 @@ if enforce_topology_computation || ~exist(multi_forms_results_filename, "file")
     for k=1:load_modes_number
         analysisHarmonic = ElasticHarmonicVibrations(fe, mesh, k, false, true);
         analysisHarmonic.supports = analysisLinear.supports;
+        analysisHarmonic.massClosestNode([l/2 h/2],["ux" "uy"],[10 10])
 
         % natural vibration analysis object definition
         vibrations = LinearNaturalVibration( analysisLinear.felems, mesh );
         vibrations.supports = analysisLinear.supports;
+        vibrations.massClosestNode([l/2 h/2],["ux" "uy"],[10 10])
+
 
         topOpt = StressIntensityTopologyOptimizationVol(Rfilter, analysisHarmonic, cutTreshold, penal,  volumeFractions, true);
         topOpt.setConstElems(const_elems);
@@ -217,12 +219,15 @@ if enforce_topology_computation || ~exist(multi_forms_results_filename, "file")
 
     analysisHarmonic1 = ElasticHarmonicVibrations(fe, mesh, 1, false, true);
     analysisHarmonic1.supports = analysisLinear.supports;
+    analysisHarmonic1.massClosestNode([l/2 h/2],["ux" "uy"],[10 10])
 
     analysisHarmonic2 = ElasticHarmonicVibrations(fe, mesh, 2, false, true);
     analysisHarmonic2.supports = analysisLinear.supports;
+    analysisHarmonic2.massClosestNode([l/2 h/2],["ux" "uy"],[10 10])
 
     analysisHarmonic3 = ElasticHarmonicVibrations(fe, mesh, 3, false, true);
     analysisHarmonic3.supports = analysisLinear.supports;
+    analysisHarmonic3.massClosestNode([l/2 h/2],["ux" "uy"],[10 10])
 
     mixedTopOpts12env=[];
     mixedVibrations12env=[];

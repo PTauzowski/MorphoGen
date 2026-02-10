@@ -1,7 +1,7 @@
 classdef ElasticHarmonicVibrations < FEAnalysis
    
    properties
-        isMeshConst, isLoadConst, lambdas, lambdas1, omegas, frequencies, mode, modes, modes1, nmodes, count, P0, correlation_matrix, freedofs, loadVectors,save_frame_modes,M1;
+        isMeshConst, isLoadConst, lambdas, lambdas1, omegas, frequencies, mode, modes, modes1, nmodes, count, P0, Mnodal, correlation_matrix, freedofs, loadVectors,save_frame_modes,M1;
    end
    
    methods       
@@ -21,11 +21,27 @@ classdef ElasticHarmonicVibrations < FEAnalysis
             obj.nmodes=30;
             obj.save_frame_modes=false;
             obj.correlation_matrix=zeros(obj.nmodes,obj.nmodes);
+            obj.Mnodal = zeros( size(mesh.nodes,1), size(obj.ndofs,2) );
        end
+
+       function massClosestNode(obj, x, dofnames, values )
+           m_nodes = obj.mesh.findClosestNode(x);
+           obj.Mnodal( m_nodes, obj.findDOFsIndices( dofnames ) ) = obj.Mnodal( m_nodes, obj.findDOFsIndices( dofnames ) ) + values;
+        end
 
        function [K, M] = computeMatrices(obj,x)
            K  = obj.createSparseMatrix( obj.assemblyGlobalMatrix('computeStifnessMatrix', x, obj.isMeshConst) );
            M  = obj.createSparseMatrix( obj.assemblyGlobalMatrix('computeMassMatrix', x, obj.isMeshConst) );
+       end
+
+       function vM = addMassLumped(obj, vM, I, J)
+           Mfem = obj.toFEMVector(obj.Mnodal);
+           diag_idx = I==J;
+           lumped_mass_dof = find(Mfem );
+           for i=1:numel(lumped_mass_dof)
+               loaded_idx = find(I(diag_idx)==lumped_mass_dof(i));
+               vM(loaded_idx) = vM(loaded_idx) + vM(loaded_idx).*Mfem(I(loaded_idx));
+           end
        end
 
        function qfem = solve(obj, x)
@@ -39,6 +55,7 @@ classdef ElasticHarmonicVibrations < FEAnalysis
            end
            vK  = obj.assemblyGlobalMatrix('computeStifnessMatrix', x, obj.isMeshConst);
            vM  = obj.assemblyGlobalMatrix('computeMassMatrix', x, obj.isMeshConst);
+           vM = obj.addMassLumped(vM,I,J);
            obj.freedofs=solver.freedofs;
 
             K = solver.createSparseMatrix(vK);

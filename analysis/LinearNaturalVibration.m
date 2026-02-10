@@ -8,6 +8,7 @@ classdef LinearNaturalVibration < FEAnalysis
        function obj = LinearNaturalVibration(felems, mesh)
             obj= obj@FEAnalysis( felems, mesh );
             obj.rotations=[];
+            obj.Mnodal = zeros( size(mesh.nodes,1), size(obj.ndofs,2) );
        end
 
        function K = globalMatrixAggregationWeighted(obj, fname, x)
@@ -23,9 +24,19 @@ classdef LinearNaturalVibration < FEAnalysis
        end
 
        function massClosestNode(obj, x, dofnames, values )
-           obj.load
-           obj.Mnodal( obj.mesh.findClosestNode(x), obj.findDOFsIndices( dofnames ) ) = obj.Mnodal( obj.mesh.findClosestNode(x), obj.findDOFsIndices( dofnames ) ) + values;
+           m_nodes = obj.mesh.findClosestNode(x);
+           obj.Mnodal( m_nodes, obj.findDOFsIndices( dofnames ) ) = obj.Mnodal( m_nodes, obj.findDOFsIndices( dofnames ) ) + values;
         end
+       
+       function vM = addMassLumped(obj, vM, I, J)
+           Mfem = obj.toFEMVector(obj.Mnodal);
+           diag_idx = I==J;
+           lumped_mass_dof = find(Mfem );
+           for i=1:numel(lumped_mass_dof)
+               diag_idx = I(diag_idx)==lumped_mass_dof(k);
+               vM(numel) = vM(numel) + vM(numel)*obj.Mfem(numel);
+           end
+       end
        
        function solve(obj, num_eigenvalues, x)
            [I,J,~,~] = obj.globalMatrixIndices();
@@ -39,6 +50,7 @@ classdef LinearNaturalVibration < FEAnalysis
            obj.fixeddofs=solver.supdofs;
            vK = obj.assemblyGlobalMatrix('computeStifnessMatrix',x,false);
            vM = obj.assemblyGlobalMatrix('computeMassMatrix',x,false);
+           vM = obj.addMassLumped(vM,I,J);
 
            [obj.qforms, lambdas]=solver.solveEigenproblem(vK,vM,num_eigenvalues);
            obj.omegas=sqrt(lambdas);
