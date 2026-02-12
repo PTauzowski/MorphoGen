@@ -54,6 +54,59 @@ classdef Mesh < handle
                 end
             end
         end
+        function stats = weldNodes(obj, tol, dropDuplicateElems)
+            % weldNodes  Global node weld on the current mesh.
+            %
+            % This is useful after assembling many blocks with transformed
+            % coordinates where seam nodes are numerically very close.
+            %
+            % Inputs:
+            %   tol               merge tolerance (defaults to obj.tolerance)
+            %   dropDuplicateElems remove duplicate connectivity rows (default true)
+            %
+            % Output:
+            %   stats struct with before/after counts.
+            if nargin < 2 || isempty(tol)
+                tol = obj.tolerance;
+            end
+            if nargin < 3 || isempty(dropDuplicateElems)
+                dropDuplicateElems = true;
+            end
+
+            nNodesBefore = size(obj.nodes, 1);
+            nElemsBefore = size(obj.elems, 1);
+
+            if nNodesBefore == 0
+                stats = struct( ...
+                    'tol', tol, ...
+                    'nodesBefore', 0, 'nodesAfter', 0, ...
+                    'elemsBefore', nElemsBefore, 'elemsAfter', nElemsBefore, ...
+                    'nodeMergedCount', 0, 'duplicateElemsRemoved', 0);
+                return;
+            end
+
+            [mergedNodes, oldToNew] = Mesh.deduplicateNodes(obj.nodes, tol);
+            obj.nodes = mergedNodes;
+
+            if ~isempty(obj.elems)
+                obj.elems = reshape(oldToNew(obj.elems(:)), size(obj.elems));
+                if dropDuplicateElems
+                    [obj.elems, ia] = unique(obj.elems, 'rows', 'stable');
+                    duplicateElemsRemoved = nElemsBefore - numel(ia);
+                else
+                    duplicateElemsRemoved = 0;
+                end
+            else
+                duplicateElemsRemoved = 0;
+            end
+
+            stats = struct( ...
+                'tol', tol, ...
+                'nodesBefore', nNodesBefore, 'nodesAfter', size(obj.nodes, 1), ...
+                'elemsBefore', nElemsBefore, 'elemsAfter', size(obj.elems, 1), ...
+                'nodeMergedCount', nNodesBefore - size(obj.nodes, 1), ...
+                'duplicateElemsRemoved', duplicateElemsRemoved);
+        end
         function el2 = append( obj, newNodes, newElems )
             nnodes=size(obj.nodes,1);
             obj.nodes = [ obj.nodes; newNodes ];
@@ -1099,13 +1152,15 @@ classdef Mesh < handle
                 
                 % Search in this bucket and 26 neighbors
                 matched = false;
-                for neighborKey = Mesh.getNeighborBuckets(bucketKey)
-                    if ~bucketMap.isKey(neighborKey{1})
+                neighborKeys = Mesh.getNeighborBuckets(bucketKey);
+                for nk = 1:numel(neighborKeys)
+                    keyNk = neighborKeys{nk};
+                    if ~bucketMap.isKey(keyNk)
                         continue;
                     end
                     
                     % Candidates are unique-node indices
-                    candidates = bucketMap(neighborKey{1});
+                    candidates = bucketMap(keyNk);
                     for uid = candidates
                         distSq = sum((nodePos - uniqueNodes(uid,:)).^2);
                         if distSq < tolSq
@@ -1169,12 +1224,14 @@ classdef Mesh < handle
                 
                 % Search in neighboring buckets
                 matched = false;
-                for neighborKey = Mesh.getNeighborBuckets(bucketKey)
-                    if ~bucketMap.isKey(neighborKey{1})
+                neighborKeys = Mesh.getNeighborBuckets(bucketKey);
+                for nk = 1:numel(neighborKeys)
+                    keyNk = neighborKeys{nk};
+                    if ~bucketMap.isKey(keyNk)
                         continue;
                     end
                     
-                    candidates = bucketMap(neighborKey{1});
+                    candidates = bucketMap(keyNk);
                     for j = candidates
                         % CRITICAL: compare against mergedNodes, not oldNodes
                         distSq = sum((nodePos - mergedNodes(j,:)).^2);

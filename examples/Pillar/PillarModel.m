@@ -33,6 +33,8 @@ classdef PillarModel < ModelLinear
 
         function obj = generateMesh(obj)
             obj.mesh = Mesh();
+            mergeTol = max(1e-6, obj.z_tolerance);
+            obj.mesh.tolerance = mergeTol;
             pillar_height = sum(obj.pillar_layers);
             ground_depth  = sum(obj.ground_layers);
             nrXY = 4;
@@ -60,36 +62,43 @@ classdef PillarModel < ModelLinear
 
 
             % ---- ring3D (pipe) under top ground layer ----
-            z_bot = -obj.ground_layers(end);
-            z_top = 0.0;
+            z0_ground = -ground_depth - obj.int_th/2; % aligned with core ground stack
+            z_top = -obj.int_th/2;                    % top of ground (below top interface)
             Rin   = Rbase;
             Rout  = 1.2*Rbase;
-            bank_hres = 5
+            bank_hres = 5;
   
-
-
-            obj.mesh.addPipe3D([0,0,z_bot], Rin, Rout, 0, 90, z_bot, z_top, bank_hres, nrXY*2, obj.ground_res(end), obj.sf.localNodes);
+            % Build full layered annulus with the same layering logic as the core.
+            obj.mesh = PillarModel.addLayeredPipe3D( ...
+                obj.mesh, [0 0 0], Rin, Rout, 0, 90, ...
+                z0_ground, obj.ground_layers, obj.ground_res, true, obj.int_th, ...
+                bank_hres, nrXY*2, obj.sf.localNodes );
 
             % ---- depression applied to ring interior ONLY (boundary nodes fixed) ----
             % depth: how deep the depression is at the TOP surface (z=z_top), positive value.
-            depth = 0.05 * abs(z_bot - z_top);   % <- tune (e.g. 0.2..0.6)*layer_thickness
+            % Cap depth so top nodes do not cross (or nearly collide with) the
+            % first interior z-level in the upper ground layer.
+            depthReq = 0.05 * obj.ground_layers(end);   % <- tune base ratio
+
+            sfStep = max(1, numel(unique(obj.sf.localNodes(:,3))) - 1); % H8->1, H27->2
+            topLayerEff = obj.ground_layers(end);
+            if obj.int_th > 0 && numel(obj.ground_layers) >= 2
+                topLayerEff = topLayerEff - obj.int_th/2;
+            end
+            dzTopNode = topLayerEff / max(1, sfStep * obj.ground_res(end));
+            minClearance = max(obj.int_th, 1e-3);
+            depthMax = max(0, dzTopNode - minClearance);
+            depth = min(depthReq, depthMax);
+
+            if depth < depthReq
+                warning('PillarModel:DepressionDepthCapped', ...
+                    ['Requested ring depression depth %.6g exceeds safe limit %.6g ' ...
+                     '(top nodal dz %.6g, clearance %.6g). Using capped value.'], ...
+                    depthReq, depthMax, dzTopNode, minClearance);
+            end
 
             obj.mesh.nodes = PillarModel.applyRingDepressionZ( ...
-                obj.mesh.nodes, [0 0], Rin, Rout, z_bot, z_top, depth );
-
-            % ---- MISSING: deeper ground annulus behind trench (all layers except last) ----
-            if numel(obj.ground_layers) >= 2
-                deep_layers = obj.ground_layers(1:end-1);
-                deep_res    = obj.ground_res(1:end-1);
-            
-                z0_deep = -ground_depth;          % bottom of full ground stack
-                % top of deep part is exactly z_bot = -obj.ground_layers(end)
-            
-                obj.mesh = PillarModel.addLayeredPipe3D_noTopInterface( ...
-                    obj.mesh, [0 0 0], Rin, Rout, 0, 90, ...
-                    z0_deep, deep_layers, deep_res, true, obj.int_th, ...
-                    bank_hres, nrXY*2, obj.sf.localNodes );
-            end
+                obj.mesh.nodes, [0 0], Rin, Rout, z0_ground, z_top, depth );
 
             
 
@@ -98,7 +107,7 @@ classdef PillarModel < ModelLinear
 
             obj.mesh = PillarModel.addLayeredPipe3D( ...
                 obj.mesh, [0 0 0], Rout, Rbank, 0, 90, ...
-                -ground_depth, obj.ground_layers, obj.ground_res, true, obj.int_th, ...
+                z0_ground, obj.ground_layers, obj.ground_res, true, obj.int_th, ...
                 bank_hres, nrXY*2, obj.sf.localNodes );
 
 
@@ -112,6 +121,7 @@ Rout + obj.pillar_layers(1) * tan(deg2rad(angle)), 0,  obj.pillar_layers(1) + z_
 Rbank, deg2rad(90), obj.pillar_layers(1) + z_top  ];
 
             mesh1 = Mesh();
+            mesh1.tolerance = mergeTol;
             mesh1.addRing3D( [0 0 0], obj_sf, x, bank_hres, nrXY*2, obj.pillar_res(1) , obj.sf.localNodes);
 
             obj.mesh.mergeMesh(mesh1);
@@ -127,6 +137,7 @@ Rbank, deg2rad(90), obj.pillar_layers(1) + z_top  ];
 Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_top; Rout + layer2 * tan(deg2rad(angle)), deg2rad(90), layer2 + z_top; Rbank, deg2rad(90), layer2 + z_top ];
 
             mesh1 = Mesh();
+            mesh1.tolerance = mergeTol;
             mesh1.addRing3D( [0 0 0], obj_sf, x, bank_hres,  nrXY*2, 2 , obj.sf.localNodes);
 
             obj.mesh.mergeMesh(mesh1);
@@ -136,18 +147,39 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
             Rtile = 1.2*Rbank;    % size of square tile (tune)
             nThetaSeg = nrXY*2;        % 6..16 is typical
 
+            % Ground transition: keep EXACT same ground layering as annulus/core.
+            % This avoids z-level drift on the Rbank seam.
             obj.mesh = PillarModel.addLayeredTransitionCircleToSquare( ...
-                obj.mesh, Rtr, Rtile, -ground_depth, [ obj.ground_layers obj.pillar_layers(1) layer2 ], [obj.ground_res obj.pillar_res(1) 2 ], ...
+                obj.mesh, Rtr, Rtile, z0_ground, obj.ground_layers, obj.ground_res, ...
                 true, obj.int_th, nThetaSeg, bank_hres, obj.sf );
+
+            % Upper bank transition (above ground top): keep horizontal
+            % internal interfaces and preserve the bank-side geometry logic.
+            z0_bank_top = -obj.int_th/2;
+            obj.mesh = PillarModel.addLayeredTransitionCircleToSquare( ...
+                obj.mesh, Rtr, Rtile, z0_bank_top, [obj.pillar_layers(1) layer2], [obj.pillar_res(1) 2], ...
+                false, obj.int_th, nThetaSeg, bank_hres, obj.sf );
            % 
            % obj.smoothRectEdges(Rtile, Rtr, 12, 0.35);
          
            obj.mesh.nodes = obj.snapCriticalZCoordinates(obj.mesh.nodes);
            obj.snapAllCoordinates();
+           weldStats = obj.mesh.weldNodes(mergeTol, true);
+           fprintf('Global weld: nodes %d -> %d, elems %d -> %d (tol=%g)\n', ...
+               weldStats.nodesBefore, weldStats.nodesAfter, ...
+               weldStats.elemsBefore, weldStats.elemsAfter, mergeTol);
 
-           mesh1= Mesh();
-           mesh1.mergeMesh(obj.mesh);
-           obj.mesh=mesh1;
+           % Try to correct residual orientation-only Jacobian issues.
+           if size(obj.mesh.elems,2) == 27
+               [badE0, ~] = obj.mesh.findNegativeJacobian(obj.sf, 1e-12);
+               if ~isempty(badE0)
+                   fixRes = obj.mesh.fixNegativeJacobianByRenumbering(obj.sf, 1e-12);
+                   if fixRes.fixed_count > 0
+                       fprintf('Jacobian renumbering: fixed %d elements, remaining bad: %d\n', ...
+                           fixRes.fixed_count, numel(fixRes.badE_after));
+                   end
+               end
+           end
            
 
         end
@@ -787,7 +819,10 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
             % ---------------------------------
             t = tol;
             if isprop(obj,'z_tolerance') && ~isempty(obj.z_tolerance)
-                t = min(t, obj.z_tolerance);
+                % Honor the caller tolerance as the primary diagnostic setting.
+                % z_tolerance is a lower-bound for snapping/classification,
+                % not a request to silently tighten duplicate reporting.
+                t = max(t, obj.z_tolerance);
             end
             key = round(X ./ t);
             [~, ia, ic] = unique(key, 'rows', 'stable');
@@ -808,9 +843,6 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
                 end
     
                 Ec = E(:,c);
-                bad = false(report.nElems,1);
-                inv = false(report.nElems,1);
-    
                 % tetra split of hex corners (gives signed volume)
                 tets = [1 2 4 5;
                         2 3 4 7;
@@ -818,12 +850,11 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
                         2 7 6 5;
                         4 7 8 5];
     
-                vols = zeros(report.nElems,1);
+                vols = nan(report.nElems,1);
     
                 for e = 1:report.nElems
                     idx = Ec(e,:);
                     if any(idx < 1) || any(idx > report.nNodes)
-                        bad(e) = true;
                         continue;
                     end
                     xe = X(idx,:);
@@ -837,14 +868,25 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
                         v = v + det([b-a; c2-a; d-a]) / 6;
                     end
                     vols(e) = v;
-    
-                    if abs(v) <= 1e-14 * max(1, max(abs(xe(:))))
-                        bad(e) = true;
-                    elseif v < 0
-                        inv(e) = true;
+                end
+
+                scaleX = max(1, max(abs(X(:))));
+                volTol = 1e-14 * scaleX;
+
+                finiteVols = isfinite(vols);
+                strong = finiteVols & (abs(vols) > volTol);
+
+                % Normalize global sign convention: if most strong volumes are
+                % negative, flip all signs before counting inversions.
+                if nnz(strong) > 0
+                    if nnz(vols(strong) < 0) > nnz(vols(strong) > 0)
+                        vols = -vols;
                     end
                 end
-    
+
+                bad = ~isfinite(vols) | (abs(vols) <= volTol);
+                inv = vols < -volTol;
+
                 report.degenerateElemCount = nnz(bad);
                 report.invertedElemCount   = nnz(inv);
                 report.minSignedVolume     = min(vols);
@@ -1273,13 +1315,12 @@ end
         end
 
         function nodes = applyRingDepressionZ(nodes, x0_xy, Rin, Rout, z_bot, z_top, depth)
-            % Apply smooth "bowl" depression on a cylindrical ring volume.
-            % Guarantees ZERO influence on:
-            %   - r == Rin  (inner boundary ring)
-            %   - r == Rout (outer boundary ring)
-            %   - z == z_bot (bottom of the ring)
+            % Apply smooth "bowl" depression on the TOP surface of a ring.
             %
-            % Deformation acts strongest at z_top and fades to 0 at z_bot.
+            % IMPORTANT:
+            %   We only move nodes on z == z_top. This preserves flat,
+            %   horizontal internal interfaces/layers below, which is
+            %   required by the layered-process constraint.
             
                 x = nodes(:,1) - x0_xy(1);
                 y = nodes(:,2) - x0_xy(2);
@@ -1288,55 +1329,37 @@ end
                 r = hypot(x,y);
             
                 % --- tolerances (scale-aware) ---
-                % Use something meaningful for your geometry scale, not 1e-9*R only.
-                % This must be >= typical floating noise from your generators/transforms.
                 epsR = max(1e-10*max(1,Rout), 1e-8);              % radial tol
                 epsZ = max(1e-10*max(1,abs(z_top-z_bot)), 1e-8);  % z tol
             
-                % --- select ring volume ---
                 inR = (r >= Rin - epsR) & (r <= Rout + epsR);
-                inZ = (z >= z_bot - epsZ) & (z <= z_top + epsZ);
+                onTop = abs(z - z_top) <= epsZ;
             
-                if ~any(inR & inZ)
+                if ~any(inR & onTop)
                     return;
                 end
             
-                % --- identify boundaries to freeze (STRICT) ---
                 onInner = abs(r - Rin)  <= epsR;
                 onOuter = abs(r - Rout) <= epsR;
-                onBot   = abs(z - z_bot) <= epsZ;
             
-                % --- ONLY deform interior nodes (exclude Rin/Rout/bottom exactly) ---
-                mask = inR & inZ & ~(onInner | onOuter | onBot);
+                % Only top-surface interior of the ring
+                mask = inR & onTop & ~(onInner | onOuter);
             
                 if ~any(mask)
                     return;
                 end
             
-                % normalized radius in [0,1]
                 t = (r(mask) - Rin) ./ max(1e-15, (Rout - Rin));
                 t = max(0, min(1, t));
             
-                % radial bowl shape: 0 at t=0 and t=1, max at t=0.5
-                bowl = 4 .* t .* (1 - t);     % in [0,1]
+                % radial bowl shape with zero slope at boundaries:
+                % 0 at t=0 and t=1, max at t=0.5, C1-continuous at edges.
+                bowl = sin(pi .* t).^2;
             
-                % normalized height in [0,1] (0 at bottom, 1 at top)
-                s = (z(mask) - z_bot) ./ max(1e-15, (z_top - z_bot));
-                s = max(0, min(1, s));
-
-                % smoothstep to avoid kinks
-                s = s .* s .* (3 - 2 .* s);
-            
-                dz = -depth .* bowl .* s;
+                dz = -depth .* bowl;
             
                 % apply
                 nodes(mask,3) = nodes(mask,3) + dz;
-            
-                % --- absolute safety: hard-freeze exact boundary rings (no-op but explicit) ---
-                % (prevents any accidental modification if future edits change code above)
-                nodes(onInner,3) = nodes(onInner,3);
-                nodes(onOuter,3) = nodes(onOuter,3);
-                nodes(onBot,  3) = nodes(onBot,  3);
             end
 
 

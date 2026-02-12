@@ -109,6 +109,23 @@ function mesh = generatePillarQuarterMesh(opts)
     mesh = buildPillarMesh(opts);
 end
 
+function z_nodes = refineZLevels(zLevels, sfStep)
+    % Add intermediate z-levels between consecutive zLevels for higher-order SF.
+    % For sfStep=1 (H8), returns zLevels unchanged.
+    % For sfStep=2 (H27), inserts midpoints — all still horizontal (constraint).
+    nz = length(zLevels) - 1;
+    nz_nodes = sfStep * nz + 1;
+    z_nodes = zeros(1, nz_nodes);
+    for iz = 1:nz
+        for k = 0:sfStep-1
+            idx = sfStep * (iz - 1) + 1 + k;
+            t = k / sfStep;
+            z_nodes(idx) = zLevels(iz) * (1 - t) + zLevels(iz+1) * t;
+        end
+    end
+    z_nodes(end) = zLevels(end);
+end
+
 function opts = setDefault(opts, field, value)
     if ~isfield(opts, field)
         opts.(field) = value;
@@ -150,6 +167,12 @@ function mesh = buildPillarMesh(opts)
     % Create shape function
     sf = createShapeFunction(opts.sfName);
 
+    % Shape function grid order: 1 for H8, 2 for H27
+    sfStep = max(sf.pattern(:));
+
+    % Refine z-levels for higher-order elements (adds midpoints, still horizontal)
+    z_nodes = refineZLevels(zLevels, sfStep);
+
     % Define radial zones
     alpha_rad = opts.alpha_deg * pi / 180;
     r_pillar_at_z0 = opts.rTop + zTop * tan(alpha_rad);
@@ -159,6 +182,7 @@ function mesh = buildPillarMesh(opts)
     fprintf('  Core: 0 -> %.1f nm\n', Rp_zone);
     fprintf('  Trench: %.1f -> %.1f nm\n', Rp_zone, opts.Rtrench);
     fprintf('  Outer: %.1f -> %.1f nm\n', opts.Rtrench, opts.Rout);
+    fprintf('  SF grid order: %d (nodes per element edge: %d)\n', sfStep, sfStep+1);
     fprintf('\n');
 
     % Generate mesh blocks
@@ -167,31 +191,32 @@ function mesh = buildPillarMesh(opts)
 
     % Core cylindrical zone
     fprintf('  Core zone...\n');
-    blockCore = generateCylindricalBlock(0, Rp_zone, zLevels, ...
-        opts.nr_core, opts.ntheta, layers, opts, sf, zTop);
+    blockCore = generateCylindricalBlock(0, Rp_zone, zLevels, z_nodes, ...
+        opts.nr_core, opts.ntheta, layers, opts, sf, zTop, sfStep);
     if ~isempty(blockCore.nodes)
         blocks{end+1} = blockCore;
     end
 
     % Trench annulus
     fprintf('  Trench zone...\n');
-    blockTrench = generateCylindricalBlock(Rp_zone, opts.Rtrench, zLevels, ...
-        opts.nr_trench, opts.ntheta, layers, opts, sf, zTop);
+    blockTrench = generateCylindricalBlock(Rp_zone, opts.Rtrench, zLevels, z_nodes, ...
+        opts.nr_trench, opts.ntheta, layers, opts, sf, zTop, sfStep);
     if ~isempty(blockTrench.nodes)
         blocks{end+1} = blockTrench;
     end
 
     % Outer transition zone (circle to square)
     fprintf('  Outer transition zone...\n');
-    blockOuter = generateTransitionBlock(opts.Rtrench, opts.Rout, zLevels, ...
-        opts.nr_outer, opts.ntheta, layers, opts, sf, zTop);
+    blockOuter = generateTransitionBlock(opts.Rtrench, opts.Rout, zLevels, z_nodes, ...
+        opts.nr_outer, opts.ntheta, layers, opts, sf, zTop, sfStep);
     if ~isempty(blockOuter.nodes)
         blocks{end+1} = blockOuter;
     end
 
-    % Merge all blocks
+    % Merge all blocks with appropriate tolerance
     fprintf('Merging blocks...\n');
     meshObj = Mesh();
+    meshObj.tolerance = 1e-6;  % 0.001 pm — safe for nm-scale coordinates
     allMatID = [];
 
     for i = 1:length(blocks)
@@ -214,7 +239,7 @@ function mesh = buildPillarMesh(opts)
     mesh.meshObj = meshObj;  % Keep reference to original Mesh object
 
     % Verify mesh
-    verifyMesh(mesh, opts, zTop, zLevels, layers);
+    verifyMesh(mesh, opts, zTop, zLevels, z_nodes, layers);
 end
 
 function [layers, zLevels, zTop] = buildLayerStack(opts)
@@ -488,34 +513,38 @@ function isInside = isPointInSolid(x, y, z, opts, zTop)
     end
 end
 
-function block = generateCylindricalBlock(Rin, Rout, zLevels, nr, ntheta, ...
-                                          layers, opts, sf, zTop)
-    % Generate cylindrical annular block
-    % Quarter circle: theta from 0 to pi/2
+function block = generateCylindricalBlock(Rin, Rout, zLevels, z_nodes, nr, ntheta, ...
+                                          layers, opts, sf, zTop, sfStep)
+    % Generate cylindrical annular block (quarter circle: theta 0..pi/2)
+    % Grid resolution adapts to shape function order (sfStep*n+1 nodes per dir)
 
-    % Radial divisions
-    r_edges = linspace(Rin, Rout, nr + 1);
+    nz = length(zLevels) - 1;
+    nen = size(sf.pattern, 1);
 
-    % Angular divisions (quarter circle)
-    theta_edges = linspace(0, pi/2, ntheta + 1);
+    % Node grid dimensions
+    nr_nodes     = sfStep * nr + 1;
+    ntheta_nodes = sfStep * ntheta + 1;
+    nz_nodes     = length(z_nodes);   % sfStep * nz + 1
+
+    % Grid coordinate arrays
+    r_arr     = linspace(Rin, Rout, nr_nodes);
+    theta_arr = linspace(0, pi/2, ntheta_nodes);
 
     % Generate nodes
-    nodes = [];
-    nodeMap = zeros(length(r_edges), length(theta_edges), length(zLevels));
-    nodeIdx = 1;
+    totalNodes = nr_nodes * ntheta_nodes * nz_nodes;
+    nodes   = zeros(totalNodes, 3);
+    nodeMap = zeros(nr_nodes, ntheta_nodes, nz_nodes);
+    nodeIdx = 0;
 
-    for iz = 1:length(zLevels)
-        z = zLevels(iz);
-        for it = 1:length(theta_edges)
-            theta = theta_edges(it);
-            for ir = 1:length(r_edges)
-                r = r_edges(ir);
-                x = r * cos(theta);
-                y = r * sin(theta);
-
-                nodes(nodeIdx, :) = [x, y, z];
-                nodeMap(ir, it, iz) = nodeIdx;
+    for iz = 1:nz_nodes
+        z = z_nodes(iz);
+        for it = 1:ntheta_nodes
+            theta = theta_arr(it);
+            for ir = 1:nr_nodes
+                r = r_arr(ir);
                 nodeIdx = nodeIdx + 1;
+                nodes(nodeIdx, :) = [r * cos(theta), r * sin(theta), z];
+                nodeMap(ir, it, iz) = nodeIdx;
             end
         end
     end
@@ -524,40 +553,30 @@ function block = generateCylindricalBlock(Rin, Rout, zLevels, nr, ntheta, ...
     elems = [];
     matID = [];
 
-    for iz = 1:length(zLevels)-1
-        % Find which layer this z-slab belongs to
+    for iz = 1:nz
         z_mid = (zLevels(iz) + zLevels(iz+1)) / 2;
         layerIdx = findLayer(z_mid, layers);
 
         for it = 1:ntheta
             for ir = 1:nr
-                % Get 8 corner nodes for this hex
-                corners = [
-                    nodeMap(ir,   it,   iz)
-                    nodeMap(ir+1, it,   iz)
-                    nodeMap(ir+1, it+1, iz)
-                    nodeMap(ir,   it+1, iz)
-                    nodeMap(ir,   it,   iz+1)
-                    nodeMap(ir+1, it,   iz+1)
-                    nodeMap(ir+1, it+1, iz+1)
-                    nodeMap(ir,   it+1, iz+1)
-                ];
+                % Build element connectivity using sf.pattern
+                elemNodes = zeros(1, nen);
+                for n = 1:nen
+                    ii = sfStep * (ir - 1) + 1 + sf.pattern(n, 1);
+                    jj = sfStep * (it - 1) + 1 + sf.pattern(n, 2);
+                    kk = sfStep * (iz - 1) + 1 + sf.pattern(n, 3);
+                    elemNodes(n) = nodeMap(ii, jj, kk);
+                end
 
-                % Check if element is in solid region
-                % Sample at element centroid
-                x_center = mean(nodes(corners, 1));
-                y_center = mean(nodes(corners, 2));
-                z_center = mean(nodes(corners, 3));
+                % Centroid from element nodes (for solid/void check)
+                x_center = mean(nodes(elemNodes, 1));
+                y_center = mean(nodes(elemNodes, 2));
+                z_center = mean(nodes(elemNodes, 3));
 
                 inSolid = isPointInSolid(x_center, y_center, z_center, opts, zTop);
 
                 if inSolid || strcmp(opts.etch_mode, 'air_material')
-                    % Build full element connectivity using shape function
-                    elemNodes = buildElementConnectivity(corners, nodeMap, ...
-                        ir, it, iz, sf);
-
                     elems(end+1, :) = elemNodes;
-
                     if inSolid
                         matID(end+1) = layers(layerIdx).matID;
                     else
@@ -568,42 +587,46 @@ function block = generateCylindricalBlock(Rin, Rout, zLevels, nr, ntheta, ...
         end
     end
 
-    % Create mesh block structure
     block.nodes = nodes;
     block.elems = elems;
     block.matID = matID(:);
 end
 
-function block = generateTransitionBlock(Rin, Rout, zLevels, nr, ntheta, ...
-                                         layers, opts, sf, zTop)
+function block = generateTransitionBlock(Rin, Rout, zLevels, z_nodes, nr, ntheta, ...
+                                         layers, opts, sf, zTop, sfStep)
     % Generate transition block with circle-to-square warping
-    % Inner boundary at r=Rin (circular)
-    % Outer boundary at square [0, Rout] x [0, Rout]
+    % Inner boundary at r=Rin (circular), outer at square [0,Rout]x[0,Rout]
 
-    % Radial parameter s from 0 (inner circle) to 1 (outer square)
-    s_edges = linspace(0, 1, nr + 1);
+    nz  = length(zLevels) - 1;
+    nen = size(sf.pattern, 1);
 
-    % Angular divisions
-    theta_edges = linspace(0, pi/2, ntheta + 1);
+    % Node grid dimensions
+    ns_nodes     = sfStep * nr + 1;
+    ntheta_nodes = sfStep * ntheta + 1;
+    nz_nodes     = length(z_nodes);
+
+    % Grid coordinate arrays
+    s_arr     = linspace(0, 1, ns_nodes);
+    theta_arr = linspace(0, pi/2, ntheta_nodes);
 
     % Generate nodes with warping
-    nodes = [];
-    nodeMap = zeros(length(s_edges), length(theta_edges), length(zLevels));
-    nodeIdx = 1;
+    totalNodes = ns_nodes * ntheta_nodes * nz_nodes;
+    nodes   = zeros(totalNodes, 3);
+    nodeMap = zeros(ns_nodes, ntheta_nodes, nz_nodes);
+    nodeIdx = 0;
 
-    for iz = 1:length(zLevels)
-        z = zLevels(iz);
-        for it = 1:length(theta_edges)
-            theta = theta_edges(it);
-            for is = 1:length(s_edges)
-                s = s_edges(is);
+    for iz = 1:nz_nodes
+        z = z_nodes(iz);
+        for it = 1:ntheta_nodes
+            theta = theta_arr(it);
+            for is = 1:ns_nodes
+                s = s_arr(is);
 
                 % Warp from circle to square
                 if s == 0
-                    % Inner circle
-                    r = Rin;
-                    x = r * cos(theta);
-                    y = r * sin(theta);
+                    % Inner circle — must match cylindrical block boundary
+                    x = Rin * cos(theta);
+                    y = Rin * sin(theta);
                 else
                     % Blend between circle and square
                     r_circ = Rin + s * (Rout - Rin);
@@ -625,46 +648,40 @@ function block = generateTransitionBlock(Rin, Rout, zLevels, nr, ntheta, ...
                     y = (1 - blend) * y_circ + blend * y_sq;
                 end
 
+                nodeIdx = nodeIdx + 1;
                 nodes(nodeIdx, :) = [x, y, z];
                 nodeMap(is, it, iz) = nodeIdx;
-                nodeIdx = nodeIdx + 1;
             end
         end
     end
 
-    % Generate elements (similar to cylindrical)
+    % Generate elements
     elems = [];
     matID = [];
 
-    for iz = 1:length(zLevels)-1
+    for iz = 1:nz
         z_mid = (zLevels(iz) + zLevels(iz+1)) / 2;
         layerIdx = findLayer(z_mid, layers);
 
         for it = 1:ntheta
             for is = 1:nr
-                corners = [
-                    nodeMap(is,   it,   iz)
-                    nodeMap(is+1, it,   iz)
-                    nodeMap(is+1, it+1, iz)
-                    nodeMap(is,   it+1, iz)
-                    nodeMap(is,   it,   iz+1)
-                    nodeMap(is+1, it,   iz+1)
-                    nodeMap(is+1, it+1, iz+1)
-                    nodeMap(is,   it+1, iz+1)
-                ];
+                % Build element connectivity using sf.pattern
+                elemNodes = zeros(1, nen);
+                for n = 1:nen
+                    ii = sfStep * (is - 1) + 1 + sf.pattern(n, 1);
+                    jj = sfStep * (it - 1) + 1 + sf.pattern(n, 2);
+                    kk = sfStep * (iz - 1) + 1 + sf.pattern(n, 3);
+                    elemNodes(n) = nodeMap(ii, jj, kk);
+                end
 
-                x_center = mean(nodes(corners, 1));
-                y_center = mean(nodes(corners, 2));
-                z_center = mean(nodes(corners, 3));
+                x_center = mean(nodes(elemNodes, 1));
+                y_center = mean(nodes(elemNodes, 2));
+                z_center = mean(nodes(elemNodes, 3));
 
                 inSolid = isPointInSolid(x_center, y_center, z_center, opts, zTop);
 
                 if inSolid || strcmp(opts.etch_mode, 'air_material')
-                    elemNodes = buildElementConnectivity(corners, nodeMap, ...
-                        is, it, iz, sf);
-
                     elems(end+1, :) = elemNodes;
-
                     if inSolid
                         matID(end+1) = layers(layerIdx).matID;
                     else
@@ -680,44 +697,8 @@ function block = generateTransitionBlock(Rin, Rout, zLevels, nr, ntheta, ...
     block.matID = matID(:);
 end
 
-function elemNodes = buildElementConnectivity(corners, nodeMap, i, j, k, sf)
-    % Build element connectivity from corner nodes using shape function
-    % corners: [8 x 1] corner node indices
-    % nodeMap: 3D array of node indices
-    % i, j, k: element position in structured grid
-    % sf: ShapeFunction object
-
-    % Get local node positions from shape function
-    localNodes = sf.localNodes; % [nen x 3] in local coords [-1, 1]
-    nen = size(localNodes, 1);
-    elemNodes = zeros(1, nen);
-
-    % Map local nodes to global connectivity
-    % Local coords: xi, eta, zeta in [-1, 1]
-    % Map to structured indices
-
-    for n = 1:nen
-        xi = localNodes(n, 1);
-        eta = localNodes(n, 2);
-        zeta = localNodes(n, 3);
-
-        % Map to structured grid indices
-        % xi:   -1 -> i,   +1 -> i+1
-        % eta:  -1 -> j,   +1 -> j+1
-        % zeta: -1 -> k,   +1 -> k+1
-
-        ii = i + (1 + xi) / 2;
-        jj = j + (1 + eta) / 2;
-        kk = k + (1 + zeta) / 2;
-
-        % Round to nearest integer (for edge/face nodes)
-        ii = round(ii);
-        jj = round(jj);
-        kk = round(kk);
-
-        elemNodes(n) = nodeMap(ii, jj, kk);
-    end
-end
+% buildElementConnectivity removed — connectivity now built inline
+% using sf.pattern for exact grid indexing (no rounding ambiguity)
 
 function layerIdx = findLayer(z, layers)
     % Find which layer contains height z
@@ -733,7 +714,7 @@ function layerIdx = findLayer(z, layers)
     layerIdx = length(layers);
 end
 
-function verifyMesh(mesh, opts, zTop, zLevels, layers)
+function verifyMesh(mesh, opts, zTop, zLevels, z_nodes, layers)
     % Verify mesh properties
     fprintf('=== Mesh Verification ===\n');
 
@@ -776,23 +757,24 @@ function verifyMesh(mesh, opts, zTop, zLevels, layers)
         end
     end
 
-    % Check node z-coordinates are from zLevels (no warping)
+    % Check node z-coordinates match z_nodes (includes midpoints for H27)
     if ~isempty(mesh.nodes)
         uniqueZ = unique(mesh.nodes(:, 3));
         fprintf('Unique z-coordinates in mesh: %d\n', length(uniqueZ));
-        fprintf('z-levels in stack: %d\n', length(zLevels));
+        fprintf('z-levels (element boundaries): %d\n', length(zLevels));
+        fprintf('z-nodes (incl. midpoints): %d\n', length(z_nodes));
 
-        % All mesh z should match zLevels
+        % All mesh z should match z_nodes (which includes midpoints)
         allMatch = true;
         for i = 1:length(uniqueZ)
-            [minDist, ~] = min(abs(zLevels - uniqueZ(i)));
+            [minDist, ~] = min(abs(z_nodes - uniqueZ(i)));
             if minDist > 1e-6
                 allMatch = false;
-                fprintf('WARNING: z=%.4f does not match any zLevel\n', uniqueZ(i));
+                fprintf('WARNING: z=%.4f does not match any z_node\n', uniqueZ(i));
             end
         end
         if allMatch
-            fprintf('All node z-coordinates match zLevels: PASS\n');
+            fprintf('All node z-coordinates match z_nodes: PASS\n');
         end
     end
 
