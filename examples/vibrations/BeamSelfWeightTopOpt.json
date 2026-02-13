@@ -2,7 +2,7 @@
   "meta": {
     "name": "Fixed beam topology with natural vibrations analysis",
     "notes": "Passive flanges counted in volume fraction.",
-    "units": {"length": "m", "force": "N", "density": "kg/m3", "elastic_modulus": "GPa"}
+    "units": {"length": "m", "force": "N", "density": "kg/m3", "elastic_modulus": "Pa"}
   },
   "domain": {
     "shape" : "rectangular",
@@ -32,6 +32,7 @@
     }
   },
   "optimisation": {
+    "method" : "Olhoff"
     "objective": "min_compliance",
     "volume_fraction": 0.4,
     "method": "SIMP",
