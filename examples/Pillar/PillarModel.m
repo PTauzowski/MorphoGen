@@ -2,7 +2,7 @@ classdef PillarModel < ModelLinear
 
     properties
         top_R
-        pillar_layers, ground_layers
+        pillar_layers, ground_layers, ground_layers_eff
         pillar_res, ground_res
         pillar_chem, ground_chem
         int_th
@@ -12,10 +12,11 @@ classdef PillarModel < ModelLinear
         z_corners_coords
         z_coords
         z_tolerance
+        z_offset
     end
 
     methods
-        function obj = PillarModel( top_R, pillar_layers, ground_layers, pillar_res, ground_res, pillar_chem, ground_chem, int_th, sf )
+        function obj = PillarModel( top_R, pillar_layers, ground_layers, pillar_res, ground_res, pillar_chem, ground_chem, int_th, sf, z_offset )
             obj.z_tolerance=1e-9;
             obj.top_R = top_R;
             obj.pillar_layers = pillar_layers;
@@ -26,7 +27,11 @@ classdef PillarModel < ModelLinear
             obj.ground_chem = ground_chem;
             obj.int_th = int_th;
             obj.sf = sf;
+            obj.z_offset = z_offset;
             obj.generateMesh();
+            obj.mesh.nodes(:,3) = obj.mesh.nodes(:,3) + obj.z_offset;
+            obj.z_corners_coords = obj.z_corners_coords + obj.z_offset;
+            obj.z_coords = obj.z_coords + obj.z_offset;
             obj.computeZNodalCoords();
         end
 
@@ -43,8 +48,17 @@ classdef PillarModel < ModelLinear
             Rtop  = obj.top_R;
 
             % ground matches pillar base, ends at z = -int_th/2 (bottom of centered interface)
-            obj.mesh.addLayeredQuarterCylinder([0, 0, -ground_depth - obj.int_th/2], ...
-                Rbase, obj.ground_layers, obj.ground_res, nrXY, true, obj.int_th, obj.sf.localNodes);
+            obj.ground_layers_eff = obj.ground_layers;
+            if obj.int_th > 0
+                obj.ground_layers_eff(end) = obj.ground_layers_eff(end) - obj.int_th/2;
+                if obj.ground_layers_eff(end) <= 0
+                    error('int_th too large: top ground layer would become <= 0.');
+                end
+            end
+            
+            obj.mesh.addLayeredQuarterCylinder([0, 0, -ground_depth], ...
+                Rbase, obj.ground_layers_eff, obj.ground_res, nrXY, true, obj.int_th, obj.sf.localNodes);
+
             
             % --- interface layer (between ground top and pillar bottom) ---
             % Interface is CENTERED at z=0, spanning z in [-int_th/2, +int_th/2]
@@ -55,14 +69,20 @@ classdef PillarModel < ModelLinear
                 Rbase, int_layers, int_res, nrXY, true, obj.int_th, obj.sf.localNodes);
 
             % pillar starts at top of interface (z = +int_th/2)
+            pillar_layers_eff = obj.pillar_layers;
+            if obj.int_th > 0
+                pillar_layers_eff(1) = pillar_layers_eff(1) - obj.int_th/2;
+            end
+            
             obj.mesh.addLayeredQuarterCylinder([0, 0, obj.int_th/2], ...
-                Rbase, obj.pillar_layers, obj.pillar_res, nrXY, true, obj.int_th, obj.sf.localNodes);
+                Rbase, pillar_layers_eff, obj.pillar_res, nrXY, true, obj.int_th, obj.sf.localNodes);
+
             
             obj.mesh.nodes = obj.mesh.coneTransformationX(pillar_height, Rbase, Rtop, obj.mesh.nodes);
 
 
             % ---- ring3D (pipe) under top ground layer ----
-            z0_ground = -ground_depth - obj.int_th/2; % aligned with core ground stack
+            z0_ground = -ground_depth; % aligned with core ground stack
             z_top = -obj.int_th/2;                    % top of ground (below top interface)
             Rin   = Rbase;
             Rout  = 1.2*Rbase;
@@ -71,18 +91,18 @@ classdef PillarModel < ModelLinear
             % Build full layered annulus with the same layering logic as the core.
             obj.mesh = PillarModel.addLayeredPipe3D( ...
                 obj.mesh, [0 0 0], Rin, Rout, 0, 90, ...
-                z0_ground, obj.ground_layers, obj.ground_res, true, obj.int_th, ...
+                z0_ground, obj.ground_layers_eff, obj.ground_res, true, obj.int_th, ...
                 bank_hres, nrXY*2, obj.sf.localNodes );
 
             % ---- depression applied to ring interior ONLY (boundary nodes fixed) ----
             % depth: how deep the depression is at the TOP surface (z=z_top), positive value.
             % Cap depth so top nodes do not cross (or nearly collide with) the
             % first interior z-level in the upper ground layer.
-            depthReq = 0.05 * obj.ground_layers(end);   % <- tune base ratio
+            depthReq = 0.05 * obj.ground_layers_eff(end);   % <- tune base ratio
 
             sfStep = max(1, numel(unique(obj.sf.localNodes(:,3))) - 1); % H8->1, H27->2
-            topLayerEff = obj.ground_layers(end);
-            if obj.int_th > 0 && numel(obj.ground_layers) >= 2
+            topLayerEff = obj.ground_layers_eff(end);
+            if obj.int_th > 0 && numel(obj.ground_layers_eff) >= 2
                 topLayerEff = topLayerEff - obj.int_th/2;
             end
             dzTopNode = topLayerEff / max(1, sfStep * obj.ground_res(end));
@@ -107,7 +127,7 @@ classdef PillarModel < ModelLinear
 
             obj.mesh = PillarModel.addLayeredPipe3D( ...
                 obj.mesh, [0 0 0], Rout, Rbank, 0, 90, ...
-                z0_ground, obj.ground_layers, obj.ground_res, true, obj.int_th, ...
+                z0_ground, obj.ground_layers_eff, obj.ground_res, true, obj.int_th, ...
                 bank_hres, nrXY*2, obj.sf.localNodes );
 
 
@@ -150,7 +170,7 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
             % Ground transition: keep EXACT same ground layering as annulus/core.
             % This avoids z-level drift on the Rbank seam.
             obj.mesh = PillarModel.addLayeredTransitionCircleToSquare( ...
-                obj.mesh, Rtr, Rtile, z0_ground, obj.ground_layers, obj.ground_res, ...
+                obj.mesh, Rtr, Rtile, z0_ground, obj.ground_layers_eff, obj.ground_res, ...
                 true, obj.int_th, nThetaSeg, bank_hres, obj.sf );
 
             % Upper bank transition (above ground top): keep horizontal
@@ -318,12 +338,18 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
                 error('pillar_layers (%d) and pillar_chem (%d) must match.', ...
                     numel(obj.pillar_layers), numel(obj.pillar_chem));
             end
-            if numel(obj.ground_layers) ~= numel(obj.ground_chem)
+            if numel(obj.ground_layers_eff) ~= numel(obj.ground_chem)
                 error('ground_layers (%d) and ground_chem (%d) must match.', ...
-                    numel(obj.ground_layers), numel(obj.ground_chem));
+                    numel(obj.ground_layers_eff), numel(obj.ground_chem));
             end
 
             z  = double(z);
+            % Work in model-local z where the top interface is centered at 0.
+            % FEAP export may shift all coordinates by obj.z_offset.
+            z_local = z;
+            if isprop(obj,'z_offset') && ~isempty(obj.z_offset)
+                z_local = z - double(obj.z_offset);
+            end
             sz = size(z);
 
             outIsCell = iscell(obj.pillar_chem) || iscell(obj.ground_chem);
@@ -414,13 +440,18 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
             end
 
             % build stacks
-            % Pillar: layers go from z=0 upward, layer 1 at bottom - natural order
-            [pS0,pS1,pType,pK,pBelow,pAbove,pPlanes,Hp] = buildStack(obj.pillar_layers);
+            % Pillar: use effective layers (layer 1 trimmed by int_th/2 for
+            % the top interface with ground) to match the actual mesh geometry.
+            pillar_layers_eff = obj.pillar_layers(:);
+            if isscalar(i_th) && i_th > 0 && ~isempty(obj.ground_layers_eff)
+                pillar_layers_eff(1) = pillar_layers_eff(1) - i_th/2;
+            end
+            [pS0,pS1,pType,pK,pBelow,pAbove,pPlanes,Hp] = buildStack(pillar_layers_eff);
 
             % Ground: layers go from z=-depth upward, so layer 1 is at BOTTOM (most negative z)
             % and layer L is at TOP (closest to z=0). We use sg = -z so sg=0 at z=0.
             % To make sg=0 correspond to the TOP layer (L), we flip the arrays.
-            ground_layers_flipped = flip(obj.ground_layers(:));
+            ground_layers_flipped = flip(obj.ground_layers_eff(:));
             ground_chem_flipped = flip(obj.ground_chem(:));
             [gS0,gS1,gType,gK,gBelow,gAbove,gPlanes,Dg] = buildStack(ground_layers_flipped);
 
@@ -429,13 +460,13 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
             % Interface is CENTERED at z=0, spanning z in [-i_th/2, +i_th/2]
             % This matches the rule: interface takes i_th/2 from each adjacent nominal layer
             % ------------------------------------------------------------
-            hasTopInterface = isscalar(i_th) && i_th > 0 && ~isempty(obj.pillar_layers) && ~isempty(obj.ground_layers);
+            hasTopInterface = isscalar(i_th) && i_th > 0 && ~isempty(obj.pillar_layers) && ~isempty(obj.ground_layers_eff);
 
             if hasTopInterface
                 z_top = i_th/2;      % top of interface (boundary with pillar layer 1)
                 z_bot = -i_th/2;     % bottom of interface (boundary with ground top layer)
 
-                inTopIf = (z >= (z_bot - tol)) & (z <= (z_top + tol));
+                inTopIf = (z_local >= (z_bot - tol)) & (z_local <= (z_top + tol));
 
                 if any(inTopIf(:))
                     % Chemistry interpolated from ground top layer (at z=-i_th/2) to pillar layer 1 (at z=+i_th/2)
@@ -446,7 +477,7 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
                     if outIsCell
                         % cannot interpolate cells; pick nearest side
                         for ii = find(inTopIf(:))'
-                            zi = z(ii);
+                            zi = z_local(ii);
                             u = (zi - z_bot) / max(1e-15, (z_top - z_bot)); % 0 at bottom, 1 at top
                             if u >= 0.5
                                 chem{ii} = cP;
@@ -455,7 +486,7 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
                             end
                         end
                     else
-                        u = (z(inTopIf) - z_bot) ./ max(1e-15, (z_top - z_bot)); % 0..1
+                        u = (z_local(inTopIf) - z_bot) ./ max(1e-15, (z_top - z_bot)); % 0..1
                         u = max(0, min(1, u));
                         chem(inTopIf) = (1-u).*cG + u.*cP;
                     end
@@ -463,7 +494,7 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
                     % lays_between_layers: true on BOTH boundary faces of top interface
                     % z=+i_th/2 is boundary between top interface and pillar layer 1
                     % z=-i_th/2 is boundary between top interface and ground top layer
-                    zTopIf = z(inTopIf);
+                    zTopIf = z_local(inTopIf);
                     onTopFace = abs(zTopIf - z_top) <= tol;
                     onBotFace = abs(zTopIf - z_bot) <= tol;
 
@@ -475,19 +506,19 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
             doneMask = false(sz);
             if hasTopInterface
                 % Top interface is centered at z=0, spanning [-i_th/2, +i_th/2]
-                doneMask = doneMask | ((z >= (-i_th/2 - tol)) & (z <= (i_th/2 + tol)));
+                doneMask = doneMask | ((z_local >= (-i_th/2 - tol)) & (z_local <= (i_th/2 + tol)));
             end
 
             % Pillar: z > i_th/2 (strictly above top interface)
             % Ground: everything else not in top interface
-            pilMask = (z > (i_th/2 + tol)) & ~doneMask;
+            pilMask = (z_local > (i_th/2 + tol)) & ~doneMask;
             grdMask = ~pilMask & ~doneMask;
 
             % =========================
             % PILLAR (z > i_th/2)
             % =========================
             if any(pilMask(:))
-                zp = z(pilMask);
+                zp = z_local(pilMask);
                 % Pillar mesh starts at z = +i_th/2, stack coordinate s = z - i_th/2
                 % s=0 corresponds to z = +i_th/2 (bottom of pillar layer 1)
                 sp = zp - i_th/2;
@@ -547,7 +578,7 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
             % GROUND (z < -i_th/2)
             % =========================
             if any(grdMask(:))
-                zg = z(grdMask);
+                zg = z_local(grdMask);
                 % Ground mesh extends from z = -Dg - i_th/2 to z = -i_th/2
                 % Stack coordinate: s=0 at z = -i_th/2 (top of ground), s=Dg at z = -Dg - i_th/2
                 sg = -zg - i_th/2;  % s=0 at z=-i_th/2, s=Dg at z=-Dg-i_th/2
@@ -1034,21 +1065,21 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
             tol = obj.z_tolerance;
             
             % Critical z-values
-            ground_depth = sum(obj.ground_layers);
+            ground_depth = sum(obj.ground_layers_eff);
             pillar_height = sum(obj.pillar_layers);
             
             critical_z = [
-                -ground_depth - obj.int_th/2;  % bottom of ground
+                -ground_depth;  % bottom of ground
                 -obj.int_th/2;                  % bottom of interface
                 0.0;                            % center (NOT a boundary)
                 obj.int_th/2;                   % top of interface
-                pillar_height + obj.int_th/2;  % top of pillar
+                pillar_height;  % top of pillar
             ];
             
             % Add layer boundaries
             z_ground = -obj.int_th/2;
-            for i = numel(obj.ground_layers):-1:1
-                z_ground = z_ground - obj.ground_layers(i);
+            for i = numel(obj.ground_layers_eff):-1:1
+                z_ground = z_ground -  obj.ground_layers_eff(i);
                 critical_z = [critical_z; z_ground]; %#ok<AGROW>
             end
             
