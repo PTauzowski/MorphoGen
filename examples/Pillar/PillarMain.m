@@ -2,11 +2,11 @@ clear; clc;
 close all;
 
 top_R = 100;
-pillar_layers = [ 10 400 30 2 6 30 ];
-pillar_res    = [ 1  8  2  1 1 2 ];
+pillar_layers = [ 10 400 30 2.6 30 ];
+pillar_res    = [ 1  8  2  1 2 ];
 ground_layers = [ 200 50 300 ];
 ground_res    = [ 10   2 10 ];
-pillar_chem = [ 0.08 0.08 0.08 0.08 0.18  0.08 ];
+pillar_chem = [ 0.08 0.08 0.08 0.18  0.08 ];
 ground_chem = [0 1 1];
 int_th = 0.1;
 

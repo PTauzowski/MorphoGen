@@ -16,7 +16,10 @@ classdef PillarModel < ModelLinear
     end
 
     methods
-        function obj = PillarModel( top_R, pillar_layers, ground_layers, pillar_res, ground_res, pillar_chem, ground_chem, int_th, sf, z_offset )
+        function obj = PillarModel( top_R, pillar_layers, ground_layers, pillar_res, ground_res, pillar_chem, ground_chem, int_th, sf, z_offset, opts )
+            if nargin < 11 || isempty(opts)
+                opts = struct();
+            end
             obj.z_tolerance=1e-9;
             obj.top_R = top_R;
             obj.pillar_layers = pillar_layers;
@@ -28,7 +31,7 @@ classdef PillarModel < ModelLinear
             obj.int_th = int_th;
             obj.sf = sf;
             obj.z_offset = z_offset;
-            obj.generateMesh();
+            obj.generateMesh(opts);
             obj.mesh.nodes(:,3) = obj.mesh.nodes(:,3) + obj.z_offset;
             obj.z_corners_coords = obj.z_corners_coords + obj.z_offset;
             obj.z_coords = obj.z_coords + obj.z_offset;
@@ -36,13 +39,17 @@ classdef PillarModel < ModelLinear
         end
 
 
-        function obj = generateMesh(obj)
+        function obj = generateMesh(obj, opts)
+            if nargin < 2 || isempty(opts)
+                opts = struct();
+            end
             obj.mesh = Mesh();
             mergeTol = max(1e-6, obj.z_tolerance);
             obj.mesh.tolerance = mergeTol;
             pillar_height = sum(obj.pillar_layers);
             ground_depth  = sum(obj.ground_layers);
-            nrXY = 4;
+            if isfield(opts, 'nrXY'),      nrXY      = opts.nrXY;      else, nrXY      = 4; end
+            if isfield(opts, 'bank_hres'), bank_hres = opts.bank_hres; else, bank_hres = 5; end
 
             Rbase = obj.top_R + pillar_height * tan(5*pi/180);
             Rtop  = obj.top_R;
@@ -86,8 +93,7 @@ classdef PillarModel < ModelLinear
             z_top = -obj.int_th/2;                    % top of ground (below top interface)
             Rin   = Rbase;
             Rout  = 1.2*Rbase;
-            bank_hres = 5;
-  
+
             % Build full layered annulus with the same layering logic as the core.
             obj.mesh = PillarModel.addLayeredPipe3D( ...
                 obj.mesh, [0 0 0], Rin, Rout, 0, 90, ...
@@ -98,7 +104,7 @@ classdef PillarModel < ModelLinear
             % depth: how deep the depression is at the TOP surface (z=z_top), positive value.
             % Cap depth so top nodes do not cross (or nearly collide with) the
             % first interior z-level in the upper ground layer.
-            depthReq = 0.05 * obj.ground_layers_eff(end);   % <- tune base ratio
+            depthReq = 0.04 * obj.ground_layers_eff(end);   % <- tune base ratio
 
             sfStep = max(1, numel(unique(obj.sf.localNodes(:,3))) - 1); % H8->1, H27->2
             topLayerEff = obj.ground_layers_eff(end);
@@ -136,14 +142,32 @@ classdef PillarModel < ModelLinear
             angle=50;
 
 
-            x = [ Rout, 0,  z_top;  Rbank, 0,  z_top;  Rout, deg2rad(90), z_top;  Rbank, deg2rad(90), z_top; ...
-Rout + obj.pillar_layers(1) * tan(deg2rad(angle)), 0,  obj.pillar_layers(1) + z_top;  Rbank,  0, obj.pillar_layers(1) + z_top; Rout + obj.pillar_layers(1) * tan(deg2rad(angle)), deg2rad(90), obj.pillar_layers(1) + z_top; 
-Rbank, deg2rad(90), obj.pillar_layers(1) + z_top  ];
+            % Canonical z-levels for pillar layer-1 split (layer loses int_th/2 to global seam
+            % and int_th/2 to the first internal pillar interface, total loss = int_th).
+            h_eff_1    = obj.pillar_layers(1) - obj.int_th;    % effective height of pillar layer 1
+            z_seam_top = obj.int_th/2;                         % top of global ground/pillar seam
+            z_pil1_top = z_seam_top + h_eff_1;                 % = pillar_layers(1) - int_th/2
 
+            % (A) Interface slab: z in [-int_th/2, +int_th/2], 1 element in z.
+            Rout_at_seam    = Rout + obj.int_th          * tan(deg2rad(angle));
+            Rout_at_pil1top = Rout + obj.pillar_layers(1)* tan(deg2rad(angle));
+            x = [ Rout,           0,           z_top;      Rbank, 0,           z_top; ...
+                  Rout,           deg2rad(90),  z_top;      Rbank, deg2rad(90),  z_top; ...
+                  Rout_at_seam,   0,           z_seam_top; Rbank, 0,           z_seam_top; ...
+                  Rout_at_seam,   deg2rad(90),  z_seam_top; Rbank, deg2rad(90), z_seam_top ];
             mesh1 = Mesh();
             mesh1.tolerance = mergeTol;
-            mesh1.addRing3D( [0 0 0], obj_sf, x, bank_hres, nrXY*2, obj.pillar_res(1) , obj.sf.localNodes);
+            mesh1.addRing3D( [0 0 0], obj_sf, x, bank_hres, nrXY*2, 1, obj.sf.localNodes);
+            obj.mesh.mergeMesh(mesh1);
 
+            % (B) Pillar layer-1 effective slab: z in [+int_th/2, z_pil1_top], pillar_res(1) elements.
+            x = [ Rout_at_seam,    0,           z_seam_top; Rbank, 0,           z_seam_top; ...
+                  Rout_at_seam,    deg2rad(90),  z_seam_top; Rbank, deg2rad(90), z_seam_top; ...
+                  Rout_at_pil1top, 0,           z_pil1_top; Rbank, 0,           z_pil1_top; ...
+                  Rout_at_pil1top, deg2rad(90),  z_pil1_top; Rbank, deg2rad(90), z_pil1_top ];
+            mesh1 = Mesh();
+            mesh1.tolerance = mergeTol;
+            mesh1.addRing3D( [0 0 0], obj_sf, x, bank_hres, nrXY*2, obj.pillar_res(1), obj.sf.localNodes);
             obj.mesh.mergeMesh(mesh1);
 
             Rin   = Rbase;
@@ -153,19 +177,36 @@ Rbank, deg2rad(90), obj.pillar_layers(1) + z_top  ];
             angle=60;
             layer2=2*obj.pillar_layers(1);
 
-            x = [ Rout, 0,  z_top;  Rbank, 0,  z_top; Rout, deg2rad(90), z_top; Rbank, deg2rad(90), z_top; ...
-Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_top; Rout + layer2 * tan(deg2rad(angle)), deg2rad(90), layer2 + z_top; Rbank, deg2rad(90), layer2 + z_top ];
-
+            % (C) Internal pillar interface between layer 1 and 2: z in [z_pil1_top, z_pil1_top+int_th].
+            Rout_at_b2_int = Rout + obj.int_th * tan(deg2rad(angle));
+            z_b2_start     = z_top + obj.int_th;
+            x = [ Rout,           0,           z_top;      Rbank, 0,           z_top; ...
+                  Rout,           deg2rad(90),  z_top;      Rbank, deg2rad(90), z_top; ...
+                  Rout_at_b2_int, 0,           z_b2_start; Rbank, 0,           z_b2_start; ...
+                  Rout_at_b2_int, deg2rad(90),  z_b2_start; Rbank, deg2rad(90), z_b2_start ];
             mesh1 = Mesh();
             mesh1.tolerance = mergeTol;
-            mesh1.addRing3D( [0 0 0], obj_sf, x, bank_hres,  nrXY*2, 2 , obj.sf.localNodes);
+            mesh1.addRing3D( [0 0 0], obj_sf, x, bank_hres, nrXY*2, 1, obj.sf.localNodes);
+            obj.mesh.mergeMesh(mesh1);
 
+            % (D) Pillar bank body block 2: z in [z_pil1_top+int_th, z_pil1_top+int_th+layer2].
+            x = [ Rout_at_b2_int,                          0,           z_b2_start; ...
+                  Rbank,                                    0,           z_b2_start; ...
+                  Rout_at_b2_int,                          deg2rad(90),  z_b2_start; ...
+                  Rbank,                                    deg2rad(90), z_b2_start; ...
+                  Rout_at_b2_int + layer2*tan(deg2rad(angle)), 0,        layer2 + z_b2_start; ...
+                  Rbank,                                    0,           layer2 + z_b2_start; ...
+                  Rout_at_b2_int + layer2*tan(deg2rad(angle)), deg2rad(90), layer2 + z_b2_start; ...
+                  Rbank,                                    deg2rad(90), layer2 + z_b2_start ];
+            mesh1 = Mesh();
+            mesh1.tolerance = mergeTol;
+            mesh1.addRing3D( [0 0 0], obj_sf, x, bank_hres, nrXY*2, 2, obj.sf.localNodes);
             obj.mesh.mergeMesh(mesh1);
 
             % ---- final circle -> square tile transition (preserve layering) ----
             Rtr   = Rbank;        % end of your cylindrical ground (already working)
             Rtile = 1.2*Rbank;    % size of square tile (tune)
-            nThetaSeg = nrXY*2;        % 6..16 is typical
+            if isfield(opts, 'nThetaSeg'), nThetaSeg = opts.nThetaSeg; else, nThetaSeg = nrXY*2; end
 
             % Ground transition: keep EXACT same ground layering as annulus/core.
             % This avoids z-level drift on the Rbank seam.
@@ -176,8 +217,22 @@ Rout + layer2 * tan(deg2rad(angle)), 0,  layer2 + z_top;  Rbank,  0, layer2 + z_
             % Upper bank transition (above ground top): keep horizontal
             % internal interfaces and preserve the bank-side geometry logic.
             z0_bank_top = -obj.int_th/2;
+            % Split at canonical z-levels matching the ring3D bank blocks above.
+            % (A) Interface slab: z in [-int_th/2, +int_th/2].
             obj.mesh = PillarModel.addLayeredTransitionCircleToSquare( ...
-                obj.mesh, Rtr, Rtile, z0_bank_top, [obj.pillar_layers(1) layer2], [obj.pillar_res(1) 2], ...
+                obj.mesh, Rtr, Rtile, -obj.int_th/2, obj.int_th, 1, ...
+                false, obj.int_th, nThetaSeg, bank_hres, obj.sf );
+            % (B) Pillar layer-1 effective slab: z in [+int_th/2, z_pil1_top].
+            obj.mesh = PillarModel.addLayeredTransitionCircleToSquare( ...
+                obj.mesh, Rtr, Rtile, obj.int_th/2, h_eff_1, obj.pillar_res(1), ...
+                false, obj.int_th, nThetaSeg, bank_hres, obj.sf );
+            % (C) Internal pillar interface slab: z in [z_pil1_top, z_pil1_top + int_th].
+            obj.mesh = PillarModel.addLayeredTransitionCircleToSquare( ...
+                obj.mesh, Rtr, Rtile, z_pil1_top, obj.int_th, 1, ...
+                false, obj.int_th, nThetaSeg, bank_hres, obj.sf );
+            % (D) Pillar bank layer 2: z in [z_pil1_top + int_th, z_pil1_top + int_th + layer2].
+            obj.mesh = PillarModel.addLayeredTransitionCircleToSquare( ...
+                obj.mesh, Rtr, Rtile, z_pil1_top + obj.int_th, layer2, 2, ...
                 false, obj.int_th, nThetaSeg, bank_hres, obj.sf );
            % 
            % obj.smoothRectEdges(Rtile, Rtr, 12, 0.35);
