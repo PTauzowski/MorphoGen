@@ -175,7 +175,7 @@ classdef PillarModel < ModelLinear
 
             z_top = obj.pillar_layers(1) + z_top;
             angle=60;
-            layer2=2*obj.pillar_layers(1);
+            layer2=obj.pillar_layers(1);
 
             % (C) Internal pillar interface between layer 1 and 2: z in [z_pil1_top, z_pil1_top+int_th].
             Rout_at_b2_int = Rout + obj.int_th * tan(deg2rad(angle));
