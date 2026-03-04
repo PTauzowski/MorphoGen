@@ -205,14 +205,15 @@ classdef PillarModel < ModelLinear
 
             % ---- final circle -> square tile transition (preserve layering) ----
             Rtr   = Rbank;        % end of your cylindrical ground (already working)
-            Rtile = 1.2*Rbank;    % size of square tile (tune)
+            Rtile = 3*Rbank;    % size of square tile (tune)
             if isfield(opts, 'nThetaSeg'), nThetaSeg = opts.nThetaSeg; else, nThetaSeg = nrXY*2; end
 
             % Ground transition: keep EXACT same ground layering as annulus/core.
             % This avoids z-level drift on the Rbank seam.
+            bank_hres2=2*bank_hres;
             obj.mesh = PillarModel.addLayeredTransitionCircleToSquare( ...
                 obj.mesh, Rtr, Rtile, z0_ground, obj.ground_layers_eff, obj.ground_res, ...
-                true, obj.int_th, nThetaSeg, bank_hres, obj.sf );
+                true, obj.int_th, nThetaSeg, bank_hres2, obj.sf );
 
             % Upper bank transition (above ground top): keep horizontal
             % internal interfaces and preserve the bank-side geometry logic.
@@ -221,19 +222,19 @@ classdef PillarModel < ModelLinear
             % (A) Interface slab: z in [-int_th/2, +int_th/2].
             obj.mesh = PillarModel.addLayeredTransitionCircleToSquare( ...
                 obj.mesh, Rtr, Rtile, -obj.int_th/2, obj.int_th, 1, ...
-                false, obj.int_th, nThetaSeg, bank_hres, obj.sf );
+                false, obj.int_th, nThetaSeg, bank_hres2, obj.sf );
             % (B) Pillar layer-1 effective slab: z in [+int_th/2, z_pil1_top].
             obj.mesh = PillarModel.addLayeredTransitionCircleToSquare( ...
                 obj.mesh, Rtr, Rtile, obj.int_th/2, h_eff_1, obj.pillar_res(1), ...
-                false, obj.int_th, nThetaSeg, bank_hres, obj.sf );
+                false, obj.int_th, nThetaSeg, bank_hres2, obj.sf );
             % (C) Internal pillar interface slab: z in [z_pil1_top, z_pil1_top + int_th].
             obj.mesh = PillarModel.addLayeredTransitionCircleToSquare( ...
                 obj.mesh, Rtr, Rtile, z_pil1_top, obj.int_th, 1, ...
-                false, obj.int_th, nThetaSeg, bank_hres, obj.sf );
+                false, obj.int_th, nThetaSeg, bank_hres2, obj.sf );
             % (D) Pillar bank layer 2: z in [z_pil1_top + int_th, z_pil1_top + int_th + layer2].
             obj.mesh = PillarModel.addLayeredTransitionCircleToSquare( ...
                 obj.mesh, Rtr, Rtile, z_pil1_top + obj.int_th, layer2, 2, ...
-                false, obj.int_th, nThetaSeg, bank_hres, obj.sf );
+                false, obj.int_th, nThetaSeg, bank_hres2, obj.sf );
            % 
            % obj.smoothRectEdges(Rtile, Rtr, 12, 0.35);
          

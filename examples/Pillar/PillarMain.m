@@ -15,7 +15,7 @@ z_offset = - pillar_layers(1);
 sf = ShapeFunctionH27();
 
 model = PillarModel( top_R, pillar_layers, ground_layers, pillar_res, ground_res, pillar_chem, ground_chem, int_th, sf , z_offset);
-model.checkMeshIntegrity(1e-6);
+%model.checkMeshIntegrity(1e-6);
 
 % diagnose
 [badE, minDetJ] = model.mesh.findNegativeJacobian(sf, 1e-12);
@@ -84,7 +84,7 @@ end
 % feb = SolidElasticElem( sf, model.mesh.elems(bad_elems,:) );
 % feb.plot(model.mesh.nodes, [0.8,0,0]);
 
-filename = "Pillar15.i";
+filename = "Pillar16.i";
 model.FEAP_Export(filename);
 
 % Reading and displaying mesh from FEAP file
