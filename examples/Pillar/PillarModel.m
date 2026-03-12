@@ -13,11 +13,13 @@ classdef PillarModel < ModelLinear
         z_coords
         z_tolerance
         z_offset
+        tile_ratio
+        tile_res_ratio
     end
 
     methods
-        function obj = PillarModel( top_R, pillar_layers, ground_layers, pillar_res, ground_res, pillar_chem, ground_chem, int_th, sf, z_offset, opts )
-            if nargin < 11 || isempty(opts)
+        function obj = PillarModel( top_R, pillar_layers, ground_layers, tile_ratio, pillar_res, ground_res,tile_res_ratio, pillar_chem, ground_chem, int_th, sf, z_offset, opts )
+            if nargin < 13 || isempty(opts)
                 opts = struct();
             end
             obj.z_tolerance=1e-9;
@@ -31,6 +33,8 @@ classdef PillarModel < ModelLinear
             obj.int_th = int_th;
             obj.sf = sf;
             obj.z_offset = z_offset;
+            obj.tile_ratio = tile_ratio;
+            obj.tile_res_ratio = tile_res_ratio;
             obj.generateMesh(opts);
             obj.mesh.nodes(:,3) = obj.mesh.nodes(:,3) + obj.z_offset;
             obj.z_corners_coords = obj.z_corners_coords + obj.z_offset;
@@ -205,12 +209,12 @@ classdef PillarModel < ModelLinear
 
             % ---- final circle -> square tile transition (preserve layering) ----
             Rtr   = Rbank;        % end of your cylindrical ground (already working)
-            Rtile = 3*Rbank;    % size of square tile (tune)
+            Rtile = obj.tile_ratio*Rbank;    % size of square tile (tune)
             if isfield(opts, 'nThetaSeg'), nThetaSeg = opts.nThetaSeg; else, nThetaSeg = nrXY*2; end
 
             % Ground transition: keep EXACT same ground layering as annulus/core.
             % This avoids z-level drift on the Rbank seam.
-            bank_hres2=2*bank_hres;
+            bank_hres2=round(obj.tile_res_ratio*bank_hres);
             obj.mesh = PillarModel.addLayeredTransitionCircleToSquare( ...
                 obj.mesh, Rtr, Rtile, z0_ground, obj.ground_layers_eff, obj.ground_res, ...
                 true, obj.int_th, nThetaSeg, bank_hres2, obj.sf );
@@ -1205,6 +1209,100 @@ end
             
             critical_radii = [obj.top_R, Rbase, Rout, Rbank, Rtile];
             obj.mesh.nodes = obj.snapCriticalRCoordinates(obj.mesh.nodes, critical_radii, obj.z_tolerance);
+        end
+
+        function plotLayerColors(obj, fe)
+        % Plot the mesh with coloured layers (blues for ground, warm hues for pillar).
+            node_z = obj.mesh.nodes(:, 3);
+            cz     = mean(node_z(obj.mesh.elems), 2);
+
+            zP = obj.computeCanonicalZ() + obj.z_offset;
+
+            layer_colors = [
+                0.15, 0.35, 0.75;   % ground 1  – dark blue
+                0.20, 0.55, 0.90;   % ground 2  – medium blue
+                0.30, 0.70, 0.95;   % ground 3  – light blue
+                0.95, 0.55, 0.10;   % pillar 1  – orange
+                0.85, 0.15, 0.15;   % pillar 2  – red
+                0.15, 0.70, 0.25;   % pillar 3  – green
+                0.90, 0.80, 0.10;   % pillar 4  – yellow
+                0.55, 0.10, 0.80;   % pillar 5  – purple
+            ];
+            iface_color = [0.78 0.78 0.78];
+
+            nominal_k = 0;
+            for k = 1 : numel(zP) - 1
+                z0   = zP(k);
+                z1   = zP(k+1);
+                dz   = z1 - z0;
+                mask = cz >= z0 - 1e-9 & cz <= z1 + 1e-9;
+                if ~any(mask), continue; end
+
+                if abs(dz - obj.int_th) < obj.int_th * 0.1
+                    col = iface_color;
+                else
+                    nominal_k = nominal_k + 1;
+                    col = layer_colors(min(nominal_k, size(layer_colors,1)), :);
+                end
+
+                hold on;  daspect([1 1 1]);  axis off;  view(3);
+                fe.plotWithSettings(obj.mesh.nodes, ...
+                    "elem nums", find(mask), "elem color", col, "edge color", "k");
+            end
+        end
+
+        function zPlanes = computeCanonicalZ(obj)
+        % Canonical element-face z-planes for this PillarModel (without z_offset).
+        % Mirrors the h_eff arithmetic of addLayeredQuarterCylinder / addLayeredPipe3D.
+            int_th        = obj.int_th;
+            ground_layers = obj.ground_layers;
+            pillar_layers = obj.pillar_layers;
+
+            Lg = numel(ground_layers);
+            Lp = numel(pillar_layers);
+
+            ge     = ground_layers(:);
+            ge(Lg) = ge(Lg) - int_th/2;
+
+            hg = ge;
+            for k = 1:Lg
+                if k > 1,  hg(k) = hg(k) - int_th/2; end
+                if k < Lg, hg(k) = hg(k) - int_th/2; end
+            end
+
+            pe    = pillar_layers(:);
+            pe(1) = pe(1) - int_th/2;
+
+            hp = pe;
+            for k = 1:Lp
+                if k > 1,  hp(k) = hp(k) - int_th/2; end
+                if k < Lp, hp(k) = hp(k) - int_th/2; end
+            end
+
+            z       = -sum(ground_layers);
+            zPlanes = z;
+
+            for k = 1:Lg
+                z = z + hg(k);
+                zPlanes(end+1) = z; %#ok<AGROW>
+                if k < Lg
+                    z = z + int_th;
+                    zPlanes(end+1) = z; %#ok<AGROW>
+                end
+            end
+            z = z + int_th;
+            zPlanes(end+1) = z; %#ok<AGROW>
+
+            for k = 1:Lp
+                z = z + hp(k);
+                zPlanes(end+1) = z; %#ok<AGROW>
+                if k < Lp
+                    z = z + int_th;
+                    zPlanes(end+1) = z; %#ok<AGROW>
+                end
+            end
+
+            zPlanes = sort(unique(zPlanes));
         end
     end
 
