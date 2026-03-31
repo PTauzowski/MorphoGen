@@ -43,6 +43,9 @@ codegen/
 *.webp
 *.heic
 *.svg
+
+# Paper directory
+paper/
 *.fig
 *.mat
 *.pdf
