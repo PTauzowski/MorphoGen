@@ -327,8 +327,26 @@ classdef PlaneElem < FiniteElement
             daspect([1 1 1]);
             colormap('jet');
             colorbar;
+            nVertices = size(nodes,1);
+            if isscalar(C)
+                hasNodalResults = isfield(obj.results,'nodal') && isfield(obj.results.nodal,'all') ...
+                    && ~isempty(obj.results.nodal.all);
+                if hasNodalResults && C == round(C) && C >= 1 && C <= size(obj.results.nodal.all,2)
+                    C = obj.results.nodal.all(:,C);
+                else
+                    error("plotMap expects one color per vertex or a valid nodal result index.");
+                end
+            elseif isvector(C)
+                C = C(:);
+            elseif size(C,1) == 3 && size(C,2) == nVertices
+                C = C';
+            end
+
+            if size(C,1) ~= nVertices
+                error("plotMap expected %d vertex colors but received %d.", nVertices, size(C,1));
+            end
+
             patch('Vertices', nodes+scd*q, 'Faces', obj.elems(:,obj.sf.contour), 'FaceVertexCData', C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
         end
     end
 end
-

@@ -1,10 +1,10 @@
 classdef Frame3D < FiniteElement
       
     properties
-        E,A,G,Jy,Jz,Ks,betas;
-       
+        E,A,G,Jy,Jz,Ks,betas,nu,kappa;
+
     end
-      
+
     methods
         function obj = Frame3D(elems, E, nu, Ro, Ri)
              obj = obj@FiniteElement(ShapeFunctionsFrame3D,elems);
@@ -16,14 +16,20 @@ classdef Frame3D < FiniteElement
              A  = pi*(Ro^2 - Ri^2);
              Jy = (pi/4)*(Ro^4 - Ri^4);
              Jz = Jy;
-             Ks = (pi/2)*(Ro^4 - Ri^4);   
+             Ks = (pi/2)*(Ro^4 - Ri^4);
+             % Cowper (1966) shear correction factor for hollow circular section
+             m  = Ri / Ro;
+             kappa = 6*(1+nu)*(1+m^2)^2 / ...
+                     ((7+6*nu)*(1+m^2)^2 + (20+12*nu)*m^2);
              obj.E=E;
              obj.A=A;
              obj.G = E/(2*(1+nu));
              obj.Jy=Jy;
              obj.Jz=Jz;
              obj.Ks=Ks;
-                 
+             obj.nu=nu;
+             obj.kappa=kappa;
+
         end
 
         function L = computeTransformationMatrixAnsys(obj, nodes)
@@ -93,59 +99,77 @@ classdef Frame3D < FiniteElement
         end
 
         function K = computeLocalStifnessMatrix(obj, nodes, varargin)
+              % Timoshenko beam stiffness matrix (Cowper shear correction).
+              % Shear parameter  Phi = 12*E*J / (kappa*G*A*l^2).
+              % Euler-Bernoulli is recovered when kappa -> inf (Phi -> 0).
               nelems = size(obj.elems,1);
               nnodes = size(obj.elems,2);
               ndofs = size( obj.ndofs,2);
               dim = nnodes * ndofs;
               K  = zeros( dim , dim, nelems );
               EA=obj.E*obj.A; EJy=obj.E*obj.Jy; EJz=obj.E*obj.Jz; GKs=obj.G*obj.Ks;
+              kappaGA = obj.kappa * obj.G * obj.A;
               for k=1:nelems
-                 l=norm(nodes(obj.elems(k,2),:)-nodes(obj.elems(k,1),:));
-                 l2=l^2;
-                 l3=l^3;
-               
-		         Ke(1,1)   = EA/l;       
-                 Ke(2,2)   = 12*EJz/l3; 
-                 Ke(3,3)   = 12*EJy/l3; 
-                 Ke(4,4)   = GKs/l;
-		         Ke(5,5)   = 4*EJy/l;    
-                 Ke(6,6)   = 4*EJz/l;   
-                 Ke(7,7)   = EA/l;      
-                 Ke(8,8)   = 12*EJz/l3; 
-                 Ke(9,9)   = 12*EJy/l3;
-		         Ke(10,10) = GKs/l;      
-                 Ke(11,11) = 4*EJy/l; 
-                 Ke(12,12) = 4*EJz/l;
+                 l  = norm(nodes(obj.elems(k,2),:)-nodes(obj.elems(k,1),:));
+                 l2 = l^2;
+                 l3 = l^3;
 
-		         Ke(5,3)  = -6*EJy/l2;  
-                 Ke(6,2)  =  6*EJz/l2;  
-                 Ke(7,1)  = -EA/l;
-		         Ke(8,2)  = -12*EJz/l3; 
-                 Ke(8,6)  = -6*EJz/l2;
-		         Ke(9,3)  = -12*EJy/l3; 
-                 Ke(9,5)  = 6*EJy/l2;
-		         Ke(10,4) = -GKs/l;
-		         Ke(11,3) = -6*EJy/l2; 
-                 Ke(11,5) = 2*EJy/l;  
-                 Ke(11,9) = 6*EJy/l2;
-		         Ke(12,2) =  6*EJz/l2; 
-                 Ke(12,6) = 2*EJz/l;  
-                 Ke(12,8) = -6*EJz/l2;
+                 % Timoshenko shear parameters (per plane)
+                 Phy = 12*EJy / (kappaGA * l2);   % xz-plane (uses Jy)
+                 Phz = 12*EJz / (kappaGA * l2);   % xy-plane (uses Jz)
+                 cy  = 1 / (1 + Phy);
+                 cz  = 1 / (1 + Phz);
 
-                 Ke(3,5)  = -6*EJy/l2;  
-                 Ke(2,6)  =  6*EJz/l2;  
-                 Ke(1,7)  = -EA/l;
-		         Ke(2,8)  = -12*EJz/l3; 
-                 Ke(6,8)  = -6*EJz/l2;
-		         Ke(3,9)  = -12*EJy/l3; 
-                 Ke(5,9)  = 6*EJy/l2;
-		         Ke(4,10) = -GKs/l;
-		         Ke(3,11) = -6*EJy/l2; 
-                 Ke(5,11) = 2*EJy/l;  
-                 Ke(9,11) = 6*EJy/l2;
-		         Ke(2,12) =  6*EJz/l2; 
-                 Ke(6,12) = 2*EJz/l;  
-                 Ke(8,12) = -6*EJz/l2;
+                 Ke = zeros(12,12);
+
+                 % --- axial (DOFs 1,7) ---
+                 Ke(1,1)   =  EA/l;
+                 Ke(7,7)   =  EA/l;
+                 Ke(1,7)   = -EA/l;
+                 Ke(7,1)   = -EA/l;
+
+                 % --- torsion (DOFs 4,10) ---
+                 Ke(4,4)   =  GKs/l;
+                 Ke(10,10) =  GKs/l;
+                 Ke(4,10)  = -GKs/l;
+                 Ke(10,4)  = -GKs/l;
+
+                 % --- xy-plane bending (Jz): DOFs 2,6 / 8,12 ---
+                 Ke(2,2)   =  12*EJz*cz/l3;
+                 Ke(8,8)   =  12*EJz*cz/l3;
+                 Ke(6,6)   =  (4+Phz)*EJz*cz/l;
+                 Ke(12,12) =  (4+Phz)*EJz*cz/l;
+                 Ke(6,2)   =   6*EJz*cz/l2;
+                 Ke(2,6)   =   6*EJz*cz/l2;
+                 Ke(8,2)   = -12*EJz*cz/l3;
+                 Ke(2,8)   = -12*EJz*cz/l3;
+                 Ke(8,6)   =  -6*EJz*cz/l2;
+                 Ke(6,8)   =  -6*EJz*cz/l2;
+                 Ke(12,2)  =   6*EJz*cz/l2;
+                 Ke(2,12)  =   6*EJz*cz/l2;
+                 Ke(12,6)  =  (2-Phz)*EJz*cz/l;
+                 Ke(6,12)  =  (2-Phz)*EJz*cz/l;
+                 Ke(12,8)  =  -6*EJz*cz/l2;
+                 Ke(8,12)  =  -6*EJz*cz/l2;
+
+                 % --- xz-plane bending (Jy): DOFs 3,5 / 9,11 ---
+                 Ke(3,3)   =  12*EJy*cy/l3;
+                 Ke(9,9)   =  12*EJy*cy/l3;
+                 Ke(5,5)   =  (4+Phy)*EJy*cy/l;
+                 Ke(11,11) =  (4+Phy)*EJy*cy/l;
+                 Ke(5,3)   =  -6*EJy*cy/l2;
+                 Ke(3,5)   =  -6*EJy*cy/l2;
+                 Ke(9,3)   = -12*EJy*cy/l3;
+                 Ke(3,9)   = -12*EJy*cy/l3;
+                 Ke(9,5)   =   6*EJy*cy/l2;
+                 Ke(5,9)   =   6*EJy*cy/l2;
+                 Ke(11,3)  =  -6*EJy*cy/l2;
+                 Ke(3,11)  =  -6*EJy*cy/l2;
+                 Ke(11,5)  =  (2-Phy)*EJy*cy/l;
+                 Ke(5,11)  =  (2-Phy)*EJy*cy/l;
+                 Ke(11,9)  =   6*EJy*cy/l2;
+                 Ke(9,11)  =   6*EJy*cy/l2;
+
                  K(:,:,k) = Ke;
               end
         end

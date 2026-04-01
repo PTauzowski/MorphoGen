@@ -14,8 +14,10 @@ classdef (Abstract) FEAnalysis < handle
             end
             obj.mesh = mesh;
             obj.ndofs = obj.felems{1}.ndofs;
-            for k=max(size(obj.felems))
-                obj.ndofs = union(obj.ndofs,obj.felems{k}.ndofs);
+            % Preserve element-declared DOF ordering when combining analyses.
+            for k = 2:numel(obj.felems)
+                [tf,~] = ismember(obj.felems{k}.ndofs, obj.ndofs);
+                obj.ndofs = [obj.ndofs obj.felems{k}.ndofs(~tf)];
             end
             obj.selTolerance=1.0E-05;
             obj.Pnodal = zeros( size(mesh.nodes,1), size(obj.ndofs,2) );
@@ -115,7 +117,9 @@ classdef (Abstract) FEAnalysis < handle
             end
         end
         function id = findDOFsIndices(obj,dofnames)
-            [~,id,~] = intersect(obj.ndofs,dofnames);
+            % Resolve DOFs in the same order requested by the caller.
+            [tf,id] = ismember(dofnames, obj.ndofs);
+            assert(all(tf), 'Unknown DOF name');
         end
         
         function q = getSolution(obj,n)
@@ -359,4 +363,3 @@ classdef (Abstract) FEAnalysis < handle
      end
         
 end
-

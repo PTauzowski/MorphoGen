@@ -62,9 +62,15 @@ max(max(max(frameNodes)));
 % scatter3(endPoints(:,1),endPoints(:,2),endPoints(:,3),'Marker','.');
 % scatter3(endPoints(:,1),endPoints(:,2),endPoints(:,3)*0-3,'Marker','.','MarkerEdgeColor','r');
 
-modelRef  = ManipulatorModel3D(E, nu, segmentLength, R, r, res, res_thickness, alpha, samples(1,:), ShapeFn, true, Pz);
+modelRef  = ManipulatorModel3D(E, nu, segmentLength, R, r, res, res_thickness, alpha, samples(10000,:), ShapeFn, true, Pz);
 modelRef.fe.plot(modelRef.mesh.nodes);
 daspect([1 1 1]);
+[q_solid, frame_forces] = modelRef.frameBasedSolver(1);
+figure;
+daspect([1 1 1]);
+modelRef.fe.plotMap(modelRef.mesh.nodes,modelRef.analysis.qnodal,13,0.2)
+
+
 
 %[vN, vTy, vTz, vMs, vMy, vMz, all_forces] = computeAllInternalForces( frameNodes, frameElems, E, nu, R, r, samples, Pz);
 
@@ -198,6 +204,8 @@ sampleMinN_smooth=[0 180 180 180 180 180 180]; %  0  164.4607  177.0448  215.180
 sampleMaxMz_smooth=[0 0 0 180 180 180 180];     %  0  343.7190   54.9144  125.4541  163.9858  169.3933  110.6999
 sampleMaxTy_smooth=[ 0  0  180 0 180  180  180]; %  0    0.0253  246.2603  287.9922  340.8601  106.8641  112.8238
 sampleMaxMs_smooth=[ 0  45 45 45  270  180 180]; %  0 0   33.5628   56.5082   36.2258  278.0525  195.3981  122.2441
+
+[maxHM, endPoints, frameNodes] = computeArmSamplesFrameBased(E, nu, segmentLength, alpha, sampleMaxMz_smooth );
 
 % sampleMinN=[ 0  164.4607  177.0448  215.1802  214.3430  186.1769  240.6389 ];
 % sampleMaxMz=[  0  343.7190   54.9144  125.4541  163.9858  169.3933  110.6999 ];

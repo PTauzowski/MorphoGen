@@ -51,11 +51,17 @@ classdef (Abstract) FiniteElement < handle
         function  [I,J,V,Ksize] = sparseMatrixAllocDataUniform( obj, gdofs )
             nelems = size( obj.elems, 1 );
             nnodes = size( obj.elems, 2 );
-            [~,~,idofs] = intersect(obj.ndofs,gdofs);
-            Kdim  = size(obj.ndofs,2) * nnodes;
+            % Map local element DOFs into the global list without reordering them.
+            [tf,idofs] = ismember(obj.ndofs, gdofs);
+            assert(all(tf), 'Local DOF missing in global DOF list');
+            idofs = reshape(idofs, 1, []);
+            ndofs = numel(idofs);
+            ngdofs = numel(gdofs);
+            Kdim  = ndofs * nnodes;
             Ksize = Kdim * Kdim;
             [ix, iy] = meshgrid( 1:Kdim, 1:Kdim );
-            alldofs = (repelem( obj.elems, 1, size(obj.ndofs,2))-1)*size(gdofs,2)+repmat(idofs',nelems,nnodes);
+            dofOffsets = repmat(idofs, nelems, nnodes);
+            alldofs = (repelem(obj.elems, 1, ndofs) - 1) * ngdofs + dofOffsets;
             I = alldofs(1:nelems,ix(:));
             J = alldofs(1:nelems,iy(:));
             V = alldofs;
@@ -123,4 +129,3 @@ classdef (Abstract) FiniteElement < handle
     end
     
 end
-
