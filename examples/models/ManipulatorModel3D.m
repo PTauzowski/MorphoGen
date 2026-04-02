@@ -456,131 +456,138 @@ classdef ManipulatorModel3D < handle
         end
 
         function [q_solid, frame_forces] = frameBasedSolver(obj, x)
-            % FRAMEBASEDSOLVER  Solve 3D solid model using static condensation
-            % driven by the skeletal (frame) solution.
+            % FRAMEBASEDSOLVER  Solve the 3D solid driven by the frame solution
+            % via a two-stage condensation scheme.
             %
-            % METHODOLOGY
-            %   1. Solves the frame (beam) model -> joint displacements q_frame
-            %      (nFrameNodes x 6: [ux uy uz theta_x theta_y theta_z]).
-            %   2. Uses exact solid section-node IDs captured during segment
-            %      generation and mapped to the merged global mesh.
-            %   3. Applies linearised rigid-body kinematics at each cross-section:
-            %         u(p) = u(c_k) + theta(c_k) x (p - c_k)
-            %      yielding prescribed solid displacements on the boundary DOFs.
-            %   4. Solves the solid FEM under pure kinematic loading (P = 0)
-            %      via static condensation:
-            %         K_ii * q_i = -K_ib * q_b
-            %      using LinearEquationsSystem.solvePq.
-            %   5. Stores updated qnodal_solid and computes element results.
+            % The method is the inverse of the condensation chain used to
+            % derive K_beam from K_full (see textbook stages below).  Starting
+            % from the frame solution q_frame we expand back to the full solid
+            % displacement field q_solid.
             %
+            % ----------------------------------------------------------------
+            % Stage 1 – Kinematic condensation  (textbook Stage 2, reversed)
+            %
+            %   Each solid boundary node p is tied to a master frame node m
+            %   via the rigid-body transformation matrix T_im:
+            %
+            %     q_d(p) = T_im * u_m,   where
+            %
+            %              [ 1  0  0 |  0   Δz  -Δy ]
+            %     T_im  =  [ 0  1  0 | -Δz  0    Δx ]   Δ = p − c_m
+            %              [ 0  0  1 |  Δy -Δx   0  ]
+            %
+            %   Evaluated as:  q_d(p) = u_m + θ_m × (p − c_m)
+            %
+            %   Only the root (frame node 1) and tip (last frame node) act as
+            %   kinematic masters.  Interior joints stay free to prevent
+            %   double-clamping and the associated kinematic locking.
+            %
+            % Stage 2 – Static condensation  (textbook Stage 1, reversed)
+            %
+            %   Partition K_full of the solid into free (i) and prescribed (d):
+            %
+            %     K_full = [ K_ii  K_id ]
+            %              [ K_di  K_dd ]
+            %
+            %   With zero external load (P_i = 0) and q_d from Stage 1, solve:
+            %
+            %     K_ii * q_i = −K_id * q_d
+            %
+            % ----------------------------------------------------------------
             % INPUTS
-            %   x  - element density vector [nElems x 1]; default: all ones.
-            %
+            %   x  - element density vector [nElems x 1]; defaults to all ones.
             % OUTPUTS
             %   q_solid      - solid nodal displacements [nNodes x 3]
-            %   frame_forces - local frame forces [12 x nFrameElems] (global coords)
+            %   frame_forces - local frame forces [12 x nFrameElems]
 
             if nargin < 2 || isempty(x) || (isscalar(x) && x == 1)
                 x = ones(obj.analysis.getTotalElemsNumber(), 1);
             end
 
-            % ---- 1. Solve frame model ------------------------------------
+            % ---- Solve frame model to obtain master DOFs u_m ----------------
             nFE_frame = size(obj.frame_mesh.elems, 1);
             obj.frame_analysis.solveWeighted(ones(nFE_frame, 1));
-            q_frame = obj.frame_analysis.qnodal;   % nFrameNodes x 6
+            q_frame = obj.frame_analysis.qnodal;   % [nFrameNodes x 6]: [ux uy uz θx θy θz]
 
-            % ---- 2. Get exact coupling sections captured during mesh build
-            % The active coupling path uses per-section sets rather than
-            % unioned per-node shell rings.
+            dof_tr  = obj.frame_analysis.findDOFsIndices(["ux","uy","uz"]);
+            dof_rot = obj.frame_analysis.findDOFsIndices(["fix","fiy","fiz"]);
+
+            % =================================================================
+            % Stage 1 – Kinematic condensation
+            %   Prescribe dependent solid boundary DOFs q_d from frame master
+            %   DOFs u_m using the rigid-body relation:
+            %     q_d(p) = u_m + θ_m × (p − c_m)   [= T_im * u_m]
+            % =================================================================
+            nSN         = size(obj.mesh.nodes, 1);
+            q_d         = zeros(nSN, 3);     % prescribed (dependent) displacements
+            is_d        = false(nSN, 3);     % flags dependent DOFs
+
             couplingSections = obj.buildCouplingSections();
             if obj.debugCoupling
                 obj.reportCouplingSectionDiagnostics(couplingSections);
             end
 
-            % ---- 3. Displacement-controlled kinematic constraints -----------
-            % DESIGN PRINCIPLE: apply rigid-body kinematic BCs only at the
-            % ROOT (frame node 1, u = 0) and the TIP (last frame node,
-            % u = frame tip displacement).  Interior joint sections are left
-            % FREE so each segment can deform elastically between the two
-            % end constraints.
-            %
-            % Constraining ALL cross-section rings simultaneously (both ends
-            % of every segment) doubly-clamps each segment and produces
-            % artificial stress concentrations (kinematic locking) because
-            % the segment interior is forced to accommodate two independently
-            % prescribed rigid-body motions that are generally inconsistent
-            % with the elastic equilibrium field.  With only root + tip
-            % kinematic BCs the interior stresses are smooth and physically
-            % meaningful (pure displacement-control formulation, P = 0).
-            nSN          = size(obj.mesh.nodes, 1);
-            q0_solid     = zeros(nSN, 3);
-            supports_new = false(nSN, 3);
-            itr          = obj.frame_analysis.findDOFsIndices(["ux","uy","uz"]);
-            irot         = obj.frame_analysis.findDOFsIndices(["fix","fiy","fiz"]);
-            ownerFrameNode = zeros(nSN, 1);
-
-            % Only constrain root (frame node 1) and tip (last frame node).
-            nFN = size(obj.frameNodes, 1);
-            boundaryFrameNodes = [1, nFN];
+            nFN          = size(obj.frameNodes, 1);
+            masterNodes  = [1, nFN];         % root and tip are the only masters
+            ownerMaster  = zeros(nSN, 1);
 
             for s = 1:numel(couplingSections)
                 k = couplingSections(s).frameNode;
-                if ~ismember(k, boundaryFrameNodes)
-                    continue;   % skip interior joints — no locking
+                if ~ismember(k, masterNodes)
+                    continue;               % interior joints: leave free (no locking)
                 end
-                inodes = couplingSections(s).nodes;
-                if isempty(inodes), continue; end
-                conflict = ownerFrameNode(inodes) ~= 0 & ownerFrameNode(inodes) ~= k;
+                p_ids = couplingSections(s).nodes;
+                if isempty(p_ids), continue; end
+
+                conflict = ownerMaster(p_ids) ~= 0 & ownerMaster(p_ids) ~= k;
                 if any(conflict)
-                    conflictFrameNodes = unique(ownerFrameNode(inodes(conflict)));
-                    error('Overlapping coupling sections detected: section %d (%s, frame node %d) conflicts with frame node(s) %s.', ...
-                        s, couplingSections(s).label, k, mat2str(conflictFrameNodes(:)'));
+                    error('Overlapping coupling sections: section %d (%s, frame node %d) conflicts with frame node(s) %s.', ...
+                        s, couplingSections(s).label, k, mat2str(unique(ownerMaster(p_ids(conflict)))'));
                 end
-                ownerFrameNode(inodes) = k;
-                ck   = obj.frameNodes(k, :);
-                u_k  = q_frame(k, itr);
-                th_k = q_frame(k, irot);
-                dp   = obj.mesh.nodes(inodes, :) - ck;   % Mx3
-                M    = size(dp, 1);
-                u_imposed = repmat(u_k, M, 1) + cross(repmat(th_k, M, 1), dp, 2);
-                q0_solid(inodes, :)     = u_imposed;
-                supports_new(inodes, :) = true;
+                ownerMaster(p_ids) = k;
+
+                c_m  = obj.frameNodes(k, :);              % master position
+                u_m  = q_frame(k, dof_tr);                % master translations
+                th_m = q_frame(k, dof_rot);               % master rotations θ_m
+                dp   = obj.mesh.nodes(p_ids, :) - c_m;   % (p − c_m) [M×3]
+
+                q_d(p_ids, :)  = repmat(u_m, size(dp,1), 1) + cross(repmat(th_m, size(dp,1), 1), dp, 2);
+                is_d(p_ids, :) = true;
             end
 
-            % ---- 4. Static condensation (displacement-controlled) -------
-            % P = 0: the solid is driven purely by the prescribed end
-            % displacements derived from the frame solution.
-            sup_combined = logical(obj.analysis.supports) | supports_new;
-            sup_fem      = reshape(sup_combined', [], 1);
-            q0_fem       = reshape(q0_solid',    [], 1);
+            % =================================================================
+            % Stage 2 – Static condensation
+            %   Assemble K_full, partition into (i) free and (d) prescribed DOFs,
+            %   then solve  K_ii * q_i = −K_id * q_d  with P_i = 0.
+            % =================================================================
+            is_d_full = reshape((logical(obj.analysis.supports) | is_d)', [], 1);
+            q_d_full  = reshape(q_d', [], 1);
 
             [I, J, ~] = obj.analysis.globalMatrixIndices();
-            K_vals    = obj.analysis.globalMatrixAggregationWeighted( ...
-                            'computeStifnessMatrix', x);
+            K_vals    = obj.analysis.globalMatrixAggregationWeighted('computeStifnessMatrix', x);
+            % K_full = [K_ii  K_id; K_di  K_dd]  (partitioned by is_d_full)
 
-            solver_sc = LinearEquationsSystem(I, J, sup_fem);
-            P_zero    = zeros(numel(q0_fem), 1);
-            q_fem_sol = solver_sc.solvePq(K_vals, P_zero, q0_fem);
+            solver_sc = LinearEquationsSystem(I, J, is_d_full);
+            P_i       = zeros(numel(q_d_full), 1);   % no external load on free DOFs
+            q_full    = solver_sc.solvePq(K_vals, P_i, q_d_full);
 
-            % Restore prescribed DOF values (solvePq leaves supdofs at P_zero=0)
-            q_fem_sol(solver_sc.supdofs) = q0_fem(solver_sc.supdofs);
-            restoreError = max(abs(q_fem_sol(solver_sc.supdofs) - q0_fem(solver_sc.supdofs)));
+            % Restore prescribed values q_d into the full solution vector
+            q_full(solver_sc.supdofs) = q_d_full(solver_sc.supdofs);
             if obj.debugCoupling
-                fprintf('Coupling prescribed-DOF restore max error: %.3e\n', restoreError);
+                fprintf('Stage 2 restore error: %.3e\n', ...
+                    max(abs(q_full(solver_sc.supdofs) - q_d_full(solver_sc.supdofs))));
             end
-            assert(restoreError < 1.0e-12, ...
-                'Prescribed DOFs were not restored correctly after solvePq.');
+            assert(max(abs(q_full(solver_sc.supdofs) - q_d_full(solver_sc.supdofs))) < 1.0e-12, ...
+                'Prescribed DOFs were not restored correctly after static condensation.');
 
-            % ---- 5. Store and compute element results --------------------
-            obj.analysis.qfem   = q_fem_sol;
-            obj.analysis.qnodal = obj.analysis.fromFEMVector(q_fem_sol);
+            % ---- Store results and compute element stresses -----------------
+            obj.analysis.qfem   = q_full;
+            obj.analysis.qnodal = obj.analysis.fromFEMVector(q_full);
             obj.qnodal_solid    = obj.analysis.qnodal;
             obj.analysis.computeElementResults(x);
 
             q_solid = obj.qnodal_solid;
-
-            [~, frame_forces] = obj.frameElem.computeResults( ...
-                obj.frame_mesh.nodes, q_frame);
+            [~, frame_forces] = obj.frameElem.computeResults(obj.frame_mesh.nodes, q_frame);
         end
 
 
