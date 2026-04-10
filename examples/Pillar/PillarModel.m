@@ -6,57 +6,98 @@ classdef PillarModel < ModelLinear
         pillar_res, ground_res
         pillar_chem, ground_chem
         int_th
-        bank_h = 0;      % wysokość banku (<= suma "cap" warstw), ustaw w konstruktorze albo tu
-        bank_r0 = 0;  
+        pillar_inclination_deg   % taper half-angle from vertical (deg); default 5
+        depression_width         % radial width of depression ring (NaN = auto 0.20×Rbase)
+        depression_depth         % requested max depression depth   (NaN = auto 0.04×top layer)
+        depression_r_min         % r of depression minimum          (NaN = auto 0.25 into ring)
+        bank_h = 0;
+        bank_r0 = 0;
         sf
         z_corners_coords
         z_coords
         z_tolerance
         z_offset
-        tile_ratio
-        tile_res_ratio
-        tile_size
+        tile_size                % square tile half-width used in mesh (NaN = auto 1.2×Rbank)
+        res_cyl                  % circumferential node divisions per 90° arc (default 4)
+        res_ring                 % radial node divisions of annular sections   (default 5)
+        res_tile                 % radial node divisions of square tile         (default = res_ring)
+        res_bank                 % z-divisions of outer bank ring block D       (default 2)
     end
 
     methods
-        function obj = PillarModel( top_R, pillar_layers, ground_layers, tile_ratio, pillar_res, ground_res,tile_res_ratio, pillar_chem, ground_chem, int_th, sf, z_offset, opts )
-            if nargin < 13 || isempty(opts)
-                opts = struct();
+        function obj = PillarModel( p )
+            % PillarModel  Create a quarter-symmetry pillar-in-ground mesh.
+            %
+            %   obj = PillarModel(p)
+            %
+            %   p – parameter struct.  See PillarMain.m for full documentation.
+            %
+            %   Required fields:
+            %       top_R, pillar_layers, ground_layers, pillar_res, ground_res,
+            %       pillar_chem, ground_chem, int_th, sf, z_offset
+            %
+            %   Optional fields and their defaults (NaN → auto-computed in generateMesh):
+            %       pillar_inclination_deg  (5)
+            %       depression_width        (0.20 × Rbase)
+            %       depression_depth        (0.04 × eff. top ground layer, safety-capped)
+            %       depression_r_min        (inner edge + 0.25 × depression_width)
+            %       tile_size               (1.2 × Rbank,  Rbank = 1.5 × Rout)
+            %       res_cyl                 (4)
+            %       res_ring                (5)
+            %       res_tile                (= res_ring)
+            %       res_bank                (2)
+
+            obj.z_tolerance = 1e-9;
+
+            % ---- required fields ----------------------------------------
+            required = {'top_R','pillar_layers','ground_layers','pillar_res', ...
+                        'ground_res','pillar_chem','ground_chem','int_th','sf','z_offset'};
+            for k = 1:numel(required)
+                fn = required{k};
+                if ~isfield(p, fn) || isempty(p.(fn))
+                    error('PillarModel: required field ''%s'' is missing or empty.', fn);
+                end
+                obj.(fn) = p.(fn);
             end
-            obj.z_tolerance=1e-9;
-            obj.top_R = top_R;
-            obj.pillar_layers = pillar_layers;
-            obj.ground_layers = ground_layers;
-            obj.pillar_res = pillar_res;
-            obj.ground_res = ground_res;
-            obj.pillar_chem = pillar_chem;
-            obj.ground_chem = ground_chem;
-            obj.int_th = int_th;
-            obj.sf = sf;
-            obj.z_offset = z_offset;
-            obj.tile_ratio = tile_ratio;
-            obj.tile_res_ratio = tile_res_ratio;
-            obj.generateMesh(opts);
+
+            % ---- geometry fields (NaN = auto-computed in generateMesh) --
+            nan_fields = {'depression_width','depression_depth','depression_r_min','tile_size'};
+            for k = 1:numel(nan_fields)
+                fn = nan_fields{k};
+                if isfield(p, fn), obj.(fn) = p.(fn); else, obj.(fn) = NaN; end
+            end
+
+            % ---- geometry fields with numeric defaults ------------------
+            if isfield(p,'pillar_inclination_deg'), obj.pillar_inclination_deg = p.pillar_inclination_deg;
+            else,                                   obj.pillar_inclination_deg = 5; end
+
+            % ---- resolution fields --------------------------------------
+            if isfield(p,'res_cyl'),  obj.res_cyl  = p.res_cyl;  else, obj.res_cyl  = 4; end
+            if isfield(p,'res_ring'), obj.res_ring = p.res_ring; else, obj.res_ring = 5; end
+            if isfield(p,'res_tile'), obj.res_tile = p.res_tile; else, obj.res_tile = obj.res_ring; end
+            if isfield(p,'res_bank'), obj.res_bank = p.res_bank; else, obj.res_bank = 2; end
+
+            obj.generateMesh();
             obj.mesh.nodes(:,3) = obj.mesh.nodes(:,3) + obj.z_offset;
             obj.z_corners_coords = obj.z_corners_coords + obj.z_offset;
-            obj.z_coords = obj.z_coords + obj.z_offset;
+            obj.z_coords         = obj.z_coords         + obj.z_offset;
             obj.computeZNodalCoords();
         end
 
 
-        function obj = generateMesh(obj, opts)
-            if nargin < 2 || isempty(opts)
-                opts = struct();
-            end
+        function obj = generateMesh(obj)
             obj.mesh = Mesh();
             mergeTol = max(1e-6, obj.z_tolerance);
             obj.mesh.tolerance = mergeTol;
             pillar_height = sum(obj.pillar_layers);
             ground_depth  = sum(obj.ground_layers);
-            if isfield(opts, 'nrXY'),      nrXY      = opts.nrXY;      else, nrXY      = 4; end
-            if isfield(opts, 'bank_hres'), bank_hres = opts.bank_hres; else, bank_hres = 5; end
 
-            Rbase = obj.top_R + pillar_height * tan(5*pi/180);
+            % Local resolution aliases (shorter names for readability below)
+            nrXY      = obj.res_cyl;
+            bank_hres = obj.res_ring;
+
+            % Pillar base radius (larger end, at z≈0 before cone transform)
+            Rbase = obj.top_R + pillar_height * tan(deg2rad(obj.pillar_inclination_deg));
             Rtop  = obj.top_R;
 
             % ground matches pillar base, ends at z = -int_th/2 (bottom of centered interface)
@@ -93,48 +134,70 @@ classdef PillarModel < ModelLinear
             obj.mesh.nodes = obj.mesh.coneTransformationX(pillar_height, Rbase, Rtop, obj.mesh.nodes);
 
 
-            % ---- ring3D (pipe) under top ground layer ----
-            z0_ground = -ground_depth; % aligned with core ground stack
-            z_top = -obj.int_th/2;                    % top of ground (below top interface)
-            Rin   = Rbase;
-            Rout  = 1.2*Rbase;
+            % ---- Annular ground rings around pillar base ----
+            z0_ground = -ground_depth;    % bottom of ground stack
+            z_top     = -obj.int_th/2;   % top of ground / bottom of interface slab
+            Rin       = Rbase;
 
-            % Build full layered annulus with the same layering logic as the core.
+            % Depression ring outer radius from p.depression_width (default 20 % of Rbase)
+            if isnan(obj.depression_width)
+                depr_width = 0.2 * Rbase;
+            else
+                depr_width = obj.depression_width;
+            end
+            Rout = Rin + depr_width;
+
+            % Inner depression ring (carries the bowl depression on its top surface)
             obj.mesh = PillarModel.addLayeredPipe3D( ...
                 obj.mesh, [0 0 0], Rin, Rout, 0, 90, ...
                 z0_ground, obj.ground_layers_eff, obj.ground_res, true, obj.int_th, ...
                 bank_hres, nrXY*2, obj.sf.localNodes );
 
-            % ---- depression applied to ring interior ONLY (boundary nodes fixed) ----
-            % depth: how deep the depression is at the TOP surface (z=z_top), positive value.
-            % Cap depth so top nodes do not cross (or nearly collide with) the
-            % first interior z-level in the upper ground layer.
-            depthReq = 0.04 * obj.ground_layers_eff(end);   % <- tune base ratio
+            % ---- Depression (bowl on top surface of inner ring) ----
+            % Safety cap: top-surface nodes must not cross the first interior z-level.
+            if isnan(obj.depression_depth)
+                depthReq = 0.04 * obj.ground_layers_eff(end);
+            else
+                depthReq = obj.depression_depth;
+            end
 
-            sfStep = max(1, numel(unique(obj.sf.localNodes(:,3))) - 1); % H8->1, H27->2
-            topLayerEff = obj.ground_layers_eff(end);
+            sfStep       = max(1, numel(unique(obj.sf.localNodes(:,3))) - 1); % H8→1, H27→2
+            topLayerEff  = obj.ground_layers_eff(end);
             if obj.int_th > 0 && numel(obj.ground_layers_eff) >= 2
                 topLayerEff = topLayerEff - obj.int_th/2;
             end
-            dzTopNode = topLayerEff / max(1, sfStep * obj.ground_res(end));
+            dzTopNode    = topLayerEff / max(1, sfStep * obj.ground_res(end));
             minClearance = max(obj.int_th, 1e-3);
-            depthMax = max(0, dzTopNode - minClearance);
-            depth = min(depthReq, depthMax);
+            depthMax     = max(0, dzTopNode - minClearance);
+            depth        = min(depthReq, depthMax);
 
             if depth < depthReq
                 warning('PillarModel:DepressionDepthCapped', ...
-                    ['Requested ring depression depth %.6g exceeds safe limit %.6g ' ...
-                     '(top nodal dz %.6g, clearance %.6g). Using capped value.'], ...
-                    depthReq, depthMax, dzTopNode, minClearance);
+                    ['Requested depression depth %.6g exceeds safe limit %.6g ' ...
+                     '(top nodal dz %.6g, clearance %.6g). Using %.6g.'], ...
+                    depthReq, depthMax, dzTopNode, minClearance, depth);
+            end
+
+            % Slope of pillar outer cone surface at inner depression boundary (dz/dr, negative)
+            pillar_slope = pillar_height / (Rtop - Rbase);
+
+            % Normalised position of depression minimum within ring (0=inner edge, 1=outer edge)
+            if isnan(obj.depression_r_min)
+                t_peak_req = 0.25;
+            else
+                t_peak_req = (obj.depression_r_min - Rin) / max(1e-15, depr_width);
+                t_peak_req = max(0.01, min(0.99, t_peak_req));
             end
 
             obj.mesh.nodes = PillarModel.applyRingDepressionZ( ...
-                obj.mesh.nodes, [0 0], Rin, Rout, z0_ground, z_top, depth );
+                obj.mesh.nodes, [0 0], Rin, Rout, z0_ground, z_top, ...
+                depth, depthMax, pillar_slope, t_peak_req );
 
             
 
 
-            Rbank =  1.5 * Rout;
+            % Outer bank ring (ground extension beyond depression ring)
+            Rbank = 1.5 * Rout;
 
             obj.mesh = PillarModel.addLayeredPipe3D( ...
                 obj.mesh, [0 0 0], Rout, Rbank, 0, 90, ...
@@ -143,8 +206,7 @@ classdef PillarModel < ModelLinear
 
 
             obj_sf = ShapeFunctionH8();
-
-            angle=50;
+            angle  = 50;   % inner-wall flare angle of bank at seam level (deg)
 
 
             % Canonical z-levels for pillar layer-1 split (layer loses int_th/2 to global seam
@@ -178,9 +240,9 @@ classdef PillarModel < ModelLinear
             Rin   = Rbase;
             Rout  = Rout + obj.pillar_layers(1) * tan(deg2rad(angle));
 
-            z_top = obj.pillar_layers(1) + z_top;
-            angle=60;
-            layer2=obj.pillar_layers(1);
+            z_top  = obj.pillar_layers(1) + z_top;
+            angle  = 60;   % inner-wall flare angle for upper bank sections (deg)
+            layer2 = obj.pillar_layers(1);
 
             % (C) Internal pillar interface between layer 1 and 2: z in [z_pil1_top, z_pil1_top+int_th].
             Rout_at_b2_int = Rout + obj.int_th * tan(deg2rad(angle));
@@ -205,17 +267,24 @@ classdef PillarModel < ModelLinear
                   Rbank,                                    deg2rad(90), layer2 + z_b2_start ];
             mesh1 = Mesh();
             mesh1.tolerance = mergeTol;
-            mesh1.addRing3D( [0 0 0], obj_sf, x, bank_hres, nrXY*2, 2, obj.sf.localNodes);
+            mesh1.addRing3D( [0 0 0], obj_sf, x, bank_hres, nrXY*2, obj.res_bank, obj.sf.localNodes);
             obj.mesh.mergeMesh(mesh1);
 
-            % ---- final circle -> square tile transition (preserve layering) ----
-            Rtr   = Rbank;        % end of your cylindrical ground (already working)
-            Rtile = obj.tile_ratio*Rbank;    % size of square tile (tune)
-            if isfield(opts, 'nThetaSeg'), nThetaSeg = opts.nThetaSeg; else, nThetaSeg = nrXY*2; end
+            % ---- Circle → square tile transition (preserve layering) ----
+            Rtr = Rbank;   % inner radius of transition band
 
-            % Ground transition: keep EXACT same ground layering as annulus/core.
-            % This avoids z-level drift on the Rbank seam.
-            bank_hres2=round(obj.tile_res_ratio*bank_hres);
+            if isnan(obj.tile_size)
+                Rtile = 1.2 * Rbank;   % auto: same proportions as legacy tile_ratio=1.2
+            else
+                Rtile = obj.tile_size;
+            end
+            if Rtile <= Rbank
+                error('PillarModel: tile_size (%.4g) must exceed Rbank (%.4g = 1.5×Rout). Increase p.tile_size.', ...
+                    Rtile, Rbank);
+            end
+
+            nThetaSeg  = nrXY * 2;
+            bank_hres2 = obj.res_tile;
             obj.mesh = PillarModel.addLayeredTransitionCircleToSquare( ...
                 obj.mesh, Rtr, Rtile, z0_ground, obj.ground_layers_eff, obj.ground_res, ...
                 true, obj.int_th, nThetaSeg, bank_hres2, obj.sf );
@@ -1509,50 +1578,97 @@ end
             end
         end
 
-        function nodes = applyRingDepressionZ(nodes, x0_xy, Rin, Rout, z_bot, z_top, depth)
+        function nodes = applyRingDepressionZ(nodes, x0_xy, Rin, Rout, z_bot, z_top, depth, depthMax, slope_inner, t_peak_req)
             % Apply smooth "bowl" depression on the TOP surface of a ring.
             %
             % IMPORTANT:
             %   We only move nodes on z == z_top. This preserves flat,
             %   horizontal internal interfaces/layers below, which is
             %   required by the layered-process constraint.
-            
+            %
+            % When slope_inner (dz/dr of the inner boundary surface, negative for
+            % an inward-tapering pillar) and depthMax are supplied, a two-piece
+            % piecewise cubic is used: a convex rise from r=Rin to the depression
+            % minimum, then a smooth smoothstep fall to r=Rout.  The initial slope
+            % is matched to slope_inner as closely as the depth constraint allows,
+            % making the depression surface tangent-continuous (or near so) with
+            % the pillar outer wall at r=Rin.
+
                 x = nodes(:,1) - x0_xy(1);
                 y = nodes(:,2) - x0_xy(2);
                 z = nodes(:,3);
-            
+
                 r = hypot(x,y);
-            
+
                 % --- tolerances (scale-aware) ---
                 epsR = max(1e-10*max(1,Rout), 1e-8);              % radial tol
                 epsZ = max(1e-10*max(1,abs(z_top-z_bot)), 1e-8);  % z tol
-            
+
                 inR = (r >= Rin - epsR) & (r <= Rout + epsR);
                 onTop = abs(z - z_top) <= epsZ;
-            
+
                 if ~any(inR & onTop)
                     return;
                 end
-            
+
                 onInner = abs(r - Rin)  <= epsR;
                 onOuter = abs(r - Rout) <= epsR;
-            
+
                 % Only top-surface interior of the ring
                 mask = inR & onTop & ~(onInner | onOuter);
-            
+
                 if ~any(mask)
                     return;
                 end
-            
-                t = (r(mask) - Rin) ./ max(1e-15, (Rout - Rin));
+
+                dR = max(1e-15, Rout - Rin);
+                t = (r(mask) - Rin) ./ dR;
                 t = max(0, min(1, t));
-            
-                % radial bowl shape with zero slope at boundaries:
-                % 0 at t=0 and t=1, max at t=0.5, C1-continuous at edges.
-                bowl = sin(pi .* t).^2;
-            
+
+                % --- bowl shape ---
+                % With slope_inner supplied: two-piece piecewise cubic (see below).
+                % Without slope_inner: fall back to sin^2 (zero slope at both edges).
+                if nargin >= 9 && isfinite(slope_inner) && slope_inner ~= 0 ...
+                        && nargin >= 8 && depthMax > 0
+                    % Two-piece piecewise cubic bowl.
+                    %
+                    % Piece 1 (t in [0, t_peak]): f1(s) = 1-(1-s)^3, s = t/t_peak.
+                    %   Rises from 0 with slope m = 3/t_peak (in t-coords), no overshoot.
+                    %   Gives d(bowl)/dt|_{t=0} = m, so d(dz)/dr|_{r=Rin} = -depth*m/dR.
+                    %
+                    % Piece 2 (t in [t_peak, 1]): smoothstep from 1 to 0, zero slopes
+                    %   at both ends, C1-joined to piece 1 at t_peak.
+                    %
+                    % t_peak is chosen as max(t_peak_C1, t_peak_floor):
+                    %   t_peak_C1 = 3*depthMax/(|slope_inner|*dR) is the largest value
+                    %   that still achieves exact C1 (depth_C1 = |slope|*dR*t_peak/3 <= depthMax).
+                    %   t_peak_floor comes from p.depression_r_min (default 0.25) and keeps
+                    %   the bowl balanced even when exact C1 would place the peak too close
+                    %   to the inner edge.
+                    if nargin >= 10 && isfinite(t_peak_req) && ~isnan(t_peak_req)
+                        t_peak_floor = t_peak_req;
+                    else
+                        t_peak_floor = 0.25;
+                    end
+                    t_peak_C1 = 3 * depthMax / (abs(slope_inner) * dR);
+                    t_peak = max(t_peak_C1, t_peak_floor);
+                    m     = 3 / t_peak;                        % slope of bowl at t=0
+                    depth = min(abs(slope_inner) * dR / m, depthMax);
+
+                    left  = t <  t_peak;
+                    right = t >= t_peak;
+                    s_l = t(left)  ./ t_peak;
+                    s_r = (t(right) - t_peak) ./ max(1e-15, 1 - t_peak);
+                    bowl = zeros(size(t));
+                    bowl(left)  = 1 - (1 - s_l).^3;           % convex rise
+                    bowl(right) = 1 - 3*s_r.^2 + 2*s_r.^3;   % smooth fall
+                else
+                    % default: zero slope at both boundaries
+                    bowl = sin(pi .* t).^2;
+                end
+
                 dz = -depth .* bowl;
-            
+
                 % apply
                 nodes(mask,3) = nodes(mask,3) + dz;
             end
