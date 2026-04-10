@@ -15,6 +15,7 @@ classdef PillarModel < ModelLinear
         z_offset
         tile_ratio
         tile_res_ratio
+        tile_size
     end
 
     methods
@@ -261,6 +262,13 @@ classdef PillarModel < ModelLinear
                end
            end
            
+           xTile = abs(obj.mesh.nodes(:,1) - Rtile) < Rtile * 0.025;
+           yTile = abs(obj.mesh.nodes(:,2) - Rtile) < Rtile * 0.025;
+
+           obj.mesh.nodes(xTile,1) = Rtile;
+           obj.mesh.nodes(yTile,2) = Rtile; 
+
+           obj.tile_size = Rtile;
 
         end
 
@@ -764,6 +772,8 @@ classdef PillarModel < ModelLinear
             fprintf(myfile, "\nEBOUndary ADD\n");
             fprintf(myfile, "1 0.0   1 0 0  1 1 ! plane x = 0  -> fix u_x\n");
             fprintf(myfile, "2 0.0   0 1 0  1 1 ! plane y = 0  -> fix u_y\n");
+            fprintf(myfile, "1 %.3f   1 0 0  1 1 ! plane x = 0  -> fix u_x\n",obj.tile_size);
+            fprintf(myfile, "2 %.3f   0 1 0  1 1 ! plane y = 0  -> fix u_y\n",obj.tile_size);
             fprintf(myfile, "3 %7.5E   1 1 1  1 1  ! plane z = min  -> fix u_x,u_y,u_z\n", ...
                 min(obj.mesh.nodes(:,3)));
 

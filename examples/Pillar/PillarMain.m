@@ -48,10 +48,10 @@ model_width.plotLayerColors(fe2);
 % feb = SolidElasticElem( sf, model.mesh.elems(bad_elems,:) );
 % feb.plot(model.mesh.nodes, [0.8,0,0]);
 
-filename = "Pillar15.i";
+filename = "Pillar16.i";
 model.FEAP_Export(filename);
 
-filename = "Pillar15w.i";
+filename = "Pillar16w.i";
 model_width.FEAP_Export(filename);
 
 % Reading and displaying mesh from FEAP file
