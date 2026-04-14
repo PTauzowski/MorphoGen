@@ -795,6 +795,48 @@ classdef PillarModel < ModelLinear
             obj.z_coords = sort(unique(round(obj.mesh.nodes(:,3) / z_tolerance) * z_tolerance), 'descend');
         end
 
+        function [chem_pillar, chem_ground, lays_between_layers] = feapChemChannelsFromZ(obj, z)
+            % feapChemChannelsFromZ  Split FEAP export chemistry into pillar
+            % and ground channels using model-local z, independent of z_offset.
+            [chem_scalar, lays_between_layers] = obj.chemFromZ(z);
+
+            if iscell(chem_scalar)
+                error('feapChemChannelsFromZ requires numeric chemistry values for FEAP export.');
+            end
+
+            z_local = double(z);
+            if isprop(obj,'z_offset') && ~isempty(obj.z_offset)
+                z_local = z_local - double(obj.z_offset);
+            end
+
+            if isprop(obj,'z_tolerance') && ~isempty(obj.z_tolerance) && obj.z_tolerance > 0
+                tol = obj.z_tolerance;
+            else
+                tol = 1e-9;
+            end
+
+            chem_pillar = zeros(size(chem_scalar));
+            chem_ground = zeros(size(chem_scalar));
+
+            pillarMask = z_local > (obj.int_th/2 + tol);
+            groundMask = z_local < (-obj.int_th/2 - tol);
+            topIfMask  = ~(pillarMask | groundMask);
+
+            chem_pillar(pillarMask) = chem_scalar(pillarMask);
+            chem_ground(groundMask) = chem_scalar(groundMask);
+
+            if any(topIfMask(:))
+                z_bot = -obj.int_th/2;
+                z_top =  obj.int_th/2;
+                denom = max(1e-15, z_top - z_bot);
+                u = (z_local(topIfMask) - z_bot) ./ denom;
+                u = max(0, min(1, u));
+
+                chem_pillar(topIfMask) = u .* obj.pillar_chem(1);
+                chem_ground(topIfMask) = (1-u) .* obj.ground_chem(end);
+            end
+        end
+
         %==================================================================
         % Eksport siatki i danych do pliku FEAP
         % (bez zmian względem Twojej wersji)
@@ -846,20 +888,15 @@ classdef PillarModel < ModelLinear
             fprintf(myfile, "3 %7.5E   1 1 1  1 1  ! plane z = min  -> fix u_x,u_y,u_z\n", ...
                 min(obj.mesh.nodes(:,3)));
 
-            [chem_from_z, lays_between_layers] = obj.chemFromZ(obj.z_coords);
+            [chem_pillar, chem_ground, lays_between_layers] = obj.feapChemChannelsFromZ(obj.z_coords);
             fprintf(myfile, "\n EDIS\n");
             for k = 1:size(obj.z_coords,1)
                 str_layer="";
                 if lays_between_layers(k)
                     str_layer=" ! ------layer surface --------------------------------";
                 end
-                if obj.z_coords(k)>0
-                    fprintf(myfile, "  3   %.5f  0  0  0  %1.2f 0.0   %s\n", ...
-                     obj.z_coords(k), chem_from_z(k),str_layer);
-                else
-                    fprintf(myfile, "  3   %.5f  0  0  0  0.0 %1.2f   %s\n", ...
-                     obj.z_coords(k), chem_from_z(k),str_layer);
-                end
+                fprintf(myfile, "  3   %.5f  0  0  0  %1.2f %1.2f   %s\n", ...
+                    obj.z_coords(k), chem_pillar(k), chem_ground(k), str_layer);
             end
             fprintf(myfile, "\n");
 

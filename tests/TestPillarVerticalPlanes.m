@@ -41,11 +41,27 @@ classdef TestPillarVerticalPlanes < matlab.unittest.TestCase
             opts.bank_hres = 2;
             opts.nThetaSeg = 4;
 
-            sf    = ShapeFunctionH27();
-            model = PillarModel(top_R, pillar_layers, ground_layers, ...
-                                pillar_res, ground_res, ...
-                                pillar_chem, ground_chem, ...
-                                int_th, sf, z_offset, opts);
+            p = struct();
+            p.top_R = top_R;
+            p.pillar_layers = pillar_layers;
+            p.ground_layers = ground_layers;
+            p.pillar_res = pillar_res;
+            p.ground_res = ground_res;
+            p.pillar_chem = pillar_chem;
+            p.ground_chem = ground_chem;
+            p.int_th = int_th;
+            p.sf = ShapeFunctionH27();
+            p.z_offset = z_offset;
+            p.pillar_inclination_deg = 5;
+            p.depression_width = NaN;
+            p.depression_depth = NaN;
+            p.depression_r_min = NaN;
+            p.tile_size = NaN;
+            p.res_cyl = opts.nrXY;
+            p.res_ring = opts.bank_hres;
+            p.res_tile = opts.bank_hres;
+
+            model = PillarModel(p);
 
             nodes = model.mesh.nodes;
             tolZ  = 1e-5;

@@ -15,7 +15,7 @@ p.sf = ShapeFunctionH27();
 %  Replace with ShapeFunctionH8() for a 1st-order (8-node) mesh.
 
 % ---- Pillar geometry -------------------------------------------------
-p.top_R = 100;
+p.top_R = 50;
 %  Radius of the pillar at its top surface.
 
 p.pillar_inclination_deg = 5;
@@ -54,13 +54,15 @@ p.int_th = 0.1;
 %  layer and int_th/2 from the bottom pillar layer.
 
 % ---- Material chemistry (per layer) ---------------------------------
-p.pillar_chem = [ 0.08   0.08   0.08   0.18   0.08 ];
-%  Chemistry value assigned to each pillar layer (same order as
-%  pillar_layers).  Used when exporting FEAP material data.
+p.pillar_chem = [ 0.00   0.08   0.08   0.18   0.08 ];
+%  Pillar chemistry value assigned to each pillar layer (same order as
+%  pillar_layers).  In the current FEAP export this is used as the
+%  pillar-side composition amplitude, so the 10 nm GaN cap is 0.00.
 
 p.ground_chem = [ 0   1   1 ];
-%  Chemistry value assigned to each ground layer (same order as
-%  ground_layers).
+%  Ground chemistry value assigned to each ground layer (same order as
+%  ground_layers).  In the current FEAP export this populates the second
+%  chemistry channel used on the ground side.
 
 % ---- Vertical offset ------------------------------------------------
 p.z_offset = -p.pillar_layers(1);
@@ -89,10 +91,16 @@ p.depression_r_min = NaN;
 %  Must satisfy  Rin < depression_r_min < Rout.
 
 % ---- Tile (outer square boundary) -----------------------------------
-p.tile_size = NaN;
+%  Both pillar diameters (100 nm and 2000 nm) share the same array pitch
+%  (same lithography grid).  Tile size is therefore fixed by the wide-pillar
+%  geometry (top_R = 1000) and reused for the small pillar.
+%  Formula mirrors the NaN auto rule: 1.2 × Rbank, Rbank = 1.5 × Rout,
+%  Rout ≈ top_R_wide + pillar_height × tan(inclination).
+pillar_height_total  = sum( p.pillar_layers );
+Rout_wide            = 1000 + pillar_height_total * tand( p.pillar_inclination_deg );
+p.tile_size          = 1.2 * 1.5 * Rout_wide;
 %  Half-width of the outer square tile (distance from the symmetry axis
 %  to the outer boundary along x or y).
-%  NaN → 1.2 × Rbank, where Rbank = 1.5 × Rout.
 %  Must be strictly larger than Rbank; otherwise the constructor errors.
 
 % ---- Mesh resolution ------------------------------------------------
@@ -120,9 +128,13 @@ model = PillarModel( p );
 %  All pillar / ground / chemistry / interface parameters are inherited
 %  from p; only the tile size and tile resolution differ.
 p_wide           = p;
-p_wide.top_R     = 2000;   % wider pillar top radius for the second model
+p_wide.top_R     = 1000;   % wider pillar top radius for the second model
 p_wide.tile_size = NaN;    % auto: 1.2 × Rbank (larger tile, consistent proportions)
 p_wide.res_tile  = 15;     % finer tile resolution for the larger domain
+
+p_wide.depression_width = 50;
+%  Radial width of the depression ring  (Rout − Rin).
+%  NaN → 20 % of Rbase (the pillar base radius).
 
 model_width = PillarModel( p_wide );
 
