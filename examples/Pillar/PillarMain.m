@@ -113,7 +113,7 @@ p.res_ring = 5;
 %  Radial node divisions of each annular (ring / pipe) section.
 %  Controls the element count from inner to outer radius of each ring.
 
-p.res_tile = 5;
+p.res_tile = 20;
 %  Radial node divisions of the square tile transition sections.
 %  Increase independently of res_ring for a finer outer region.
 
@@ -132,9 +132,13 @@ p_wide.top_R     = 1000;   % wider pillar top radius for the second model
 p_wide.tile_size = NaN;    % auto: 1.2 × Rbank (larger tile, consistent proportions)
 p_wide.res_tile  = 15;     % finer tile resolution for the larger domain
 
-p_wide.depression_width = 50;
+p_wide.depression_width = 120;
 %  Radial width of the depression ring  (Rout − Rin).
 %  NaN → 20 % of Rbase (the pillar base radius).
+
+p_wide.res_ring = 10;
+%  Radial node divisions of each annular (ring / pipe) section.
+%  Controls the element count from inner to outer radius of each ring.
 
 model_width = PillarModel( p_wide );
 
