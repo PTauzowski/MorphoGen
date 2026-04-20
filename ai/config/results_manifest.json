@@ -1,0 +1,225 @@
+{
+  "paper_context": {
+    "paper_id": "viaduct_ai",
+    "paper_title": "Railway viaduct damage and component segmentation benchmark",
+    "domain": "structural inspection / semantic segmentation",
+    "result_scope": "numerical segmentation results for synthetic benchmark, conditioning ablation, oracle analysis, real-photo transfer, and zero-shot baseline"
+  },
+  "authoritative_sources": {
+    "authoritative_files": [
+      "results/tables/damage_models.csv",
+      "results/tables/segmentation_models.csv",
+      "results/tables/joint_component_aware_summary.csv",
+      "results/oracle/filter_oracle_results.csv",
+      "results/real_eval_component/real_eval_summary.csv",
+      "results/grounded_sam_eval/structural_vit_h/grounded_sam_summary.csv"
+    ],
+    "authoritative_directories": [
+      "results/tables",
+      "results/oracle",
+      "results/real_eval_component",
+      "results/grounded_sam_eval/structural_vit_h"
+    ],
+    "preferred_formats": [
+      "csv",
+      "json",
+      "tex"
+    ]
+  },
+  "excluded_sources": {
+    "ignored_files": [
+      "results/summary17.csv",
+      "results/summary17.json",
+      "results/._summary.csv",
+      "results/._summary.json"
+    ],
+    "ignored_directories": [
+      "outputs",
+      "results/real_eval_component_matched",
+      "results/gsam_prompt_ablation"
+    ],
+    "stale_patterns": [
+      "results/._*",
+      "results/grounded_sam_eval/v*",
+      "*tmp*",
+      "*debug*",
+      "*old*",
+      "*draft*"
+    ]
+  },
+  "experiment_groups": [
+    {
+      "id": "damage_benchmark",
+      "name": "Synthetic damage benchmark",
+      "purpose": "Compare single-task damage architectures on the synthetic test split",
+      "source_files": [
+        "results/tables/damage_models.csv"
+      ],
+      "status": "final",
+      "include_in_paper": "yes"
+    },
+    {
+      "id": "damage_ablations",
+      "name": "Damage ablation studies",
+      "purpose": "Quantify loss, encoder, resolution, and pretraining effects on damage segmentation",
+      "source_files": [
+        "results/tables/damage_models.csv"
+      ],
+      "status": "final",
+      "include_in_paper": "yes"
+    },
+    {
+      "id": "component_benchmark",
+      "name": "Synthetic component benchmark",
+      "purpose": "Compare single-task structural/component architectures on the synthetic test split",
+      "source_files": [
+        "results/tables/segmentation_models.csv"
+      ],
+      "status": "final",
+      "include_in_paper": "yes"
+    },
+    {
+      "id": "joint_conditioning",
+      "name": "Joint component-aware conditioning ablation",
+      "purpose": "Test whether component-aware conditioning improves damage segmentation",
+      "source_files": [
+        "results/tables/joint_component_aware_summary.csv"
+      ],
+      "status": "final",
+      "include_in_paper": "yes"
+    },
+    {
+      "id": "oracle_filter",
+      "name": "Oracle-filter analysis",
+      "purpose": "Check whether the null conditioning result persists on good-component subsets",
+      "source_files": [
+        "results/oracle/filter_oracle_results.csv"
+      ],
+      "status": "final",
+      "include_in_paper": "yes"
+    },
+    {
+      "id": "real_transfer",
+      "name": "Synthetic-to-real component transfer",
+      "purpose": "Quantify transfer performance on real viaduct photographs",
+      "source_files": [
+        "results/real_eval_component/real_eval_summary.csv"
+      ],
+      "status": "final",
+      "include_in_paper": "yes"
+    },
+    {
+      "id": "zero_shot_structural_baseline",
+      "name": "Zero-shot structural GroundedSAM baseline",
+      "purpose": "Provide a training-free structural segmentation lower bound on real photographs",
+      "source_files": [
+        "results/grounded_sam_eval/structural_vit_h/grounded_sam_summary.csv"
+      ],
+      "status": "final",
+      "include_in_paper": "yes"
+    }
+  ],
+  "primary_metrics": [
+    {
+      "id": "miou_main",
+      "name": "foreground mean Intersection-over-Union",
+      "meaning": "Primary segmentation accuracy metric excluding dominant background classes",
+      "unit": "unitless",
+      "optimization_direction": "higher_is_better",
+      "reporting_priority": 1
+    },
+    {
+      "id": "macro_dice",
+      "name": "macro Dice coefficient",
+      "meaning": "Secondary overlap metric used to support segmentation quality comparisons",
+      "unit": "unitless",
+      "optimization_direction": "higher_is_better",
+      "reporting_priority": 2
+    },
+    {
+      "id": "fps",
+      "name": "frames per second",
+      "meaning": "Inference throughput metric used for runtime context",
+      "unit": "fps",
+      "optimization_direction": "higher_is_better",
+      "reporting_priority": 3
+    }
+  ],
+  "reporting_priority": {
+    "primary_result": "damage_benchmark",
+    "primary_comparison": "joint_conditioning",
+    "secondary_results": [
+      "damage_ablations",
+      "component_benchmark",
+      "real_transfer",
+      "zero_shot_structural_baseline",
+      "oracle_filter"
+    ],
+    "optional_results": [
+      "component_benchmark"
+    ]
+  },
+  "comparison_rules": {
+    "valid_comparisons": [
+      "Compare synthetic benchmark models within the same task and metric family",
+      "Compare joint-conditioning variants using the aggregated summary file only",
+      "Compare real-photo transfer and zero-shot baseline only on the real structural/component task"
+    ],
+    "forbidden_comparisons": [
+      "Do not compare synthetic damage metrics to real structural metrics as if they were the same task",
+      "Do not treat prompt-variant GroundedSAM runs as equal-status main baselines",
+      "Do not use raw per-run output folders directly when a stable summary CSV exists"
+    ],
+    "aggregation_rules": [
+      "Use the aggregated means and standard deviations reported in stable CSV summaries when available",
+      "Use per-seed rows only when the manuscript explicitly discusses run-level spread or best checkpoints",
+      "For real transfer, average the three ConvNeXt rows in results/real_eval_component/real_eval_summary.csv when reporting the manuscript-level mean"
+    ],
+    "final_run_rule": "Prefer the stable table and summary CSVs named in authoritative_files over raw run artifacts and exploratory prompt variants"
+  },
+  "claim_links": {
+    "contribution_to_result_map": {
+      "synthetic_damage_benchmark": "damage_benchmark",
+      "null_component_conditioning_result": "joint_conditioning",
+      "oracle_null_result_check": "oracle_filter",
+      "synthetic_to_real_component_transfer": "real_transfer",
+      "annotation_free_structural_lower_bound": "zero_shot_structural_baseline"
+    },
+    "claim_to_metric_map": {
+      "best_damage_model": [
+        "miou_main",
+        "macro_dice",
+        "fps"
+      ],
+      "conditioning_null_result": [
+        "miou_main"
+      ],
+      "real_transfer_gap": [
+        "miou_main"
+      ],
+      "zero_shot_lower_bound": [
+        "miou_main"
+      ]
+    }
+  },
+  "writing_constraints": {
+    "max_key_findings": 5,
+    "max_metrics_per_paragraph": 3,
+    "must_report": [
+      "headline synthetic damage benchmark result",
+      "conditioning null result spread",
+      "real-photo transfer mean",
+      "zero-shot structural baseline"
+    ],
+    "must_not_report": [
+      "raw checkpoint paths",
+      "debug or prompt-search variants as main results",
+      "duplicate metrics when one headline metric is already sufficient"
+    ],
+    "interpretation_notes": [
+      "Keep synthetic damage and real structural results conceptually separate",
+      "Treat the paper as a benchmark/null-result paper, not a universal-method-superiority paper",
+      "Use only conservative interpretations directly supported by the selected summary files"
+    ]
+  }
+}
