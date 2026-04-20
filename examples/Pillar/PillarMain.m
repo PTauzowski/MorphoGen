@@ -136,9 +136,13 @@ p_wide.depression_width = 120;
 %  Radial width of the depression ring  (Rout − Rin).
 %  NaN → 20 % of Rbase (the pillar base radius).
 
-p_wide.res_ring = 10;
+p_wide.res_ring = 5;
 %  Radial node divisions of each annular (ring / pipe) section.
 %  Controls the element count from inner to outer radius of each ring.
+
+p_wide.res_tile = 5;
+%  Radial node divisions of the square tile transition sections.
+%  Increase independently of res_ring for a finer outer region.
 
 model_width = PillarModel( p_wide );
 
