@@ -77,6 +77,56 @@ modelRef.fe.plotMap(modelRef.mesh.nodes,modelRef.analysis.qnodal,13,0.2)
 %save("ManipulatorFrameForces200K.mat","vN", "vTy", "vTz", "vMs", "vMy", "vMz", "all_forces");
 load("ManipulatorFrameForces200K.mat","vN", "vTy", "vTz", "vMs", "vMy", "vMz", "all_forces");
 
+nbin=500;
+
+figure;
+histogram(vN(:,1,2),nbin);
+title('N 1');
+
+figure;
+histogram(vTy(:,1,2),nbin);
+title('Ty 1');
+
+figure;
+histogram(vTz(:,1,2),nbin);
+title('Tz 1');
+
+figure;
+histogram(vMs(:,1,2),nbin);
+title('Ms 1');
+
+figure;
+histogram(vMy(:,1,2),nbin);
+title('My 1');
+
+figure;
+histogram(vMz(:,1,2),nbin);
+title('Mz 1');
+
+figure;
+histogram(vN(:,2,2),nbin);
+title('N 2');
+
+figure;
+histogram(vTy(:,2,2),nbin);
+title('Ty 2');
+
+figure;
+histogram(vTz(:,2,2),nbin);
+title('Tz 2');
+
+figure;
+histogram(vMs(:,2,2),nbin);
+title('Ms 2');
+
+figure;
+histogram(vMy(:,2,2),nbin);
+title('My 2');
+
+figure;
+histogram(vMz(:,2,2),nbin);
+title('Mz 2');
+
 %[vMaxN1, imaxN1]=max(abs(vN(:,1)));
 %[vMaxN2, imaxN2]=max(abs(vN(:,2)));
 
