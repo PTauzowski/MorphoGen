@@ -127,6 +127,15 @@ figure;
 histogram(vMz(:,2,2),nbin);
 title('Mz 2');
 
+Ms_env = max(max(abs(vMs), [], 2), [], 3);
+T_env  = max(max(hypot(vTy, vTz), [], 2), [], 3);
+Mb_env = max(max(hypot(vMy, vMz), [], 2), [], 3);
+
+figure; histogram(Ms_env, nbin, 'Normalization', 'probability'); title('|M_s| envelope');
+figure; histogram(T_env, nbin, 'Normalization', 'probability'); title('shear resultant envelope');
+figure; histogram(Mb_env, nbin, 'Normalization', 'probability'); title('bending resultant envelope');
+
+
 %[vMaxN1, imaxN1]=max(abs(vN(:,1)));
 %[vMaxN2, imaxN2]=max(abs(vN(:,2)));
 

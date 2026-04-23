@@ -60,6 +60,88 @@ examples = struct( ...
     } ...
 );
 
+frameElems=[1 2; 2 3; 3 4; 4 5; 5 6; 6 7; 7 8];
+nDiv  = 8;                           % 8 bins per angle
+%vals  = linspace(0, 360 - 360/nDiv, nDiv);  % [0,45,90,...,315]
+vals  = linspace(-180, 180 - 360/nDiv, nDiv);  % [0,45,90,...,315]
+
+% We keep the first column fixed at 0, vary the remaining 6
+nVar = nArms - 1;                    % 6
+G = cell(1, nVar);
+[G{:}] = ndgrid(vals);
+
+% Assemble samples: rows = 8^6, cols = 7 (first col fixed to 0)
+samples = zeros(nDiv^nVar, nArms);
+%samples(:,1) = 0;
+for k = 1:nVar
+    samples(:, k+1) = G{k}(:);
+end
+
+nSamples = size(samples,1);
+[~, ~, frameNodes] = computeArmSamples(E, nu, segmentLength, alpha, samples );
+[vN, vTy, vTz, vMs, vMy, vMz, all_forces] = computeAllInternalForces( frameNodes, frameElems, E, nu, R, r, samples, Pz);
+
+save("ManipulatorFrame3Ddata200K.mat");
+%load("ManipulatorFrame3Ddata200K.mat");
+
+nbin=500;
+
+figure;
+histogram(vN(:,1,2),nbin);
+title('N 1');
+
+figure;
+histogram(vTy(:,1,2),nbin);
+title('Ty 1');
+
+figure;
+histogram(vTz(:,1,2),nbin);
+title('Tz 1');
+
+figure;
+histogram(vMs(:,1,2),nbin);
+title('Ms 1');
+
+figure;
+histogram(vMy(:,1,2),nbin);
+title('My 1');
+
+figure;
+histogram(vMz(:,1,2),nbin);
+title('Mz 1');
+
+figure;
+histogram(vN(:,2,2),nbin);
+title('N 2');
+
+figure;
+histogram(vTy(:,2,2),nbin);
+title('Ty 2');
+
+figure;
+histogram(vTz(:,2,2),nbin);
+title('Tz 2');
+
+figure;
+histogram(vMs(:,2,2),nbin);
+title('Ms 2');
+
+figure;
+histogram(vMy(:,2,2),nbin);
+title('My 2');
+
+figure;
+histogram(vMz(:,2,2),nbin);
+title('Mz 2');
+
+Ms_env = max(max(abs(vMs), [], 2), [], 3);
+T_env  = max(max(hypot(vTy, vTz), [], 2), [], 3);
+Mb_env = max(max(hypot(vMy, vMz), [], 2), [], 3);
+
+figure; histogram(Ms_env, nbin, 'Normalization', 'probability'); title('|M_s| envelope');
+figure; histogram(T_env, nbin, 'Normalization', 'probability'); title('shear resultant envelope');
+figure; histogram(Mb_env, nbin, 'Normalization', 'probability'); title('bending resultant envelope');
+
 sectionReportPrinted = false;
 
 for k = 1:numel(examples)
