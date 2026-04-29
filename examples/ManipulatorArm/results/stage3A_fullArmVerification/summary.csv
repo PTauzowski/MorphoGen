@@ -1,0 +1,16 @@
+configName,configLabel,designName,designLabel,status,volFrac,tipDisp_mm,maxDisp_mm,maxHM_MPa
+straight,Straight,A_My_only,My only,ok,1,0.0812673848135684,0.121420742927433,0.0389175890412978
+straight,Straight,B_multiload_shell,Multi-load shell,ok,1,0.0816658417724926,0.121420742927433,0.032072967497157
+straight,Straight,C_full_solid,Full solid,ok,1,0.081660280455999,0.121420742927433,0.0619034128507817
+max_bending,Max M_z,A_My_only,My only,ok,1,1.58322061919149,1.59331577192429,0.157287776533065
+max_bending,Max M_z,B_multiload_shell,Multi-load shell,ok,1,1.58322061919149,1.59331577192429,0.126588273414744
+max_bending,Max M_z,C_full_solid,Full solid,ok,1,1.58322061919149,1.59331577192429,0.242557738472341
+max_torsion,Max M_s,A_My_only,My only,ok,1,1.32895033179838,1.35833003762005,0.0660116715415411
+max_torsion,Max M_s,B_multiload_shell,Multi-load shell,ok,1,1.32895033179838,1.35833003762005,0.0972236897109537
+max_torsion,Max M_s,C_full_solid,Full solid,ok,1,1.32895033179838,1.35833003762005,0.177133917309692
+max_shear,Max T_y,A_My_only,My only,ok,1,0.240063694643351,0.243547713382372,0.0464146558343718
+max_shear,Max T_y,B_multiload_shell,Multi-load shell,ok,1,0.240063694643351,0.243547713382372,0.0371987317559487
+max_shear,Max T_y,C_full_solid,Full solid,ok,1,0.240063694643351,0.243547713382372,0.072493946873679
+multi_rep,Min N / multi,A_My_only,My only,ok,1,0.00361715779754307,0.00361715779754308,0.00200896938545301
+multi_rep,Min N / multi,B_multiload_shell,Multi-load shell,ok,1,0.00361715779754307,0.00361715779754308,0.00161581448174303
+multi_rep,Min N / multi,C_full_solid,Full solid,ok,1,0.00361715779754307,0.00361715779754308,0.0027343884823089
