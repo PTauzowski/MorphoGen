@@ -1,0 +1,7 @@
+configName,configLabel,nNodes,nElems,nTaskDofs,nSupportedDofs,nLoadedDofsBeforeSolve,sameConnectivityAsFirst,sameDofsAsFirst
+min_bending,Min M_z,60475,48144,181425,885,295,1,1
+min_torsion,Min M_s,60475,48144,181425,885,295,1,1
+min_shear,Min T_y,60475,48144,181425,885,295,1,1
+max_bending,Max M_z,60475,48144,181425,885,295,1,1
+max_torsion,Max M_s,60475,48144,181425,885,295,1,1
+max_shear,Max T_y,60475,48144,181425,885,295,1,1

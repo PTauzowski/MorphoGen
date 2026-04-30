@@ -42,16 +42,15 @@ classdef StressIntensityMultiAvTopologyOptimization < StressIntensityTopologyOpt
                 for i=1:size(obj.FEAnalysis.felems,2)
                    hmIndex=find(obj.FEAnalyses(k).felems{i}.results.names == "sHM");
                    for j=1:size(obj.FEAnalyses(k).felems{i}.elems,1)
-                        %ais(obj.elem_inds{i}(j),k) = mean( obj.linearElasticProblem.felems{i}.results.GPvalues(hmIndex,j,:) );
                         sais(obj.elem_inds{i}(j),k) = mean( obj.FEAnalyses(k).felems{i}.results.nodal.all(obj.FEAnalyses(k).felems{i}.elems(j,:),hmIndex) );
                    end
                 end
                 obj.maxstress = [ obj.maxstress max(sais(:,k)) ];
                 maxstress(k)=max(sais(:,k));
-                ais = ais + sais(:,k) / max(sais(:,k));
+                ais = ais + sais(:,k);
             end
             obj.plMaxStress=[ obj.plMaxStress;  maxstress ];
-            ais = ais / nFEAnalyses;
+            ais = ais / max(ais);
         end
 
     end

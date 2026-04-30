@@ -590,7 +590,7 @@ classdef SolidElasticElem < FiniteElement
             %patch('Vertices', nodes, 'Faces', plotfaces,'FaceColor',col,"FaceAlpha",0.3);
         end
         function plotSolidSelected(obj,nodes,elem_inds,varargin)
-            if isempty(elem_inds)
+            if isempty(elem_inds) || ~any(elem_inds)
                 return
             end
             if nargin == 3
