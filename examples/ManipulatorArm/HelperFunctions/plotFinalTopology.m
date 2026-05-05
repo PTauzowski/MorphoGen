@@ -1,31 +1,35 @@
-function plotFinalTopology(model, x, resultRoot, postResult, analyses)
+function plotFinalTopology(model, x, resultRoot, postResult, analyses, opts)
 % PLOTFINALTOPOLOGY  Save density field and threshold topology images.
 %
 %   plotFinalTopology(model, x, resultRoot)
 %   plotFinalTopology(model, x, resultRoot, postResult)
 %   plotFinalTopology(model, x, resultRoot, postResult, analyses)
+%   plotFinalTopology(..., opts)
 %
 %   When postResult (from postprocessSIMPResult) is supplied, an additional
 %   figure comparing the best extracted topology against the raw rho>0.5
 %   cut is saved as 'final_best_topology.png'.
 %
-%   When analyses ({nConfigs x 1} FEAnalysis objects) is supplied, max
-%   Huber-Mises stress and max displacement magnitude are computed for each
-%   threshold topology and included in the figure title.
+%   By default this function keeps topology plotting light: it saves only the
+%   rho>0.5 threshold and does not run FE metrics for threshold previews.
+%   Set opts.thresholds and opts.computeMetrics to enable heavier output.
 
     if nargin < 4, postResult = []; end
     if nargin < 5, analyses = []; end
-    computeMetrics = ~isempty(analyses);
+    if nargin < 6, opts = struct(); end
+    thresholds = optField(opts, 'thresholds', 0.5);
+    computeMetrics = optField(opts, 'computeMetrics', false) && ~isempty(analyses);
+    saveFigFiles = optField(opts, 'saveFigFiles', false);
 
     fig = figure('Name', 'Final density', 'Visible', 'off');
     plotElementDensityField(model, x);
     title(sprintf('Final density, vf=%.3f', mean(x)));
     saveas(fig, fullfile(resultRoot, 'final_density.png'));
-    set(fig, 'Visible', 'on');
-    savefig(fig, fullfile(resultRoot, 'final_density.fig'));
+    if saveFigFiles
+        savefig(fig, fullfile(resultRoot, 'final_density.fig'));
+    end
     close(fig);
 
-    thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
     xVoid = 1e-6;
     for i = 1:numel(thresholds)
         t    = thresholds(i);
@@ -46,8 +50,9 @@ function plotFinalTopology(model, x, resultRoot, postResult, analyses)
         model.fe.plotSolidSelected(model.mesh.nodes, solid_t, [0.55 0.55 0.55]);
         title(titleStr);
         saveas(fig, fullfile(resultRoot, [stem '.png']));
-        set(fig, 'Visible', 'on');
-        savefig(fig, fullfile(resultRoot, [stem '.fig']));
+        if saveFigFiles
+            savefig(fig, fullfile(resultRoot, [stem '.fig']));
+        end
         close(fig);
     end
 
@@ -88,7 +93,12 @@ function plotFinalTopology(model, x, resultRoot, postResult, analyses)
 
     sgtitle('Topology extraction: naive cut vs best method');
     saveas(fig, fullfile(resultRoot, 'final_best_topology.png'));
-    set(fig, 'Visible', 'on');
-    savefig(fig, fullfile(resultRoot, 'final_best_topology.fig'));
+    if saveFigFiles
+        savefig(fig, fullfile(resultRoot, 'final_best_topology.fig'));
+    end
     close(fig);
+end
+
+function v = optField(s, field, default)
+    if isfield(s, field), v = s.(field); else, v = default; end
 end

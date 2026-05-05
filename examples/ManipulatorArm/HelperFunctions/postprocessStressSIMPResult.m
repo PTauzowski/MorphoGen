@@ -87,6 +87,8 @@ function postResult = postprocessStressSIMPResult(optResult, model, analyses, Wf
     resultRoot    = optField(opts, 'resultRoot',    '');
     configNames   = optField(opts, 'configNames',   ...
         arrayfun(@(k) sprintf('cfg%d',k), (1:nConfigs)', 'UniformOutput', false));
+    plotModels    = optField(opts, 'plotModels',    {});
+    plotConfigs   = optField(opts, 'plotConfigs',   []);
 
     z     = optResult.zFinal(:);
     x_arm = optResult.xFinal(:);
@@ -150,7 +152,8 @@ function postResult = postprocessStressSIMPResult(optResult, model, analyses, Wf
 
     %% -- 5. Save to disk ---------------------------------------------------
     if ~isempty(resultRoot)
-        saveStressPostprocessResults(model, allCandidates, configNames, resultRoot);
+        saveStressPostprocessResults(model, allCandidates, configNames, resultRoot, ...
+            plotModels, plotConfigs);
     end
 end
 
@@ -245,7 +248,8 @@ function [bestIdx, selectedBy] = selectBestStressCandidate(allCandidates, runRea
 end
 
 % -------------------------------------------------------------------------
-function saveStressPostprocessResults(model, allCandidates, configNames, resultRoot)
+function saveStressPostprocessResults(model, allCandidates, configNames, resultRoot, ...
+        plotModels, plotConfigs)
 
     % Summary CSV
     nCands = numel(allCandidates);
@@ -280,9 +284,14 @@ function saveStressPostprocessResults(model, allCandidates, configNames, resultR
             strrep(c.label,'_',' '), c.volFrac, char(c.selectedBy), c.selectedScore, ...
             c.sHM_max, c.u_max), 'Interpreter', 'tex');
         saveas(fig, fullfile(resultRoot, [stem '.png']));
-        set(fig, 'Visible', 'on');
         savefig(fig, fullfile(resultRoot, [stem '.fig']));
         close(fig);
+
+        if ~isempty(plotModels)
+            plotTopologyConfigurations(plotModels, c.solid, resultRoot, ...
+                string(stem) + "_by_config", ...
+                sprintf('%s by configuration', strrep(c.label, '_', ' ')), plotConfigs);
+        end
     end
 end
 

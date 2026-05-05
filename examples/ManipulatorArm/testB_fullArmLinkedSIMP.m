@@ -58,7 +58,18 @@ pAgg = 4.0;
 maxIter = 200;
 xminValue = arm.mma.xminValue;
 Rfilter = arm.Rfilter;
-useParallel = license('test', 'Distrib_Computing_Toolbox');
+parallelWorkers = 6;
+parallelAvailable = license('test', 'Distrib_Computing_Toolbox');
+useParallel = parallelAvailable;
+if useParallel
+    pool = gcp('nocreate');
+    if isempty(pool)
+        parpool('Processes', parallelWorkers);
+    elseif pool.NumWorkers ~= parallelWorkers
+        delete(pool);
+        parpool('Processes', parallelWorkers);
+    end
+end
 
 fdElemCount = 5;
 fdStep = 1.0e-5;
@@ -86,8 +97,8 @@ end
 
 fprintf('Test B full-arm linked SIMP (modular Arm-Z)\n');
 fprintf('  Result root: %s\n', resultRoot);
-fprintf('  VolFrac=%.3f, penal=%.2f, pAgg=%.2f, maxIter=%d, changeTol=%.1e, xmin=%.3f, parallel=%d\n', ...
-    VolFrac, penal, pAgg, maxIter, changeTol, xminValue, useParallel);
+fprintf('  VolFrac=%.3f, penal=%.2f, pAgg=%.2f, maxIter=%d, changeTol=%.1e, xmin=%.3f, parallel=%d, workers=%d\n', ...
+    VolFrac, penal, pAgg, maxIter, changeTol, xminValue, useParallel, parallelWorkers);
 
 %% ---- Build full-arm configurations -----------------------------------------
 models    = cell(nConfigs, 1);
@@ -95,6 +106,7 @@ analyses  = cell(nConfigs, 1);
 setupRows = cell(nConfigs, 1);
 
 referenceElems     = [];
+referenceModel     = [];
 referenceElemCount = [];
 referenceDofs      = [];
 referenceTaskDim   = [];
@@ -114,6 +126,7 @@ for k = 1:nConfigs
 
     if k == 1
         referenceElems     = model.mesh.elems;
+        referenceModel     = model;
         referenceElemCount = nElems;
         referenceDofs      = analysis.ndofs;
         referenceTaskDim   = taskDim;
@@ -126,8 +139,7 @@ for k = 1:nConfigs
         assert(taskDim == referenceTaskDim, ...
             'DOF-count mismatch in %s: got %d, expected %d.', ...
             cfg.name, taskDim, referenceTaskDim);
-        assert(isequal(model.mesh.elems, referenceElems), ...
-            'Mesh connectivity differs in configuration %s.', cfg.name);
+        assertLinkedArmLayoutCompatible(model, referenceModel, cfg.name);
         assert(isequal(analysis.ndofs, referenceDofs), ...
             'DOF labels/order differ in configuration %s.', cfg.name);
     end
@@ -142,7 +154,8 @@ for k = 1:nConfigs
     row.nTaskDofs           = taskDim;
     row.nSupportedDofs      = nSupports;
     row.nLoadedDofsBeforeSolve = nLoadedDofs;
-    row.sameConnectivityAsFirst = true;
+    row.sameConnectivityAsFirst = k == 1 || isequal(model.mesh.elems, referenceElems);
+    row.sameLinkedLayoutAsFirst = true;
     row.sameDofsAsFirst         = true;
     setupRows{k, 1}         = row;
 
@@ -299,7 +312,8 @@ save(fullfile(resultRoot, 'result.mat'), ...
     'finalVolumeFraction', 'finalChange', ...
     'history', 'configs', 'map', ...
     'H', 'nElems', 'nCopies', 'nIter', ...
-    'VolFrac', 'penal', 'pAgg', 'maxIter', 'minIter', 'changeTol', 'xminValue', 'Rfilter', 'useParallel', ...
+    'VolFrac', 'penal', 'pAgg', 'maxIter', 'minIter', 'changeTol', 'xminValue', 'Rfilter', ...
+    'useParallel', 'parallelAvailable', 'parallelWorkers', ...
     'const_elems', ...
     'E', 'nu', 'R', 'r', 'h_seg', 'alpha', 'res', 'res_th', 'Pz', ...
     'locationStats', 'locationDensityRange', 'locationDensityStd', ...
@@ -324,6 +338,8 @@ ppOpts.fixedVars   = const_elems;
 ppOpts.useParallel = useParallel;
 ppOpts.resultRoot  = resultRoot;
 ppOpts.configNames = string(cellfun(@(s) s.name, configs, 'UniformOutput', false));
+ppOpts.plotModels  = models;
+ppOpts.plotConfigs = configs;
 % Heaviside sharpening is only valid for projection-based SIMP (solveSIMPVolumeStressMMA).
 % solveSIMPComplianceVolumeMMA uses a sensitivity filter only: z IS the physical density,
 % so Wfilter*z has no density-sharpening meaning and collapses volume.
@@ -337,6 +353,8 @@ postResult = postprocessSIMPResult(optResult, models{1}, analyses, Wfilter, ppOp
 
 % Plot full-arm expanded topology with comparison panel
 plotFinalTopology(models{1}, x_arm_final, resultRoot, postResult, analyses);
+plotTopologyConfigurations(models, x_arm_final > 0.5, resultRoot, ...
+    "final_threshold_rho_gt_05_by_config", "Final rho > 0.5 by configuration", configs);
 plotHistory(history, configs, resultRoot);
 plotLocationDensity(locationStats, resultRoot);
 

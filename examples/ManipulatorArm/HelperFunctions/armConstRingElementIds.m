@@ -29,7 +29,7 @@ function const_elems = armConstRingElementIds(model, arm, designSpace)
     end
 
     H = model.halfSegmentNelems;
-    sliceElems = localSliceElementCount(arm);
+    sliceElems = localSliceElementCount(model, arm);
     assert(sliceElems <= H, ...
         'Ring slice size %d exceeds half-segment element count %d.', sliceElems, H);
 
@@ -64,7 +64,16 @@ function const_elems = referenceModuleConstElems(model, useEndRing, useMiddleRin
     const_elems = unique(const_elems(:));
 end
 
-function sliceElems = localSliceElementCount(arm)
+function sliceElems = localSliceElementCount(model, arm)
+    % Prefer the actual model discretization when available. Linked full-arm
+    % runs may snap resCirc to nCircDiv, so recomputing it from arm.R/r can
+    % undercount one physical ring.
+    if isobject(model) && isprop(model, 'resTh') && isprop(model, 'resCirc') && ...
+            ~isempty(model.resTh) && ~isempty(model.resCirc)
+        sliceElems = model.resTh * model.resCirc;
+        return;
+    end
+
     resTh = max(1, round(arm.res_th));
     wallThickness = arm.R - arm.r;
     resCirc = max(3, round(2 * pi * arm.R / wallThickness * resTh));

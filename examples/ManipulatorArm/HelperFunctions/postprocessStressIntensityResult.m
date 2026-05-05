@@ -66,6 +66,8 @@ function postResult = postprocessStressIntensityResult(history, model, analyses,
     resultRoot   = optField(opts, 'resultRoot',   '');
     configNames  = optField(opts, 'configNames',  ...
         arrayfun(@(k) sprintf('cfg%d',k), (1:nConfigs)', 'UniformOutput', false));
+    plotModels   = optField(opts, 'plotModels',   {});
+    plotConfigs  = optField(opts, 'plotConfigs',  []);
 
     weights = weights(:);
 
@@ -135,7 +137,7 @@ function postResult = postprocessStressIntensityResult(history, model, analyses,
 
     %% -- Save to disk -------------------------------------------------------
     if ~isempty(resultRoot)
-        saveESOPostprocessResults(model, candidates, resultRoot);
+        saveESOPostprocessResults(model, candidates, resultRoot, plotModels, plotConfigs);
     end
 end
 
@@ -178,7 +180,7 @@ function cand = buildCandidateESO(solid, x_nearBinary, analyses, penal, pAgg, ..
 end
 
 % -------------------------------------------------------------------------
-function saveESOPostprocessResults(model, candidates, resultRoot)
+function saveESOPostprocessResults(model, candidates, resultRoot, plotModels, plotConfigs)
 
     % Summary CSV
     nCands = numel(candidates);
@@ -208,9 +210,14 @@ function saveESOPostprocessResults(model, candidates, resultRoot)
             strrep(c.label,'_',' '), c.volFrac, c.J_direct, c.sHM_max, c.u_max), ...
             'Interpreter', 'tex');
         saveas(fig, fullfile(resultRoot, [stem '.png']));
-        set(fig, 'Visible', 'on');
         savefig(fig, fullfile(resultRoot, [stem '.fig']));
         close(fig);
+
+        if ~isempty(plotModels)
+            plotTopologyConfigurations(plotModels, c.solid, resultRoot, ...
+                string(stem) + "_by_config", ...
+                sprintf('%s by configuration', strrep(c.label, '_', ' ')), plotConfigs);
+        end
     end
 
     % J vs VF comparison bar chart (if more than one candidate)
@@ -230,7 +237,6 @@ function saveESOPostprocessResults(model, candidates, resultRoot)
         xtickangle(30);
         title('ESO post-processing: candidates');
         saveas(fig, fullfile(resultRoot, 'postprocess_eso_candidates.png'));
-        set(fig, 'Visible', 'on');
         savefig(fig, fullfile(resultRoot, 'postprocess_eso_candidates.fig'));
         close(fig);
     end

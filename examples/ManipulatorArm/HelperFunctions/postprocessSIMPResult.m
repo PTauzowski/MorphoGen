@@ -86,6 +86,8 @@ function postResult = postprocessSIMPResult(optResult, model, analyses, Wfilter,
     resultRoot  = optField(opts, 'resultRoot',      '');
     configNames = optField(opts, 'configNames',     ...
         arrayfun(@(k) sprintf('cfg%d',k), (1:nConfigs)', 'UniformOutput', false));
+    plotModels  = optField(opts, 'plotModels',      {});
+    plotConfigs = optField(opts, 'plotConfigs',     []);
 
     z       = optResult.zFinal(:);
     x_arm   = optResult.xFinal(:);
@@ -182,7 +184,7 @@ function postResult = postprocessSIMPResult(optResult, model, analyses, Wfilter,
     %% -- 6. Save to disk -------------------------------------------------
     if ~isempty(resultRoot)
         savePostprocessResults(postResult, model, allCandidates, sweepResult, ...
-            configNames, resultRoot);
+            configNames, resultRoot, plotModels, plotConfigs);
     end
 end
 
@@ -283,7 +285,7 @@ end
 
 % -------------------------------------------------------------------------
 function savePostprocessResults(~, model, allCandidates, sweepResult, ...
-        ~, resultRoot)
+        ~, resultRoot, plotModels, plotConfigs)
 
     % --- Summary CSV ---
     nCands = numel(allCandidates);
@@ -316,9 +318,14 @@ function savePostprocessResults(~, model, allCandidates, sweepResult, ...
             strrep(c.label,'_',' '), c.volFrac, char(c.selectedBy), c.selectedScore, ...
             c.sHM_max, c.u_max), 'Interpreter', 'tex');
         saveas(fig, fullfile(resultRoot, [stem '.png']));
-        set(fig, 'Visible', 'on');
         savefig(fig, fullfile(resultRoot, [stem '.fig']));
         close(fig);
+
+        if ~isempty(plotModels)
+            plotTopologyConfigurations(plotModels, c.solid, resultRoot, ...
+                string(stem) + "_by_config", ...
+                sprintf('%s by configuration', strrep(c.label, '_', ' ')), plotConfigs);
+        end
     end
 
     % --- Pareto plot from sweep ---
@@ -333,7 +340,6 @@ function savePostprocessResults(~, model, allCandidates, sweepResult, ...
         legend('sweep', 'best', 'Location', 'northwest');
         grid on;
         saveas(fig, fullfile(resultRoot, 'postprocess_pareto.png'));
-        set(fig, 'Visible', 'on');
         savefig(fig, fullfile(resultRoot, 'postprocess_pareto.fig'));
         close(fig);
         writetable(struct2table(struct( ...

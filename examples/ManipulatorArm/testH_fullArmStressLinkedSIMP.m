@@ -79,6 +79,7 @@ analyses = cell(nConfigs, 1);
 setupRows = cell(nConfigs, 1);
 
 referenceElems = [];
+referenceModel = [];
 referenceElemCount = [];
 referenceDofs = [];
 referenceTaskDim = [];
@@ -89,13 +90,14 @@ for k = 1:nConfigs
         k, nConfigs, cfg.label, mat2str(cfg.betas));
 
     model = ManipulatorModel3D(E, nu, h_seg, R, r, res, res_th, alpha, ...
-        cfg.betas, ShapeFn, true, Pz, arm.constEndRing, arm.constMiddleRing);
+        cfg.betas, ShapeFn, false, Pz, arm.constEndRing, arm.constMiddleRing, arm.nCircDiv);
     analysis = model.analysis;
     nElems = analysis.getTotalElemsNumber();
     taskDim = analysis.getTaskDim();
 
     if k == 1
         referenceElems = model.mesh.elems;
+        referenceModel = model;
         referenceElemCount = nElems;
         referenceDofs = analysis.ndofs;
         referenceTaskDim = taskDim;
@@ -104,7 +106,7 @@ for k = 1:nConfigs
     else
         assert(nElems == referenceElemCount, 'Element-count mismatch in %s.', cfg.name);
         assert(taskDim == referenceTaskDim, 'DOF-count mismatch in %s.', cfg.name);
-        assert(isequal(model.mesh.elems, referenceElems), 'Mesh connectivity differs in %s.', cfg.name);
+        assertLinkedArmLayoutCompatible(model, referenceModel, cfg.name);
         assert(isequal(analysis.ndofs, referenceDofs), 'DOF labels/order differ in %s.', cfg.name);
     end
 
@@ -118,7 +120,8 @@ for k = 1:nConfigs
     row.nTaskDofs = taskDim;
     row.nSupportedDofs = nnz(analysis.supports);
     row.nLoadedDofsBeforeSolve = nnz(analysis.Pnodal);
-    row.sameConnectivityAsFirst = true;
+    row.sameConnectivityAsFirst = k == 1 || isequal(model.mesh.elems, referenceElems);
+    row.sameLinkedLayoutAsFirst = true;
     row.sameDofsAsFirst = true;
     setupRows{k, 1} = row;
 end
@@ -289,6 +292,8 @@ ppOpts.fixedVars          = const_elems;
 ppOpts.useParallel        = useParallel;
 ppOpts.resultRoot         = resultRoot;
 ppOpts.configNames        = string(cellfun(@(s) s.name, configs, 'UniformOutput', false));
+ppOpts.plotModels         = models;
+ppOpts.plotConfigs        = configs;
 ppOpts.runReanalysis      = false;
 
 ppOptResult = optResult;
@@ -302,6 +307,8 @@ ppOptResult.finalConstraint = finalConstraint;
 postResult = postprocessStressSIMPResult(ppOptResult, models{1}, analyses, Wfilter, ppOpts);
 
 plotFinalTopology(models{1}, x_arm_final, resultRoot, postResult, analyses);
+plotTopologyConfigurations(models, x_arm_final > 0.5, resultRoot, ...
+    "final_threshold_rho_gt_05_by_config", "Final rho > 0.5 by configuration", configs);
 plotStressSIMPHistory(history, configs, resultRoot, 'Test H');
 plotLocationDensity(locationStats, resultRoot);
 

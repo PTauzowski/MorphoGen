@@ -1,2 +1,0 @@
-order,id,label,group,script,resultDir,status,errorMessage,durationSec,expectedOutputsPresent,completedAt
-1,reference_loads,Reference load validation,validation,/Users/piotrek/Programming/Matlab/MorphoGenCAS_Arm/examples/ManipulatorArm/testReferenceModuleLoads.m,/Users/piotrek/Programming/Matlab/MorphoGenCAS_Arm/examples/ManipulatorArm/results,ok,,23.791711,0,2026-05-04 20:29:52

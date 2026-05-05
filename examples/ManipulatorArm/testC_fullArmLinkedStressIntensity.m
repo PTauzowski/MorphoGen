@@ -101,6 +101,7 @@ analyses  = cell(nConfigs, 1);
 setupRows = cell(nConfigs, 1);
 
 referenceElems     = [];
+referenceModel     = [];
 referenceElemCount = [];
 referenceDofs      = [];
 referenceTaskDim   = [];
@@ -111,7 +112,7 @@ for k = 1:nConfigs
         k, nConfigs, cfg.label, mat2str(cfg.betas));
 
     model    = ManipulatorModel3D(E, nu, h_seg, R, r, res, res_th, alpha, ...
-        cfg.betas, ShapeFn, true, Pz, arm.constEndRing, arm.constMiddleRing);
+        cfg.betas, ShapeFn, false, Pz, arm.constEndRing, arm.constMiddleRing, arm.nCircDiv);
     analysis = model.analysis;
     if useSecondOrderBuckling
         analysis = SecondOrderElasticityWeighted(model.fe, model.mesh, bucklingLambdaFactor, false);
@@ -127,6 +128,7 @@ for k = 1:nConfigs
 
     if k == 1
         referenceElems     = model.mesh.elems;
+        referenceModel     = model;
         referenceElemCount = nElems;
         referenceDofs      = analysis.ndofs;
         referenceTaskDim   = taskDim;
@@ -139,8 +141,7 @@ for k = 1:nConfigs
         assert(taskDim == referenceTaskDim, ...
             'DOF-count mismatch in %s: got %d, expected %d.', ...
             cfg.name, taskDim, referenceTaskDim);
-        assert(isequal(model.mesh.elems, referenceElems), ...
-            'Mesh connectivity differs in configuration %s.', cfg.name);
+        assertLinkedArmLayoutCompatible(model, referenceModel, cfg.name);
         assert(isequal(analysis.ndofs, referenceDofs), ...
             'DOF labels/order differ in configuration %s.', cfg.name);
     end
@@ -158,6 +159,9 @@ for k = 1:nConfigs
     row.analysisClass          = string(class(analysis));
     row.useSecondOrderBuckling  = useSecondOrderBuckling;
     row.bucklingLambdaFactor    = bucklingLambdaFactor;
+    row.sameConnectivityAsFirst = k == 1 || isequal(model.mesh.elems, referenceElems);
+    row.sameLinkedLayoutAsFirst = true;
+    row.sameDofsAsFirst         = true;
     setupRows{k, 1} = row;
 
     fprintf('  nodes=%d, elems=%d, taskDOFs=%d, supportedDOFs=%d, loadedDOFs=%d\n', ...
@@ -371,11 +375,15 @@ ppOpts.penal        = penal;
 ppOpts.useParallel  = useParallel;
 ppOpts.resultRoot   = resultRoot;
 ppOpts.configNames  = string(cellfun(@(s) s.name, configs, 'UniformOutput', false));
+ppOpts.plotModels   = models;
+ppOpts.plotConfigs  = configs;
 ppOpts.runReanalysis = false;
 
 postResult = postprocessStressIntensityResult(history, models{1}, analyses, ppOpts);
 
 plotFinalTopology(models{1}, x_arm_final, resultRoot, postResult, analyses);
+plotTopologyConfigurations(models, x_arm_final > 0.5, resultRoot, ...
+    "final_threshold_rho_gt_05_by_config", "Final rho > 0.5 by configuration", configs);
 plotLocationDensity(locationStats, resultRoot);
 
 %% ---- Structural performance metrics ----------------------------------------

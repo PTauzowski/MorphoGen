@@ -15,7 +15,7 @@
 %   Changing rho(e_ref) changes EXACTLY nCopies elements in x_arm,
 %   which are the nArms red (2a) and nArms blue (2b) highlighted bands.
 %   Every configuration with a 45° joint (max_torsion, min_torsion) will
-%   produce the same connectivity — proving that joint rotations do NOT
+%   produce the same linked layout — proving that joint rotations do NOT
 %   break element correspondence across segments.
 
 clear; close all; clc;
@@ -107,16 +107,7 @@ for k = 1:numel(configs)
     fprintf('  %s  (betas=%s)  same linked layout: %d\n', ...
         configs{k}.label, mat2str(configs{k}.betas), sameLayout);
     assert(sameLayout, 'Linked layout mismatch in configuration %s!', configs{k}.name);
-
-    expectedShared = 2 * m.resCirc * m.resTh;
-    for c = 1:nCopiesK-1
-        e1 = (c-1)*Hk + (1:Hk);
-        e2 = c*Hk + (1:Hk);
-        shared = intersect(unique(m.mesh.elems(e1,:)), unique(m.mesh.elems(e2,:)));
-        assert(numel(shared) == expectedShared, ...
-            'Interface %d-%d in %s has %d shared nodes, expected %d.', ...
-            c, c+1, configs{k}.name, numel(shared), expectedShared);
-    end
+    assertLinkedArmLayoutCompatible(m, models{1}, configs{k}.name);
 end
 fprintf('  PASS: all configurations share linked layout and conforming interfaces.\n');
 
