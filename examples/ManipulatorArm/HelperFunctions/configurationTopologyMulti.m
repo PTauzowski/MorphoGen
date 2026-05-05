@@ -1,6 +1,7 @@
 function [xopt_av, xopt_av_lambda, xoptBuckling_av, xoptBuckling_av_lambda, xopt_max, xopt_max_lambda , xoptBuckling_max, xoptBuckling_max_lambda, newLoadFactor, topOptAvLinear, topOptEnvLinear, topOptAvBuckling, topOptEnvBuckling ]  = configurationTopologyMulti(E,nu,R,r, res, res_thickness, segmentLength,ShapeFn,alpha,samples,frameElems,max_segments, loadFactor,Pz, Rmin,maxais,penal,volFr,is_const,ringMode)
 
      nSamples=size(samples,1);
+     useParallel = license('test', 'Distrib_Computing_Toolbox');
 
      analysesLinear = [];
      analysesBuckling = [];
@@ -25,12 +26,14 @@ function [xopt_av, xopt_av_lambda, xoptBuckling_av, xoptBuckling_av_lambda, xopt
      analysisLinear.plotFiniteElements();
 
     topOptMultiLinear = StressIntensityMultiAvTopologyOptimization(Rmin,analysesLinear,maxais,penal,volFr,is_const);
+    topOptMultiLinear.useParallel = useParallel;
     topOptMultiLinear.setConstElems(const_elems);
     [~, xopt_av] = topOptMultiLinear.solve();
     xopt_av_lambda=topOptMultiLinear.plLambda(end);
     topOptAvLinear = topOptMultiLinear;
 
      topOptMultiLinear = StressIntensityMultiMaxTopologyOptimization(Rmin,analysesLinear,maxais,penal,volFr,is_const);
+     topOptMultiLinear.useParallel = useParallel;
      topOptMultiLinear.setConstElems(const_elems);
     [~, xopt_max] = topOptMultiLinear.solve();
     xopt_max_lambda = topOptMultiLinear.plLambda(end);
@@ -61,12 +64,14 @@ function [xopt_av, xopt_av_lambda, xoptBuckling_av, xoptBuckling_av_lambda, xopt
      end
 
     topOptMultiBuckling = StressIntensityMultiAvTopologyOptimization(Rmin,analysesBuckling,maxais,penal,volFr,is_const);
+    topOptMultiBuckling.useParallel = useParallel;
     topOptMultiBuckling.setConstElems(const_elems);
     [~, xoptBuckling_av] = topOptMultiBuckling.solve();
     xoptBuckling_av_lambda = topOptMultiBuckling.plLambda(end);
     topOptAvBuckling = topOptMultiBuckling;
 
     topOptMultiBuckling = StressIntensityMultiMaxTopologyOptimization(Rmin,analysesBuckling,maxais,penal,volFr,is_const);
+    topOptMultiBuckling.useParallel = useParallel;
     topOptMultiBuckling.setConstElems(const_elems);
     [~, xoptBuckling_max] = topOptMultiBuckling.solve();
     xoptBuckling_max_lambda = topOptMultiBuckling.plLambda(end);
@@ -75,4 +80,3 @@ function [xopt_av, xopt_av_lambda, xoptBuckling_av, xoptBuckling_av_lambda, xopt
     xopt_av_lambda  = xopt_av_lambda/coeff;
     xopt_max_lambda = xopt_max_lambda/coeff;
 end
-

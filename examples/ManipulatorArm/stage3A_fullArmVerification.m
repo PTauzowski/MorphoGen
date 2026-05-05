@@ -6,8 +6,8 @@
 % then runs frameBasedSolver for five representative configurations.
 %
 % Designs:
-%   A  My_only (vf=0.40, Rmin=0.5t)
-%   B  My+Mz+Ms+Ty+Tz (vf=0.40, Rmin=0.5t, p=4)  -- multi-load shell
+%   A  My_only (vf=0.40, Rfilter ~= 3 FE sizes)
+%   B  My+Mz+Ms+Ty+Tz (vf=0.40, Rfilter ~= 3 FE sizes, p=4)
 %   C  Full solid (rho=1 everywhere, reference baseline)
 %
 % Configurations (7-joint arm, betas in degrees):
@@ -28,28 +28,30 @@ addpath(genpath(projectRoot));
 rng(0, 'twister');
 
 %% ---- Model geometry (must match reference-module Stage 2) ---------------
-E      = 2.0e9;     % Pa  (PLA, same as Stage 2)
-nu     = 0.35;
-R      = 0.14;      % m outer radius
-r      = 0.08;      % m inner radius
-h_seg  = 0.25;      % m segment length
-alpha  = 22.5;      % deg inclination
-res_th = 4;         % radial layers (matches reference module: 4012 elems/half-seg)
-Pz     = 100;       % N  tip force applied to frame
-ShapeFn = ShapeFunctionL8();
+arm = armModelDefaults("thin");
+E = arm.E;
+nu = arm.nu;
+R = arm.R;
+r = arm.r;
+h_seg = arm.h_seg;
+alpha = arm.alpha;
+res_th = arm.res_th;
+Pz = arm.Pz;
+ShapeFn = arm.ShapeFn;
+useParallel = license('test', 'Distrib_Computing_Toolbox');
 
 %% ---- Load module designs -------------------------------------------------
 sweepRoot = fullfile(scriptDir, 'results', 'referenceModuleSIMP_sweep');
 
 fprintf('Loading reference-module designs from Stage 2C sweep...\n');
 
-% Design A: bending-only (My only, vf=0.40, Rmin=0.5t)
-dA = load(fullfile(sweepRoot, 'My_only_vf040_rmin050', 'result.mat'), 'rho_opt');
+% Design A: bending-only (My only, vf=0.40, Rfilter ~= 3 FE sizes)
+dA = load(fullfile(sweepRoot, 'My_only_vf040_rmin300', 'result.mat'), 'rho_opt');
 rhoA = dA.rho_opt;
 
-% Design B: multi-load shell (My+Mz+Ms+Ty+Tz, vf=0.40, Rmin=0.5t, p=4)
+% Design B: multi-load shell (My+Mz+Ms+Ty+Tz, vf=0.40, Rfilter ~= 3 FE sizes, p=4)
 dB = load(fullfile(sweepRoot, ...
-    'My_Mz_Ms_Ty_Tz_vf040_rmin050_p04_vf040_rmin050_p04', 'result.mat'), 'rho_opt');
+    'My_Mz_Ms_Ty_Tz_vf040_rmin300_p04', 'result.mat'), 'rho_opt');
 rhoB = dB.rho_opt;
 
 nHalfSegElems = numel(rhoA);
@@ -82,6 +84,7 @@ if ~exist(resultRoot, 'dir'), mkdir(resultRoot); end
 
 fprintf('\nFull-arm model will have ~%d elements per configuration.\n', ...
     nHalfSegElems * 12);   % 7-joint arm → 12 half-segments
+fprintf('Parallel verification sweep: %d\n', useParallel);
 
 %% ---- Main sweep ---------------------------------------------------------
 % Preallocate metric arrays: [nConf × nDes]
@@ -91,72 +94,39 @@ maxHM_MPa   = nan(nConf, nDes);
 volFracs    = nan(nConf, nDes);
 statuses    = strings(nConf, nDes);
 
+jobs = {};
 for ci = 1:nConf
-    cfg = configs{ci};
-    fprintf('\n=== Config %d/%d: %s  betas=%s ===\n', ...
-        ci, nConf, cfg.label, mat2str(cfg.betas));
-
     for di = 1:nDes
-        des = designs{di};
-        fprintf('  [%s] ... ', des.label);
-        tic;
-        try
-            %% Build full-arm model for this configuration
-            model = ManipulatorModel3D(E, nu, h_seg, R, r, 15, res_th, alpha, ...
-                cfg.betas, ShapeFn, true, Pz);
-            nArmElems = model.analysis.getTotalElemsNumber();
-
-            %% Expand module design to full arm
-            if isempty(des.rhoSeg)
-                x_arm = ones(nArmElems, 1);           % full solid baseline
-            else
-                x_arm = model.segmentToArm(des.rhoSeg);
-                assert(numel(x_arm) == nArmElems, ...
-                    'segmentToArm returned %d elements, arm model has %d.', ...
-                    numel(x_arm), nArmElems);
-            end
-
-            %% Solve: frame → kinematic BCs → static condensation
-            % frameBasedSolver also calls computeElementResults internally.
-            [~, ~] = model.frameBasedSolver(x_arm);
-
-            %% Compute metrics
-            % Displacements [nNodes × 3] in metres
-            qn = model.analysis.qnodal;
-            dispNorm_m = sqrt(sum(qn.^2, 2));
-            maxDisp_mm(ci, di)  = max(dispNorm_m) * 1e3;
-
-            tipIds = find(model.loadSurfaceNodes);
-            tipDisp_mm(ci, di)  = norm(mean(qn(tipIds, :), 1)) * 1e3;
-
-            % Huber-Mises stress: gp.all is [nResults × nElems × nGP]
-            % index 13 = sHM, restrict to active elements (rho > 0.5)
-            activeElems = x_arm > 0.5;
-            if ~any(activeElems)
-                activeElems = true(nArmElems, 1);
-            end
-            hmGP = model.fe.results.gp.all(13, activeElems, :);
-            maxHM_MPa(ci, di) = max(hmGP(:)) / 1e6;
-
-            volFracs(ci, di) = mean(x_arm);
-
-            statuses(ci, di) = "ok";
-            elapsed = toc;
-            fprintf('tipDisp=%.3f mm  maxHM=%.4f MPa  vf=%.3f  (%.1f s)\n', ...
-                tipDisp_mm(ci, di), maxHM_MPa(ci, di), volFracs(ci, di), elapsed);
-
-            %% Save HM stress figure for this (config, design) pair
-            figPath = fullfile(resultRoot, sprintf('%s__%s', cfg.name, des.name));
-            saveStressFigure(model, x_arm, activeElems, cfg.label, des.label, ...
-                maxHM_MPa(ci, di), tipDisp_mm(ci, di), figPath);
-
-        catch ME
-            statuses(ci, di) = "failed";
-            fprintf('FAILED: %s\n', ME.message);
-            save(fullfile(resultRoot, ...
-                sprintf('failed_%s_%s.mat', cfg.name, des.name)), 'ME', 'cfg', 'des');
-        end
+        jobs{end+1, 1} = struct('ci', ci, 'di', di, 'cfg', configs{ci}, 'des', designs{di}); %#ok<SAGROW>
     end
+end
+jobResults = cell(numel(jobs), 1);
+
+if useParallel
+    parfor ji = 1:numel(jobs)
+        job = jobs{ji};
+        jobResults{ji} = runStage3AVerificationCase(job.ci, job.di, job.cfg, job.des, ...
+            E, nu, h_seg, R, r, res_th, alpha, ShapeFn, Pz, ...
+            arm.constEndRing, arm.constMiddleRing, resultRoot);
+    end
+else
+    for ji = 1:numel(jobs)
+        job = jobs{ji};
+        jobResults{ji} = runStage3AVerificationCase(job.ci, job.di, job.cfg, job.des, ...
+            E, nu, h_seg, R, r, res_th, alpha, ShapeFn, Pz, ...
+            arm.constEndRing, arm.constMiddleRing, resultRoot);
+    end
+end
+
+for ji = 1:numel(jobResults)
+    jr = jobResults{ji};
+    ci = jr.ci;
+    di = jr.di;
+    tipDisp_mm(ci, di) = jr.tipDisp_mm;
+    maxDisp_mm(ci, di) = jr.maxDisp_mm;
+    maxHM_MPa(ci, di) = jr.maxHM_MPa;
+    volFracs(ci, di) = jr.volFrac;
+    statuses(ci, di) = jr.status;
 end
 
 %% ---- Summary table -------------------------------------------------------
@@ -213,6 +183,7 @@ fig1 = figure('Visible', 'off', 'Name', 'tipDisp comparison', ...
 bar3A_comparison(tipDisp_mm, configLabels, designLabels, colors, ...
     'Tip displacement (mm)', 'Stage 3A: Tip displacement by design and configuration');
 saveas(fig1, fullfile(resultRoot, 'comparison_tipDisp.png'));
+savefig(fig1, fullfile(resultRoot, 'comparison_tipDisp.fig'));
 close(fig1);
 
 % Figure 2: max HM stress comparison
@@ -221,6 +192,7 @@ fig2 = figure('Visible', 'off', 'Name', 'maxHM comparison', ...
 bar3A_comparison(maxHM_MPa, configLabels, designLabels, colors, ...
     'Max HM stress (MPa)', 'Stage 3A: Max Huber-Mises stress by design and configuration');
 saveas(fig2, fullfile(resultRoot, 'comparison_maxHM.png'));
+savefig(fig2, fullfile(resultRoot, 'comparison_maxHM.fig'));
 close(fig2);
 
 % Figure 3: stress ratio A/B (>1 means bending design is worse)
@@ -233,11 +205,66 @@ ylabel('max HM ratio  A / B');
 title('Stage 3A: Bending-only vs. shell design stress ratio (>1 = shell is better)');
 grid on;
 saveas(fig3, fullfile(resultRoot, 'stress_ratio_A_over_B.png'));
+savefig(fig3, fullfile(resultRoot, 'stress_ratio_A_over_B.fig'));
 close(fig3);
 
 fprintf('\nComparison figures saved to %s\n', resultRoot);
 
 % =========================================================================
+function result = runStage3AVerificationCase(ci, di, cfg, des, ...
+        E, nu, h_seg, R, r, res_th, alpha, ShapeFn, Pz, ...
+        constEndRing, constMiddleRing, resultRoot)
+    fprintf('\n=== Config %d, design %d: %s / %s ===\n', ci, di, cfg.label, des.label);
+    result = struct('ci', ci, 'di', di, 'tipDisp_mm', NaN, 'maxDisp_mm', NaN, ...
+        'maxHM_MPa', NaN, 'volFrac', NaN, 'status', "failed");
+    tic;
+    try
+        model = ManipulatorModel3D(E, nu, h_seg, R, r, 15, res_th, alpha, ...
+            cfg.betas, ShapeFn, true, Pz, constEndRing, constMiddleRing);
+        nArmElems = model.analysis.getTotalElemsNumber();
+
+        if isempty(des.rhoSeg)
+            x_arm = ones(nArmElems, 1);
+        else
+            x_arm = model.segmentToArm(des.rhoSeg);
+            assert(numel(x_arm) == nArmElems, ...
+                'segmentToArm returned %d elements, arm model has %d.', ...
+                numel(x_arm), nArmElems);
+        end
+
+        [~, ~] = model.frameBasedSolver(x_arm);
+
+        qn = model.analysis.qnodal;
+        dispNorm_m = sqrt(sum(qn.^2, 2));
+        result.maxDisp_mm = max(dispNorm_m) * 1e3;
+
+        tipIds = find(model.loadSurfaceNodes);
+        result.tipDisp_mm = norm(mean(qn(tipIds, :), 1)) * 1e3;
+
+        activeElems = x_arm > 0.5;
+        if ~any(activeElems)
+            activeElems = true(nArmElems, 1);
+        end
+        hmGP = model.fe.results.gp.all(13, activeElems, :);
+        result.maxHM_MPa = max(hmGP(:)) / 1e6;
+        result.volFrac = mean(x_arm);
+        result.status = "ok";
+
+        elapsed = toc;
+        fprintf('  [%s / %s] tipDisp=%.3f mm  maxHM=%.4f MPa  vf=%.3f  (%.1f s)\n', ...
+            cfg.label, des.label, result.tipDisp_mm, result.maxHM_MPa, result.volFrac, elapsed);
+
+        figPath = fullfile(resultRoot, sprintf('%s__%s', cfg.name, des.name));
+        saveStressFigure(model, x_arm, activeElems, cfg.label, des.label, ...
+            result.maxHM_MPa, result.tipDisp_mm, figPath);
+    catch ME
+        result.status = "failed";
+        fprintf('  [%s / %s] FAILED: %s\n', cfg.label, des.label, ME.message);
+        save(fullfile(resultRoot, ...
+            sprintf('failed_%s_%s.mat', cfg.name, des.name)), 'ME', 'cfg', 'des');
+    end
+end
+
 function saveStressFigure(model, x_arm, activeElems, cfgLabel, desLabel, ...
         maxHM_MPa, tipDisp_mm, figPath)
     fig = figure('Visible', 'off', 'Name', [cfgLabel ' - ' desLabel]);
@@ -286,6 +313,7 @@ function saveStressFigure(model, x_arm, activeElems, cfgLabel, desLabel, ...
     title(sprintf('%s | %s\nmaxHM=%.4f MPa, tipDisp=%.3f mm (deform \times%d)', ...
         cfgLabel, desLabel, maxHM_MPa, tipDisp_mm, scale), 'FontSize', 9);
     saveas(fig, [figPath '.png']);
+    savefig(fig, [figPath '.fig']);
     close(fig);
 end
 

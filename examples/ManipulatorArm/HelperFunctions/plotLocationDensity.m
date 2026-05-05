@@ -15,5 +15,6 @@ function plotLocationDensity(locationStats, resultRoot)
     grid on; xlabel('Half-segment location'); ylabel('Fraction \rho > 0.5');
 
     saveas(fig, fullfile(resultRoot, 'location_density.png'));
+    savefig(fig, fullfile(resultRoot, 'location_density.fig'));
     close(fig);
 end

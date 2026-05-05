@@ -22,28 +22,87 @@ classdef SolidElasticElem < FiniteElement
             obj.props.D = D;
             obj.props.M = M;
         end
-        function B = strainDerivMatrix( ~, dNx )
-            ndofs = 3 * size(dNx,3); 
-            nip = size(dNx,3); 
-            nnd = size(dNx,2); 
-            B = cell(nip,1);
-            Bn = zeros(6,ndofs);
-            for i=1:nip
-                for j = 1:nnd
-                  Bn(1, 3*j-2) = dNx(1,j,i);
-                  Bn(2, 3*j-1) = dNx(2,j,i);
-                  Bn(3, 3*j)   = dNx(3,j,i);
-
-                  Bn(4, 3*j-2) = dNx(2,j,i);
-                  Bn(5, 3*j-1) = dNx(3,j,i);
-                  Bn(6, 3*j-2) = dNx(3,j,i);
-
-                  Bn(4, 3*j-1) = dNx(1,j,i);
-                  Bn(5, 3*j)   = dNx(2,j,i);
-                  Bn(6, 3*j)   = dNx(1,j,i);
-                end
-                B{i}=Bn;
+        function [Jinv, detJ] = jacobianInversePages(obj, nodes, elemIds, dNtr)
+            elemX = obj.elementNodePages(nodes, elemIds);
+            nelems = numel(elemIds);
+            nip = size(dNtr, 3);
+            detJ = zeros(1, 1, nelems, nip);
+            Jinv = zeros(3, 3, nelems, nip);
+            for ip = 1:nip
+                J = pagemtimes(dNtr(:, :, ip), elemX);
+                detJ(:, :, :, ip) = J(1,1,:).*J(2,2,:).*J(3,3,:) ...
+                    - J(1,2,:).*J(2,1,:).*J(3,3,:) ...
+                    - J(1,1,:).*J(2,3,:).*J(3,2,:) ...
+                    + J(1,3,:).*J(2,1,:).*J(3,2,:) ...
+                    + J(1,2,:).*J(2,3,:).*J(3,1,:) ...
+                    - J(1,3,:).*J(2,2,:).*J(3,1,:);
+                dj = detJ(:, :, :, ip);
+                Jinv(1,1,:,ip) =  (J(2,2,:).*J(3,3,:) - J(2,3,:).*J(3,2,:)) ./ dj;
+                Jinv(1,2,:,ip) = -(J(1,2,:).*J(3,3,:) - J(1,3,:).*J(3,2,:)) ./ dj;
+                Jinv(1,3,:,ip) =  (J(1,2,:).*J(2,3,:) - J(1,3,:).*J(2,2,:)) ./ dj;
+                Jinv(2,1,:,ip) = -(J(2,1,:).*J(3,3,:) - J(2,3,:).*J(3,1,:)) ./ dj;
+                Jinv(2,2,:,ip) =  (J(1,1,:).*J(3,3,:) - J(1,3,:).*J(3,1,:)) ./ dj;
+                Jinv(2,3,:,ip) = -(J(1,1,:).*J(2,3,:) - J(1,3,:).*J(2,1,:)) ./ dj;
+                Jinv(3,1,:,ip) =  (J(2,1,:).*J(3,2,:) - J(2,2,:).*J(3,1,:)) ./ dj;
+                Jinv(3,2,:,ip) = -(J(1,1,:).*J(3,2,:) - J(1,2,:).*J(3,1,:)) ./ dj;
+                Jinv(3,3,:,ip) =  (J(1,1,:).*J(2,2,:) - J(1,2,:).*J(2,1,:)) ./ dj;
             end
+        end
+        function B = strainBPages(obj, Jinv, dNtr)
+            nnodes = size(obj.elems, 2);
+            dim = 3 * nnodes;
+            nelems = size(Jinv, 3);
+            nip = size(Jinv, 4);
+            B = zeros(6, dim, nelems, nip);
+            for ip = 1:nip
+                dNx = pagemtimes(Jinv(:, :, :, ip), dNtr(:, :, ip));
+                cols = 1:nnodes;
+                c1 = 3 * cols - 2;
+                c2 = 3 * cols - 1;
+                c3 = 3 * cols;
+                B(1, c1, :, ip) = dNx(1, cols, :);
+                B(2, c2, :, ip) = dNx(2, cols, :);
+                B(3, c3, :, ip) = dNx(3, cols, :);
+                B(4, c2, :, ip) = dNx(3, cols, :);
+                B(4, c3, :, ip) = dNx(2, cols, :);
+                B(5, c1, :, ip) = dNx(3, cols, :);
+                B(5, c3, :, ip) = dNx(1, cols, :);
+                B(6, c1, :, ip) = dNx(2, cols, :);
+                B(6, c2, :, ip) = dNx(1, cols, :);
+            end
+        end
+        function Sg = geometricGradientPages(~, Jinv, dNtr)
+            nelems = size(Jinv, 3);
+            nip = size(Jinv, 4);
+            nnodes = size(dNtr, 2);
+            Sg = zeros(3, nnodes, nelems, nip);
+            for ip = 1:nip
+                Sg(:, :, :, ip) = pagemtimes(Jinv(:, :, :, ip), dNtr(:, :, ip));
+            end
+        end
+        function s = geometricStressPages(obj, elemIds, nip)
+            nelems = numel(elemIds);
+            s = zeros(3, 3, nelems, nip);
+            stress = obj.results.gp.stress(elemIds, :, :);
+            s(1,1,:,:) = reshape(stress(:,:,1), 1, 1, nelems, nip);
+            s(2,2,:,:) = reshape(stress(:,:,2), 1, 1, nelems, nip);
+            s(3,3,:,:) = reshape(stress(:,:,3), 1, 1, nelems, nip);
+            s(2,3,:,:) = reshape(stress(:,:,4), 1, 1, nelems, nip);
+            s(3,2,:,:) = reshape(stress(:,:,4), 1, 1, nelems, nip);
+            s(1,3,:,:) = reshape(stress(:,:,5), 1, 1, nelems, nip);
+            s(3,1,:,:) = reshape(stress(:,:,5), 1, 1, nelems, nip);
+            s(1,2,:,:) = reshape(stress(:,:,6), 1, 1, nelems, nip);
+            s(2,1,:,:) = reshape(stress(:,:,6), 1, 1, nelems, nip);
+        end
+        function K = composeGeometricPages(~, So, scale)
+            nnodes = size(So, 1);
+            nelems = size(So, 3);
+            dim = 3 * nnodes;
+            K = zeros(dim, dim, nelems);
+            So = So .* reshape(scale, 1, 1, []);
+            K(1:3:dim, 1:3:dim, :) = So;
+            K(2:3:dim, 2:3:dim, :) = So;
+            K(3:3:dim, 3:3:dim, :) = So;
         end
         function N = shapeMatrix( obj, points )
             nnodes = size(obj.elems, 2 );
@@ -63,53 +122,19 @@ classdef SolidElasticElem < FiniteElement
             ndofs = size( obj.ndofs,2);
             dim = nnodes * ndofs;
             integrator = obj.sf.createIntegrator();
-            nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
-            nnd = size(dN,1); 
+            dN = obj.sf.computeGradient(integrator.points);
             dNtr = permute(dN,[2,1,3]);
-            dNtrc = cell(size(dNtr,3),1);
-            if ( nargin == 3 )
-                x=varargin{1};
-            else
-                x=ones(nelems,1);
-            end
-            for i=1:nip
-                dNtrc{i}=dNtr(:,:,i);
-            end
-            %dNx = zeros(size(dN,2),size(dN,1), nip );
-            K = zeros( dim , dim, nelems );
-            B = zeros(6,dim);
+            x = obj.elementScale(nelems, varargin{:});
+            K = zeros(dim, dim, nelems);
+            chunkSize = obj.assemblyChunkSize(dim);
             D = obj.mat.D;
-            for k=1:nelems
-                elemX = nodes(obj.elems(k,:),:);
-                Ke = zeros( dim , dim );
-                for i=1:nip
-                    J = dNtrc{i}*elemX;
-                    detJ = J(1,1)*J(2,2)*J(3,3)-J(1,2)*J(2,1)*J(3,3)-J(1,1)*J(2,3)*J(3,2)+J(1,3)*J(2,1)*J(3,2)+J(1,2)*J(2,3)*J(3,1)-J(1,3)*J(2,2)*J(3,1);
-                    invJ   = [ (J(2,2)*J(3,3)-J(2,3)*J(3,2))	-(J(1,2)*J(3,3)-J(1,3)*J(3,2))  (J(1,2)*J(2,3)-J(1,3)*J(2,2) ); ...
-              		          -(J(2,1)*J(3,3)-J(2,3)*J(3,1))	 (J(1,1)*J(3,3)-J(1,3)*J(3,1)) -(J(1,1)*J(2,3)-J(1,3)*J(2,1) ); ...
-              		           (J(2,1)*J(3,2)-J(2,2)*J(3,1))	-(J(1,1)*J(3,2)-J(1,2)*J(3,1))  (J(1,1)*J(2,2)-J(1,2)*J(2,1) ) ]/detJ;
-                    dNx = invJ * dNtr(:,:,i);
-                    for j = 1:nnd
-                          B(1, 3*j-2) = dNx(1,j);
-                          B(2, 3*j-1) = dNx(2,j);
-                          B(3, 3*j)   = dNx(3,j);
-
-                          B(4, 3*j-1) = dNx(3,j);
-                          B(4, 3*j) = dNx(2,j);
-                          
-                          B(5, 3*j-2) = dNx(3,j);
-                          B(5, 3*j) = dNx(1,j);
-                          
-                          B(6, 3*j-2) = dNx(2,j);
-                          B(6, 3*j-1) = dNx(1,j);
-
-                    end                   
-                    Ke = Ke + abs(detJ) * integrator.weights(i) * B'*D*B;
-                end
-                K(:,:,k) = x(k)*Ke;
+            for first = 1:chunkSize:nelems
+                elemIds = first:min(first + chunkSize - 1, nelems);
+                [Jinv, detJ] = obj.jacobianInversePages(nodes, elemIds, dNtr);
+                B = obj.strainBPages(Jinv, dNtr);
+                K(:, :, elemIds) = obj.integratePagematrix(B, D, detJ, integrator.weights, x(elemIds));
             end
-            K=K(:);
+            K = obj.flattenElementMatrices(K);
         end
         function K = computeGeometricStifnessMatrix(obj, nodes, varargin)
             nelems = size(obj.elems,1);
@@ -117,60 +142,20 @@ classdef SolidElasticElem < FiniteElement
             ndofs = size( obj.ndofs,2);
             dim = nnodes * ndofs;
             integrator = obj.sf.createIntegrator();
-            nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
+            dN = obj.sf.computeGradient(integrator.points);
             dNtr = permute(dN,[2,1,3]);
-            dNtrc = cell(size(dNtr,3),1);
-            if ( nargin == 3 )
-                x=varargin{1};
-            else
-                x=ones(nelems,1);
+            x = obj.elementScale(nelems, varargin{:});
+            K = zeros(dim, dim, nelems);
+            chunkSize = obj.assemblyChunkSize(dim);
+            for first = 1:chunkSize:nelems
+                elemIds = first:min(first + chunkSize - 1, nelems);
+                [Jinv, detJ] = obj.jacobianInversePages(nodes, elemIds, dNtr);
+                Sg = obj.geometricGradientPages(Jinv, dNtr);
+                s = obj.geometricStressPages(elemIds, size(integrator.points, 1));
+                So = obj.integratePagematrix(Sg, s, detJ, integrator.weights, ones(numel(elemIds), 1));
+                K(:, :, elemIds) = obj.composeGeometricPages(So, x(elemIds));
             end
-            for i=1:nip
-                dNtrc{i}=dNtr(:,:,i);
-            end
-
-            Sg = zeros(3,nnodes);
-            s = zeros(3,3);
-            %dNx = zeros(size(dN,2),size(dN,1), nip );
-            K = zeros( dim , dim, nelems );
-
-            for k=1:nelems
-                elemX = nodes(obj.elems(k,:),:);
-                So=zeros(nnodes,nnodes);
-                for i=1:nip
-                    J = dNtrc{i}*elemX;
-                    detJ = J(1,1)*J(2,2)*J(3,3)-J(1,2)*J(2,1)*J(3,3)-J(1,1)*J(2,3)*J(3,2)+J(1,3)*J(2,1)*J(3,2)+J(1,2)*J(2,3)*J(3,1)-J(1,3)*J(2,2)*J(3,1);
-                    invJ   = [ (J(2,2)*J(3,3)-J(2,3)*J(3,2))	-(J(1,2)*J(3,3)-J(1,3)*J(3,2))  (J(1,2)*J(2,3)-J(1,3)*J(2,2) ); ...
-              		          -(J(2,1)*J(3,3)-J(2,3)*J(3,1))	 (J(1,1)*J(3,3)-J(1,3)*J(3,1)) -(J(1,1)*J(2,3)-J(1,3)*J(2,1) ); ...
-              		           (J(2,1)*J(3,2)-J(2,2)*J(3,1))	-(J(1,1)*J(3,2)-J(1,2)*J(3,1))  (J(1,1)*J(2,2)-J(1,2)*J(2,1) ) ]/detJ;
-                    dNx = invJ * dNtr(:,:,i);
-
-                    s(1,1)=obj.results.gp.stress(k,i,1);
-                    s(2,2)=obj.results.gp.stress(k,i,2);
-                    s(3,3)=obj.results.gp.stress(k,i,3);
-                    s(2,3)=obj.results.gp.stress(k,i,4);
-                    s(1,3)=obj.results.gp.stress(k,i,5);
-                    s(1,2)=obj.results.gp.stress(k,i,6);
-                    s(3,2)=obj.results.gp.stress(k,i,4);
-                    s(3,1)=obj.results.gp.stress(k,i,5);
-                    s(2,1)=obj.results.gp.stress(k,i,6);
-                                      
-                    for j = 1:nnodes                         
-                          Sg(1,j) = dNx(1,j);
-                          Sg(2,j) = dNx(2,j);
-                          Sg(3,j) = dNx(3,j);       
-                    end                   
-                    So = So + abs(detJ) * integrator.weights(i) * Sg'*s*Sg;
-                end
-                % K(1:nnodes,1:nnodes,k) = x(k)*So;
-                % K(nnodes+1:2*nnodes,nnodes+1:2*nnodes,k) = x(k)*So;
-                % K(2*nnodes+1:3*nnodes,2*nnodes+1:3*nnodes,k) = x(k)*So;
-                K(1:3:dim,1:3:dim,k) = x(k)*So;
-                K(2:3:dim,2:3:dim,k) = x(k)*So;
-                K(3:3:dim,3:3:dim,k) = x(k)*So;
-            end
-            K=K(:);
+            K = obj.flattenElementMatrices(K);
         end
         function M = computeMassMatrix(obj, nodes, varargin)
             nelems = size(obj.elems,1);
@@ -178,34 +163,31 @@ classdef SolidElasticElem < FiniteElement
             ndofs = size( obj.ndofs,2);
             dim = nnodes * ndofs;
             integrator = obj.sf.createIntegrator();
-            nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
-            N = obj.shapeMatrix( integrator.points );
-            nnd = size(dN,1); 
+            dN = obj.sf.computeGradient(integrator.points);
+            N = obj.shapeMatrix(integrator.points);
             dNtr = permute(dN,[2,1,3]);
-            dNtrc = cell(size(dNtr,3),1);
-            if ( nargin == 3 )
-                x=varargin{1};
+            x = obj.elementScale(nelems, varargin{:});
+            M = zeros(dim, dim, nelems);
+            chunkSize = obj.assemblyChunkSize(dim);
+            if isprop(obj.mat, 'M') && ~isempty(obj.mat.M)
+                massMatrix = obj.mat.M;
+            elseif isprop(obj.mat, 'rho') && ~isempty(obj.mat.rho)
+                massMatrix = obj.mat.rho * eye(ndofs);
             else
-                x=ones(nelems,1);
+                massMatrix = eye(ndofs);
             end
-            for i=1:nip
-                dNtrc{i}=dNtr(:,:,i);
-            end
-            %dNx = zeros(size(dN,2),size(dN,1), nip );
-            M = zeros( dim , dim, nelems );
-            rho = obj.mat.rho;
-            for k=1:nelems
-                elemX = nodes(obj.elems(k,:),:);
-                Me = zeros( dim , dim );
-                for i=1:nip
-                    J = dNtrc{i}*elemX;
-                    detJ = J(1,1)*J(2,2)*J(3,3)-J(1,2)*J(2,1)*J(3,3)-J(1,1)*J(2,3)*J(3,2)+J(1,3)*J(2,1)*J(3,2)+J(1,2)*J(2,3)*J(3,1)-J(1,3)*J(2,2)*J(3,1);                
-                    Me = Me + abs(detJ) * integrator.weights(i) * N(:,:,i)' * N(:,:,i);
+            for first = 1:chunkSize:nelems
+                elemIds = first:min(first + chunkSize - 1, nelems);
+                [~, detJ] = obj.jacobianInversePages(nodes, elemIds, dNtr);
+                nc = numel(elemIds);
+                Npages = zeros(ndofs, dim, nc, size(integrator.points, 1));
+                for ip = 1:size(integrator.points, 1)
+                    Npages(:, :, :, ip) = repmat(N(:, :, ip), 1, 1, nc);
                 end
-                M(:,:,k) = x(k)*rho*Me;
+                M(:, :, elemIds) = obj.integratePagematrix(Npages, massMatrix, detJ, ...
+                    integrator.weights, x(elemIds));
             end
-            M=M(:);
+            M = obj.flattenElementMatrices(M);
         end
         function Pnodal = thermalLoad(obj, nodes, Telems, Pnodal, alpha, varargin)
             nelems = size(Telems,1);
@@ -271,49 +253,20 @@ classdef SolidElasticElem < FiniteElement
             nsens = size(obj.mat.dD,3);
             dim = nnodes * ndofs;
             integrator = obj.sf.createIntegrator();
-            nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
-            nnd = size(dN,1); 
+            dN = obj.sf.computeGradient(integrator.points);
             dNtr = permute(dN,[2,1,3]);
-            dNtrc = cell(size(dNtr,3),1);
-            for i=1:nip
-                dNtrc{i}=dNtr(:,:,i);
-            end
-            dNx = zeros(size(dN,2),size(dN,1), nip );
-            K = zeros( dim , dim, nelems );
-            B = zeros(6,dim);
-            dK = zeros( dim, nelems, nsens );
+            dK = zeros(dim, nelems, nsens);
             qelems = reshape( q( obj.elems',:)', nnodes * ndofs, nelems );
-            for k=1:nelems
-                elemX = nodes(obj.elems(k,:),:);
+            chunkSize = obj.assemblyChunkSize(dim);
+            for first = 1:chunkSize:nelems
+                elemIds = first:min(first + chunkSize - 1, nelems);
+                [Jinv, detJ] = obj.jacobianInversePages(nodes, elemIds, dNtr);
+                B = obj.strainBPages(Jinv, dNtr);
+                qpages = reshape(qelems(:, elemIds), dim, 1, []);
                 for s=1:nsens
-                    Ke = zeros( dim , dim );
-                    dD = obj.mat.dD(:,:,s);
-                    for i=1:nip
-                        J = dNtrc{i}*elemX;
-                        detJ = J(1,1)*J(2,2)*J(3,3)-J(1,2)*J(2,1)*J(3,3)-J(1,1)*J(2,3)*J(3,2)+J(1,3)*J(2,1)*J(3,2)+J(1,2)*J(2,3)*J(3,1)-J(1,3)*J(2,2)*J(3,1);
-                        invJ   = [ (J(2,2)*J(3,3)-J(2,3)*J(3,2))/detJ	-(J(1,2)*J(3,3)-J(1,3)*J(3,2))/detJ  (J(1,2)*J(2,3)-J(1,3)*J(2,2) )/detJ; ...
-              		              -(J(2,1)*J(3,3)-J(2,3)*J(3,1))/detJ	 (J(1,1)*J(3,3)-J(1,3)*J(3,1))/detJ -(J(1,1)*J(2,3)-J(1,3)*J(2,1) )/detJ; ...
-              		               (J(2,1)*J(3,2)-J(2,2)*J(3,1))/detJ	-(J(1,1)*J(3,2)-J(1,2)*J(3,1))/detJ  (J(1,1)*J(2,2)-J(1,2)*J(2,1) )/detJ ];
-                        dNx = invJ * dNtr(:,:,i);
-                        for j = 1:nnd
-                              B(1, 3*j-2) = dNx(1,j);
-                              B(2, 3*j-1) = dNx(2,j);
-                              B(3, 3*j)   = dNx(3,j);
-    
-                              B(4, 3*j-1) = dNx(3,j);
-                              B(4, 3*j) = dNx(2,j);
-                              
-                              B(5, 3*j-2) = dNx(3,j);
-                              B(5, 3*j) = dNx(1,j);
-                              
-                              B(6, 3*j-2) = dNx(2,j);
-                              B(6, 3*j-1) = dNx(1,j);
-    
-                        end                   
-                        Ke = Ke + abs(detJ) * integrator.weights(i) * B'*dD*B;
-                    end
-                    dK(:,k,s) = Ke*qelems(:,k);
+                    Ke = obj.integratePagematrix(B, obj.mat.dD(:,:,s), detJ, ...
+                        integrator.weights, ones(numel(elemIds), 1));
+                    dK(:, elemIds, s) = squeeze(pagemtimes(Ke, qpages));
                 end
             end
             dK=reshape(dK,[nnodes*ndofs*nelems nsens]);
@@ -324,42 +277,14 @@ classdef SolidElasticElem < FiniteElement
             ndofs = size( obj.ndofs,2);
             dim = nnodes * ndofs;
             integrator = obj.sf.createIntegrator();
-            nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
-            nnd = size(dN,1); 
+            dN = obj.sf.computeGradient(integrator.points);
             dNtr = permute(dN,[2,1,3]);
-            dNx = zeros(size(dN,2),size(dN,1), nip );
-            K = zeros( dim , dim, nelems );
-            B = zeros(6,dim);
-            elemX = nodes(obj.elems(1,:),:);
-            Ke = zeros( dim , dim );
-            for i=1:nip
-                J = dNtr(:,:,i) * elemX;
-                detJ = J(1,1)*J(2,2)*J(3,3)-J(1,2)*J(2,1)*J(3,3)-J(1,1)*J(2,3)*J(3,2)+J(1,3)*J(2,1)*J(3,2)+J(1,2)*J(2,3)*J(3,1)-J(1,3)*J(2,2)*J(3,1);
-                invJ   = [ (J(2,2)*J(3,3)-J(2,3)*J(3,2))/detJ	-(J(1,2)*J(3,3)-J(1,3)*J(3,2))/detJ  (J(1,2)*J(2,3)-J(1,3)*J(2,2) )/detJ; ...
-                          -(J(2,1)*J(3,3)-J(2,3)*J(3,1))/detJ	 (J(1,1)*J(3,3)-J(1,3)*J(3,1))/detJ -(J(1,1)*J(2,3)-J(1,3)*J(2,1) )/detJ; ...
-                           (J(2,1)*J(3,2)-J(2,2)*J(3,1))/detJ	-(J(1,1)*J(3,2)-J(1,2)*J(3,1))/detJ  (J(1,1)*J(2,2)-J(1,2)*J(2,1) )/detJ ];
-                dNx = invJ * dNtr(:,:,i);
-                for j = 1:nnd
-                          B(1, 3*j-2) = dNx(1,j);
-                          B(2, 3*j-1) = dNx(2,j);
-                          B(3, 3*j)   = dNx(3,j);
-
-                          B(4, 3*j-1) = dNx(3,j);
-                          B(4, 3*j) = dNx(2,j);
-                          
-                          B(5, 3*j-2) = dNx(3,j);
-                          B(5, 3*j) = dNx(1,j);
-                          
-                          B(6, 3*j-2) = dNx(2,j);
-                          B(6, 3*j-1) = dNx(1,j);
-                end
-                Ke = Ke + abs(detJ) * integrator.weights(i) * B'*obj.mat.D*B;
-            end
-            for k=1:nelems
-                K(:,:,k)=x(k)*Ke;
-            end
-            K=K(:);
+            x = obj.elementScale(nelems, x);
+            [Jinv, detJ] = obj.jacobianInversePages(nodes, 1, dNtr);
+            B = obj.strainBPages(Jinv, dNtr);
+            Ke = obj.integratePagematrix(B, obj.mat.D, detJ, integrator.weights, 1);
+            K = Ke .* reshape(x, 1, 1, []);
+            K = obj.flattenElementMatrices(K);
         end
         function initializeResults(obj)
             nelems = size(obj.elems,1);
@@ -451,7 +376,7 @@ classdef SolidElasticElem < FiniteElement
             obj.results.gp.all(11,:,:) = syz;
             obj.results.gp.all(12,:,:) = sxz;
             obj.results.gp.all(13,:,:) = sHM;
-            obj.results.gp.all(14,:,:) = repmat(x,1,nip);
+            obj.results.gp.all(14,:,:) = repmat(reshape(x(:)', 1, nelems, 1), 1, 1, nip);
         end
         function faces = findFaces( obj, fnodes )
               allfaces = obj.multiObjectList( obj.sf.faces );

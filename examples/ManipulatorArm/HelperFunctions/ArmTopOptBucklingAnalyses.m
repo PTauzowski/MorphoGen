@@ -11,8 +11,8 @@ function  [analysisSecondOrder,  analysisWithBuckling, const_elems ] = ArmTopOpt
     resCirc=round(2*pi*R/th*resTh);
     resHeight=round(h/th*resTh);
     
-    % Filtering radius
-    Rfilter = R*3*pi/resCirc;
+    % Filtering radius: approximately three nominal FE sizes.
+    Rfilter = 3 * th / resTh;
     penal=3;
     cutTreshold = 0.005;
     
@@ -112,4 +112,3 @@ function  [analysisSecondOrder,  analysisWithBuckling, const_elems ] = ArmTopOpt
     
    
 end
-

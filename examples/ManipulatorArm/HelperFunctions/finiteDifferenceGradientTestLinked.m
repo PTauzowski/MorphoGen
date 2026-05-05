@@ -1,4 +1,4 @@
-function fd = finiteDifferenceGradientTestLinked(model, analyses, rho, penal, pAgg, weights, C0, dJdrho, nTest, h, xmin, xmax)
+function fd = finiteDifferenceGradientTestLinked(model, analyses, rho, penal, pAgg, weights, C0, dJdrho, nTest, h, xmin, xmax, useParallel)
 % FINITEDIFFERENCEGRADIENTTESTLINKED  Finite-difference gradient check in rho-space.
 %
 %   Validates the pullback gradient dJdrho by perturbing individual rho(e)
@@ -30,41 +30,50 @@ function fd = finiteDifferenceGradientTestLinked(model, analyses, rho, penal, pA
 %       maxRelativeError scalar
 %       meanRelativeError scalar
 
+    if nargin < 13
+        useParallel = false;
+    end
+
     H = numel(rho);
-    nTest = min(nTest, H);
-    elemIds = randperm(H, nTest)';
+    % Avoid subtracting nearly identical large-solve objectives for weak sensitivities.
+    targetObjectiveChange = 1.0e-8;
+    candidateIds = find(xmax(:) > xmin(:) + eps);
+    nTest = min(nTest, numel(candidateIds));
+    elemIds = candidateIds(randperm(numel(candidateIds), nTest));
     rows = repmat(struct('elemId', 0, 'analytic', 0, 'finiteDifference', 0, ...
-        'relativeError', 0), nTest, 1);
+        'absoluteError', 0, 'relativeError', 0, 'step', 0), nTest, 1);
     relErrors = zeros(nTest, 1);
 
     for i = 1:nTest
         e = elemIds(i);
-        hUse = min([h, 0.49 * (xmax(e) - rho(e)), 0.49 * (rho(e) - xmin(e))]);
-        if hUse <= 0
-            hUse = h;
-        end
+        maxCentralStep = min(0.49 * (xmax(e) - rho(e)), 0.49 * (rho(e) - xmin(e)));
+        hUse = min(maxCentralStep, max(h, targetObjectiveChange / max(abs(dJdrho(e)), eps)));
+        assert(hUse > 0, 'Finite-difference rho(%d) has no free perturbation range.', e);
 
         rhop = rho;
         rhom = rho;
-        rhop(e) = min(xmax(e), rhop(e) + hUse);
-        rhom(e) = max(xmin(e), rhom(e) - hUse);
+        rhop(e) = rhop(e) + hUse;
+        rhom(e) = rhom(e) - hUse;
 
         xp = model.segmentToArm(rhop);
         xm = model.segmentToArm(rhom);
 
-        [Jp, ~] = evaluateObjectiveOnly(analyses, xp, penal, pAgg, weights, C0);
-        [Jm, ~] = evaluateObjectiveOnly(analyses, xm, penal, pAgg, weights, C0);
+        [Jp, ~] = evaluateObjectiveOnly(analyses, xp, penal, pAgg, weights, C0, useParallel);
+        [Jm, ~] = evaluateObjectiveOnly(analyses, xm, penal, pAgg, weights, C0, useParallel);
         fdGrad = (Jp - Jm) / (rhop(e) - rhom(e));
-        relErr = abs(fdGrad - dJdrho(e)) / max([abs(fdGrad), abs(dJdrho(e)), eps]);
+        absErr = abs(fdGrad - dJdrho(e));
+        relErr = absErr / max([abs(fdGrad), abs(dJdrho(e)), eps]);
 
         rows(i).elemId = e;
         rows(i).analytic = dJdrho(e);
         rows(i).finiteDifference = fdGrad;
+        rows(i).absoluteError = absErr;
         rows(i).relativeError = relErr;
+        rows(i).step = hUse;
         relErrors(i) = relErr;
 
-        fprintf('  rho(%7d): analytic=% .6e  FD=% .6e  relErr=%.3e\n', ...
-            e, dJdrho(e), fdGrad, relErr);
+        fprintf('  rho(%7d): analytic=% .6e  FD=% .6e  relErr=%.3e  h=%.1e\n', ...
+            e, dJdrho(e), fdGrad, relErr, hUse);
     end
 
     fd.elemIds = elemIds;

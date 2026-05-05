@@ -1,36 +1,44 @@
-function fd = finiteDifferenceGradientTest(analyses, x, penal, pAgg, weights, C0, grad, nTest, h, xmin, xmax)
+function fd = finiteDifferenceGradientTest(analyses, x, penal, pAgg, weights, C0, grad, nTest, h, xmin, xmax, useParallel)
+    if nargin < 12
+        useParallel = false;
+    end
     n = numel(x);
-    nTest = min(nTest, n);
-    elemIds = randperm(n, nTest)';
+    % Avoid subtracting nearly identical large-solve objectives for weak sensitivities.
+    targetObjectiveChange = 1.0e-8;
+    candidateIds = find(xmax(:) > xmin(:) + eps);
+    nTest = min(nTest, numel(candidateIds));
+    elemIds = candidateIds(randperm(numel(candidateIds), nTest));
     rows = repmat(struct('elemId', 0, 'analytic', 0, 'finiteDifference', 0, ...
-        'relativeError', 0), nTest, 1);
+        'absoluteError', 0, 'relativeError', 0, 'step', 0), nTest, 1);
     relErrors = zeros(nTest, 1);
 
     for i = 1:nTest
         e = elemIds(i);
-        hUse = min([h, 0.49 * (xmax(e) - x(e)), 0.49 * (x(e) - xmin(e))]);
-        if hUse <= 0
-            hUse = h;
-        end
+        maxCentralStep = min(0.49 * (xmax(e) - x(e)), 0.49 * (x(e) - xmin(e)));
+        hUse = min(maxCentralStep, max(h, targetObjectiveChange / max(abs(grad(e)), eps)));
+        assert(hUse > 0, 'Finite-difference element %d has no free perturbation range.', e);
 
         xp = x;
         xm = x;
-        xp(e) = min(xmax(e), xp(e) + hUse);
-        xm(e) = max(xmin(e), xm(e) - hUse);
+        xp(e) = xp(e) + hUse;
+        xm(e) = xm(e) - hUse;
 
-        [Jp, ~] = evaluateObjectiveOnly(analyses, xp, penal, pAgg, weights, C0);
-        [Jm, ~] = evaluateObjectiveOnly(analyses, xm, penal, pAgg, weights, C0);
+        [Jp, ~] = evaluateObjectiveOnly(analyses, xp, penal, pAgg, weights, C0, useParallel);
+        [Jm, ~] = evaluateObjectiveOnly(analyses, xm, penal, pAgg, weights, C0, useParallel);
         fdGrad = (Jp - Jm) / (xp(e) - xm(e));
-        relErr = abs(fdGrad - grad(e)) / max([abs(fdGrad), abs(grad(e)), eps]);
+        absErr = abs(fdGrad - grad(e));
+        relErr = absErr / max([abs(fdGrad), abs(grad(e)), eps]);
 
         rows(i).elemId = e;
         rows(i).analytic = grad(e);
         rows(i).finiteDifference = fdGrad;
+        rows(i).absoluteError = absErr;
         rows(i).relativeError = relErr;
+        rows(i).step = hUse;
         relErrors(i) = relErr;
 
-        fprintf('  elem %7d: analytic=% .6e  FD=% .6e  relErr=%.3e\n', ...
-            e, grad(e), fdGrad, relErr);
+        fprintf('  elem %7d: analytic=% .6e  FD=% .6e  relErr=%.3e  h=%.1e\n', ...
+            e, grad(e), fdGrad, relErr, hUse);
     end
 
     fd.elemIds = elemIds;

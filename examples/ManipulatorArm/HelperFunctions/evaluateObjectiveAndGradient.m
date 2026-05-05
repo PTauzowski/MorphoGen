@@ -1,10 +1,22 @@
-function [J, gradJ, C0, C] = evaluateObjectiveAndGradient(analyses, x, penal, pAgg, weights, C0)
+function [J, gradJ, C0, C] = evaluateObjectiveAndGradient(analyses, x, penal, pAgg, weights, C0, useParallel)
+    if nargin < 7
+        useParallel = false;
+    end
     nConfigs = numel(analyses);
     C = zeros(nConfigs, 1);
     dC = zeros(numel(x), nConfigs);
 
-    for k = 1:nConfigs
-        [C(k), dC(:, k)] = computeComplianceAndGradient(analyses{k}, x, penal);
+    useParallel = useParallel && license('test', 'Distrib_Computing_Toolbox');
+    if useParallel
+        parfor k = 1:nConfigs
+            [C_k, dC_k] = computeComplianceAndGradient(analyses{k}, x, penal);
+            C(k) = C_k;
+            dC(:, k) = dC_k;
+        end
+    else
+        for k = 1:nConfigs
+            [C(k), dC(:, k)] = computeComplianceAndGradient(analyses{k}, x, penal);
+        end
     end
 
     if isempty(C0)

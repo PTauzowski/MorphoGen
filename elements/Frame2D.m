@@ -33,20 +33,21 @@ classdef Frame2D < FiniteElement
               nnodes = size(obj.elems,2);
               ndofs = size( obj.ndofs,2);
               dim = nnodes * ndofs;
-              K = zeros( dim , dim, nelems );
+              Kl = zeros( dim , dim, nelems );
               L = obj.computeTransformationMatrix(nodes);
              for k=1:nelems
                  l=norm(nodes(obj.elems(k,2))-nodes(obj.elems(k,1)));
                  l2=l^2;
                  l3=l^3;
-                  K(:,:,k) =  L(:,:,k)' * [EA/l   , 0.0      , 0.0      , -EA/l  , 0.0       , 0.0;...
+                  Kl(:,:,k) = [EA/l   , 0.0      , 0.0      , -EA/l  , 0.0       , 0.0;...
 		                0.0    , 12*EJ/l3 , -6*EJ/l2 , 0.0    , -12*EJ/l3 , -6*EJ/l2;...
 		                0.0    , -6*EJ/l2 , 4*EJ/l   , 0.0    , 6*EJ/l2   , 2*EJ/l;...
 		                -EA/l  , 0.0      , 0.0      , EA/l   , 0.0       , 0.0 ;...
 		                0.0    , -12*EJ/l3, 6*EJ/l2  , 0.0    , 12*EJ/l3  , 6*EJ/l2;...
-		                0.0    , -6*EJ/l2 , 2*EJ/l   , 0.0    , 6*EJ/l2   , 4*EJ/l   ]  * L(:,:,k);
+		                0.0    , -6*EJ/l2 , 2*EJ/l   , 0.0    , 6*EJ/l2   , 4*EJ/l   ];
              end
-             K=K(:);
+             K = pagemtimes(pagemtimes(L, 'transpose', Kl, 'none'), L);
+             K = obj.flattenElementMatrices(K);
         end
         function K = computeGeometricStifnessMatrix(obj, nodes, varargin)
               EA=obj.E*obj.A;
@@ -71,4 +72,3 @@ classdef Frame2D < FiniteElement
         end
     end
 end
-

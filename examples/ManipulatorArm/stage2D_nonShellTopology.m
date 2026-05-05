@@ -4,9 +4,9 @@
 % Question: is torsion (Ms) the dominant factor enforcing closed-shell topology?
 %
 % Three cases:
-%   A) My + Mz only (no torsion),   vf=0.40, Rmin=0.5*t
-%   B) My only,                      vf=0.30, Rmin=0.5*t
-%   C) My + Mz + Ms (with torsion),  vf=0.30, Rmin=0.5*t
+%   A) My + Mz only (no torsion),   vf=0.40, Rfilter ~= 3 FE sizes
+%   B) My only,                      vf=0.30, Rfilter ~= 3 FE sizes
+%   C) My + Mz + Ms (with torsion),  vf=0.30, Rfilter ~= 3 FE sizes
 %
 % For each case the script saves rho, thresholded topology (rho>0.6), and
 % reports: freeRhoStd, nConnComp (connected components at rho>0.6), rhoGt08.
@@ -21,14 +21,16 @@ addpath(genpath(projectRoot));
 rng(42, 'twister');
 
 % ----- Model geometry (from coupledExamples.m) ---------------------------
-E   = 2.0e9;
-nu  = 0.35;
-R   = 0.14;
-r   = 0.08;
-h   = 0.25;
-alpha_deg   = 22.5;
-res_th      = 4;
-wallThickness = R - r;   % 0.06 m
+arm = armModelDefaults("thin");
+E = arm.E;
+nu = arm.nu;
+R = arm.R;
+r = arm.r;
+h = arm.h;
+alpha_deg = arm.alpha_deg;
+res_th = arm.res_th;
+wallThickness = R - r;
+Rfilter = arm.Rfilter;
 
 % ----- Optimization controls ----------------------------------------------
 penal              = 4.0;
@@ -36,39 +38,40 @@ pAgg               = 4.0;   % p-norm aggregation for multi-load cases
 loadTol            = 0.02;
 maxIterations      = 140;
 minIterations      = 25;
-changeTol          = 1.0e-3;
+changeTol          = arm.mma.changeTol;
 objectiveTol       = 5.0e-3;
 volumeTol          = 5.0e-3;
-moveLimit          = 0.05;
-minMoveLimit       = 0.003;
-moveDecay          = 0.95;
-mmaDamping         = 0.25;
+moveLimit          = arm.mma.moveLimit;
+minMoveLimit       = arm.mma.minMoveLimit;
+moveDecay          = arm.mma.moveDecay;
+mmaDamping         = arm.mma.mmaDamping;
 useCompNorm        = true;
 connectThreshold   = 0.6;   % threshold for topology connectivity analysis
 denseThreshold     = 0.8;   % threshold for "dense material" fraction
+useParallel = license('test', 'Distrib_Computing_Toolbox');
 
 % ----- Case definitions ---------------------------------------------------
 %   mode:        'single' | 'multi'
 %   loadNames:   string array
 %   loadCases:   cell array of structs
 %   volFrac:     volume fraction target
-%   RminFactor:  Rmin / wallThickness
+%   Rfilter:     density filter radius, fixed to about 3 nominal FE sizes
 cases = {
     struct('label', 'A_My_Mz', ...
            'mode',  'multi', ...
            'loadNames', {{'My','Mz'}}, ...
            'loadCases', {{struct('My',1.0), struct('Mz',1.0)}}, ...
-           'volFrac', 0.40, 'RminFactor', 0.5);
+           'volFrac', 0.40, 'Rfilter', Rfilter);
     struct('label', 'B_My', ...
            'mode',  'single', ...
            'loadNames', {{'My'}}, ...
            'loadCases', {{struct('My',1.0)}}, ...
-           'volFrac', 0.30, 'RminFactor', 0.5);
+           'volFrac', 0.30, 'Rfilter', Rfilter);
     struct('label', 'C_My_Mz_Ms', ...
            'mode',  'multi', ...
            'loadNames', {{'My','Mz','Ms'}}, ...
            'loadCases', {{struct('My',1.0), struct('Mz',1.0), struct('Ms',1.0)}}, ...
-           'volFrac', 0.30, 'RminFactor', 0.5);
+           'volFrac', 0.30, 'Rfilter', Rfilter);
 };
 
 resultRoot = fullfile(scriptDir, 'results', 'stage2D_nonShellTopology');
@@ -76,122 +79,26 @@ if ~exist(resultRoot, 'dir'), mkdir(resultRoot); end
 
 fprintf('Stage 2D – non-shell topology identification\n');
 fprintf('Results root: %s\n\n', resultRoot);
+fprintf('Parallel outer case sweep: %d\n\n', useParallel);
 
 summaryRows = cell(numel(cases), 1);
 
-for ci = 1:numel(cases)
-    cs = cases{ci};
-    cs.Rfilter = cs.RminFactor * wallThickness;
-    cs.loadNames = string(cs.loadNames);
-    caseName = sprintf('%s_vf%03d_rmin%03d', cs.label, ...
-        round(100*cs.volFrac), round(100*cs.RminFactor));
-    fprintf('[%d/%d] %s\n', ci, numel(cases), caseName);
-
-    caseDir = fullfile(resultRoot, caseName);
-    if ~exist(caseDir, 'dir'), mkdir(caseDir); end
-
-    row = makeEmptyRow(caseName, cs);
-    try
-        % Build model
-        mdl = ReferenceModuleSolidModel(E, nu, r, R, h, alpha_deg, res_th);
-        mdl.analysis.isConst = true;
-
-        % Validate all load cases
-        allLoadsPassed = true;
-        for k = 1:numel(cs.loadCases)
-            mdl.applyLoadCase(cs.loadCases{k});
-            lv = mdl.validateLoadApplication(cs.loadCases{k}, loadTol);
-            allLoadsPassed = allLoadsPassed && lv.passed;
-        end
-
-        % Constant elements: on loaded and fixed faces
-        fixedNodeIds = find(mdl.fixedFaceSelector.select(mdl.mesh.nodes));
-        const_elems  = find(any(ismember(mdl.mesh.elems, ...
-            [mdl.loaded_node_ids(:); fixedNodeIds(:)]), 2));
-        const_elems  = unique(const_elems(:));
-
-        % Initialize optimizer
-        if strcmp(cs.mode, 'single')
-            mdl.applyLoadCase(cs.loadCases{1});
-            topOpt = SIMP_MMA_TopologyOptimizationElasticCompliance( ...
-                cs.Rfilter, mdl.analysis, penal, cs.volFrac, true);
-        else
-            weights = ones(numel(cs.loadCases), 1) / numel(cs.loadCases);
-            topOpt = SIMP_MMA_ReferenceModuleMultiLoadCompliance( ...
-                cs.Rfilter, mdl, cs.loadCases, weights, pAgg, penal, ...
-                cs.volFrac, true, useCompNorm);
-        end
-
-        [topOpt, free_elems, freeInitialRho] = initDesign(topOpt, const_elems, cs.volFrac);
-
-        % Normalization / scale
-        if strcmp(cs.mode, 'single')
-            topOpt.computeObjectiveFunctonWithGradient(topOpt.x);
-            compNorm = max(topOpt.FobjValue, eps);
-            objScale = 1.0 / max(abs(topOpt.FobjValue), eps);
-            history = runSingleMMA(topOpt, free_elems, const_elems, cs.volFrac, ...
-                objScale, maxIterations, minIterations, changeTol, objectiveTol, ...
-                volumeTol, moveLimit, minMoveLimit, moveDecay, mmaDamping);
-        else
-            topOpt.initializeComplianceNormalization(topOpt.x);
-            topOpt.computeObjectiveFunctonWithGradient(topOpt.x);
-            objScale = 1.0 / max(abs(topOpt.FobjValue), eps);
-            history = runMultiMMA(topOpt, free_elems, const_elems, cs.volFrac, ...
-                objScale, maxIterations, minIterations, changeTol, objectiveTol, ...
-                volumeTol, moveLimit, minMoveLimit, moveDecay, mmaDamping);
-        end
-
-        topOpt.computeObjectiveFunctonWithGradient(topOpt.x);
-        topOpt.computeConstraintsAndGradient(topOpt.x);
-        rho_opt = topOpt.x;
-
-        % ----- Compute metrics --------------------------------------------
-        freeRho    = rho_opt(free_elems);
-        freeRhoStd = std(freeRho);
-
-        rhoAboveConn  = rho_opt > connectThreshold;
-        nConnComp     = countConnectedComponents(mdl.mesh.elems, rhoAboveConn);
-        rhoGt08       = mean(rho_opt > denseThreshold);
-
-        finalVF   = mean(rho_opt);
-        finalConstr = topOpt.constrValues;
-        finalChange = topOpt.change;
-        converged = finalChange < changeTol || ...
-            objectiveHistoryConverged(history, objectiveTol, cs.mode);
-
-        fprintf('  vf=%.4f  freeRhoStd=%.4f  nConnComp=%d  rhoGt08=%.4f\n', ...
-            finalVF, freeRhoStd, nConnComp, rhoGt08);
-
-        % ----- Save figures -----------------------------------------------
-        saveFigures(caseDir, mdl, rho_opt, const_elems, caseName, connectThreshold);
-
-        % ----- Save .mat --------------------------------------------------
-        save(fullfile(caseDir, 'result.mat'), ...
-            'rho_opt', 'history', 'const_elems', 'free_elems', ...
-            'freeInitialRho', 'finalVF', 'finalConstr', 'finalChange', ...
-            'converged', 'freeRhoStd', 'nConnComp', 'rhoGt08', ...
-            'connectThreshold', 'denseThreshold', 'allLoadsPassed', ...
-            'E', 'nu', 'r', 'R', 'h', 'alpha_deg', 'res_th', 'cs');
-
-        row.status        = "ok";
-        row.converged     = converged;
-        row.finalVF       = finalVF;
-        row.finalConstr   = finalConstr;
-        row.finalChange   = finalChange;
-        row.freeRhoStd    = freeRhoStd;
-        row.nConnComp     = nConnComp;
-        row.rhoGt08       = rhoGt08;
-        row.allLoadsPassed = allLoadsPassed;
-        row.iterations    = numel(history.iteration);
-
-    catch ME
-        row.status = "failed";
-        row.errorMsg = string(ME.message);
-        fprintf('  FAILED: %s\n', ME.message);
-        save(fullfile(caseDir, 'failed.mat'), 'ME', 'cs');
+if useParallel
+    parfor ci = 1:numel(cases)
+        cs = cases{ci};
+        summaryRows{ci} = runStage2DCase(cs, ci, numel(cases), resultRoot, wallThickness, ...
+            E, nu, r, R, h, alpha_deg, res_th, loadTol, penal, pAgg, useCompNorm, ...
+            maxIterations, minIterations, changeTol, objectiveTol, volumeTol, ...
+            moveLimit, minMoveLimit, moveDecay, mmaDamping, connectThreshold, denseThreshold);
     end
-
-    summaryRows{ci} = row;
+else
+    for ci = 1:numel(cases)
+        cs = cases{ci};
+        summaryRows{ci} = runStage2DCase(cs, ci, numel(cases), resultRoot, wallThickness, ...
+            E, nu, r, R, h, alpha_deg, res_th, loadTol, penal, pAgg, useCompNorm, ...
+            maxIterations, minIterations, changeTol, objectiveTol, volumeTol, ...
+            moveLimit, minMoveLimit, moveDecay, mmaDamping, connectThreshold, denseThreshold);
+    end
 end
 
 % ----- Summary table ------------------------------------------------------
@@ -240,6 +147,110 @@ if numel(allResults) == 3
 end
 
 % ==========================================================================
+function row = runStage2DCase(cs, ci, nCases, resultRoot, wallThickness, ...
+        E, nu, r, R, h, alpha_deg, res_th, loadTol, penal, pAgg, useCompNorm, ...
+        maxIterations, minIterations, changeTol, objectiveTol, volumeTol, ...
+        moveLimit, minMoveLimit, moveDecay, mmaDamping, connectThreshold, denseThreshold)
+    cs.RminFactor = cs.Rfilter / wallThickness;
+    cs.loadNames = string(cs.loadNames);
+    caseName = sprintf('%s_vf%03d_rmin%03d', cs.label, ...
+        round(100*cs.volFrac), round(100*cs.RminFactor));
+    fprintf('[%d/%d] %s\n', ci, nCases, caseName);
+
+    caseDir = fullfile(resultRoot, caseName);
+    if ~exist(caseDir, 'dir'), mkdir(caseDir); end
+
+    row = makeEmptyRow(caseName, cs);
+    try
+        mdl = ReferenceModuleSolidModel(E, nu, r, R, h, alpha_deg, res_th);
+        mdl.analysis.isConst = true;
+
+        allLoadsPassed = true;
+        for k = 1:numel(cs.loadCases)
+            mdl.applyLoadCase(cs.loadCases{k});
+            lv = mdl.validateLoadApplication(cs.loadCases{k}, loadTol);
+            allLoadsPassed = allLoadsPassed && lv.passed;
+        end
+
+        const_elems  = armConstRingElementIds(mdl, arm, "reference");
+
+        if strcmp(cs.mode, 'single')
+            mdl.applyLoadCase(cs.loadCases{1});
+            topOpt = SIMP_MMA_TopologyOptimizationElasticCompliance( ...
+                cs.Rfilter, mdl.analysis, penal, cs.volFrac, true);
+        else
+            weights = ones(numel(cs.loadCases), 1) / numel(cs.loadCases);
+            topOpt = SIMP_MMA_ReferenceModuleMultiLoadCompliance( ...
+                cs.Rfilter, mdl, cs.loadCases, weights, pAgg, penal, ...
+                cs.volFrac, true, useCompNorm);
+        end
+
+        [topOpt, free_elems, freeInitialRho] = initDesign(topOpt, const_elems, cs.volFrac);
+
+        if strcmp(cs.mode, 'single')
+            topOpt.computeObjectiveFunctonWithGradient(topOpt.x);
+            objScale = 1.0 / max(abs(topOpt.FobjValue), eps);
+            history = runSingleMMA(topOpt, free_elems, const_elems, cs.volFrac, ...
+                objScale, maxIterations, minIterations, changeTol, objectiveTol, ...
+                volumeTol, moveLimit, minMoveLimit, moveDecay, mmaDamping);
+        else
+            topOpt.initializeComplianceNormalization(topOpt.x);
+            topOpt.computeObjectiveFunctonWithGradient(topOpt.x);
+            objScale = 1.0 / max(abs(topOpt.FobjValue), eps);
+            history = runMultiMMA(topOpt, free_elems, const_elems, cs.volFrac, ...
+                objScale, maxIterations, minIterations, changeTol, objectiveTol, ...
+                volumeTol, moveLimit, minMoveLimit, moveDecay, mmaDamping);
+        end
+
+        topOpt.computeObjectiveFunctonWithGradient(topOpt.x);
+        topOpt.computeConstraintsAndGradient(topOpt.x);
+        rho_opt = topOpt.x;
+
+        freeRho    = rho_opt(free_elems);
+        freeRhoStd = std(freeRho);
+
+        rhoAboveConn  = rho_opt > connectThreshold;
+        nConnComp     = countConnectedComponents(mdl.mesh.elems, rhoAboveConn);
+        rhoGt08       = mean(rho_opt > denseThreshold);
+
+        finalVF   = mean(rho_opt);
+        finalConstr = topOpt.constrValues;
+        finalChange = topOpt.change;
+        converged = finalChange < changeTol || ...
+            objectiveHistoryConverged(history, objectiveTol, cs.mode);
+
+        fprintf('  vf=%.4f  freeRhoStd=%.4f  nConnComp=%d  rhoGt08=%.4f\n', ...
+            finalVF, freeRhoStd, nConnComp, rhoGt08);
+
+        saveFigures(caseDir, mdl, rho_opt, const_elems, caseName, connectThreshold);
+        saveHistoryCsv(caseDir, history);
+
+        save(fullfile(caseDir, 'result.mat'), ...
+            'rho_opt', 'history', 'const_elems', 'free_elems', ...
+            'freeInitialRho', 'finalVF', 'finalConstr', 'finalChange', ...
+            'converged', 'freeRhoStd', 'nConnComp', 'rhoGt08', ...
+            'connectThreshold', 'denseThreshold', 'allLoadsPassed', ...
+            'E', 'nu', 'r', 'R', 'h', 'alpha_deg', 'res_th', 'cs');
+
+        row.status        = "ok";
+        row.converged     = converged;
+        row.finalVF       = finalVF;
+        row.finalConstr   = finalConstr;
+        row.finalChange   = finalChange;
+        row.freeRhoStd    = freeRhoStd;
+        row.nConnComp     = nConnComp;
+        row.rhoGt08       = rhoGt08;
+        row.allLoadsPassed = allLoadsPassed;
+        row.iterations    = numel(history.iteration);
+
+    catch ME
+        row.status = "failed";
+        row.errorMsg = string(ME.message);
+        fprintf('  FAILED: %s\n', ME.message);
+        save(fullfile(caseDir, 'failed.mat'), 'ME', 'cs');
+    end
+end
+
 function row = makeEmptyRow(caseName, cs)
     row.caseName     = string(caseName);
     row.mode         = string(cs.mode);
@@ -448,14 +459,18 @@ function saveFigures(caseDir, mdl, rho, const_elems, caseName, threshold)
     fig = figure('Visible','off','Name',[caseName ' density']);
     plotDensityField(mdl, rho, const_elems);
     title([titleStr ' – density']); colorbar; caxis([0 1]);
-    saveas(fig, fullfile(caseDir, 'density_field.png')); close(fig);
+    saveas(fig, fullfile(caseDir, 'density_field.png'));
+    savefig(fig, fullfile(caseDir, 'density_field.fig'));
+    close(fig);
 
     % Density histogram
     fig = figure('Visible','off','Name',[caseName ' histogram']);
     histogram(rho, 20, 'BinLimits',[0 1]); grid on;
     xlabel('\rho'); ylabel('Element count');
     title([titleStr ' – histogram']);
-    saveas(fig, fullfile(caseDir, 'density_histogram.png')); close(fig);
+    saveas(fig, fullfile(caseDir, 'density_histogram.png'));
+    savefig(fig, fullfile(caseDir, 'density_histogram.fig'));
+    close(fig);
 
     % Thresholded topology at rho > threshold
     fig = figure('Visible','off','Name',sprintf('%s rho>%.1f', caseName, threshold));
@@ -465,6 +480,7 @@ function saveFigures(caseDir, mdl, rho, const_elems, caseName, threshold)
     xlabel('x'); ylabel('y'); zlabel('z');
     title(sprintf('%s, \\rho > %.1f', titleStr, threshold));
     saveas(fig, fullfile(caseDir, sprintf('topology_rho_gt_%02d.png', round(10*threshold))));
+    savefig(fig, fullfile(caseDir, sprintf('topology_rho_gt_%02d.fig', round(10*threshold))));
     close(fig);
 
     % Thresholded at 0.8
@@ -474,7 +490,30 @@ function saveFigures(caseDir, mdl, rho, const_elems, caseName, threshold)
     mdl.fe.plotSolidSelected(mdl.mesh.nodes, const_elems, [0.70 0.70 0.70]);
     xlabel('x'); ylabel('y'); zlabel('z');
     title(sprintf('%s, \\rho > 0.8', titleStr));
-    saveas(fig, fullfile(caseDir, 'topology_rho_gt_08.png')); close(fig);
+    saveas(fig, fullfile(caseDir, 'topology_rho_gt_08.png'));
+    savefig(fig, fullfile(caseDir, 'topology_rho_gt_08.fig'));
+    close(fig);
+end
+
+function saveHistoryCsv(caseDir, history)
+    T = table(history.iteration(:), history.objective(:), ...
+        history.volumeFraction(:), history.constraint(:), history.change(:), ...
+        'VariableNames', {'iteration', 'objective', 'volumeFraction', 'constraint', 'change'});
+
+    if isfield(history, 'compliance')
+        T = [T array2table(history.compliance, ...
+            'VariableNames', numberedNames('compliance', size(history.compliance, 2)))]; %#ok<AGROW>
+    end
+    if isfield(history, 'normalizedCompliance')
+        T = [T array2table(history.normalizedCompliance, ...
+            'VariableNames', numberedNames('normalizedCompliance', size(history.normalizedCompliance, 2)))]; %#ok<AGROW>
+    end
+
+    writetable(T, fullfile(caseDir, 'history.csv'));
+end
+
+function names = numberedNames(prefix, n)
+    names = arrayfun(@(i) sprintf('%s_%d', prefix, i), 1:n, 'UniformOutput', false);
 end
 
 function plotDensityField(mdl, rho, const_elems)

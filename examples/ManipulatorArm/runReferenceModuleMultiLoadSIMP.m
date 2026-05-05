@@ -14,18 +14,17 @@ projectRoot = fullfile(scriptDir, '..', '..'); %#ok<NASGU>
 rng(3, 'twister');
 
 % ----- Model parameters from coupledExamples.m ---------------------------
-E = 2.0e9;
-nu = 0.35;
-R = 0.14;
-r = 0.08;
-alpha = 22.5;
-segmentLength = 0.25;
-res = 15; %#ok<NASGU>
-res_thickness = 4;
-
-h = segmentLength;
-alpha_deg = alpha;
-res_th = res_thickness;
+arm = armModelDefaults("thin");
+E = arm.E;
+nu = arm.nu;
+R = arm.R;
+r = arm.r;
+alpha = arm.alpha;
+segmentLength = arm.segmentLength;
+res = arm.res; %#ok<NASGU>
+h = arm.h;
+alpha_deg = arm.alpha_deg;
+res_th = arm.res_th;
 
 % ----- Optimization parameters ------------------------------------------
 loadTol = 0.02;
@@ -33,15 +32,16 @@ volFracTarget = 0.35;
 penal = 4.0;
 pAgg = 6.0;
 useComplianceNormalization = true;
+useParallel = license('test', 'Distrib_Computing_Toolbox');
 maxIterations = 140;
 minIterations = 25;
-changeTol = 1.0e-3;
+changeTol = arm.mma.changeTol;
 objectiveTol = 5.0e-3;
 volumeTol = 5.0e-3;
-moveLimit = 0.05;
-minMoveLimit = 0.003;
-moveDecay = 0.95;
-mmaDamping = 0.25;
+moveLimit = arm.mma.moveLimit;
+minMoveLimit = arm.mma.minMoveLimit;
+moveDecay = arm.mma.moveDecay;
+mmaDamping = arm.mma.mmaDamping;
 fdElemCount = 8;
 fdStep = 1.0e-5;
 gradTol = 1.0e-3;
@@ -76,19 +76,20 @@ for k = 1:numel(loadCases)
 end
 assert(allLoadsPassed, 'At least one synthetic load case failed validation.');
 
-fixedNodeIds = find(mdl.fixedFaceSelector.select(mdl.mesh.nodes));
-const_elems = find(any(ismember(mdl.mesh.elems, [mdl.loaded_node_ids(:); fixedNodeIds(:)]), 2));
-const_elems = unique(const_elems(:));
-fprintf('\nConst elems on loaded/fixed faces: %d\n', numel(const_elems));
+const_elems = armConstRingElementIds(mdl, arm, "reference");
+fprintf('\nConst ring elems: %d (end=%d, middle=%d)\n', ...
+    numel(const_elems), arm.constEndRing, arm.constMiddleRing);
 
 resCirc = round(2*pi*R / (R-r) * res_th);
-Rfilter = R * 3 * pi / resCirc;
-Rfilter = 0.60 * Rfilter;
-fprintf('Rfilter from coupled model resolution: %.6g\n', Rfilter);
+Rfilter = arm.Rfilter;
+fprintf('Rfilter = %.6g (3 x nominal FE size %.6g)\n', ...
+    Rfilter, arm.nominalElementSize);
+fprintf('Parallel load evaluation: %d\n', useParallel);
 
 % ----- Create optimizer and initialize normalized multi-load objective ----
 topOpt = SIMP_MMA_ReferenceModuleMultiLoadCompliance( ...
     Rfilter, mdl, loadCases, weights, pAgg, penal, volFracTarget, true, useComplianceNormalization);
+topOpt.useParallel = useParallel;
 topOpt.setConstElems(const_elems);
 
 free_elems = setdiff((1:topOpt.totalFENumber)', const_elems);
@@ -215,14 +216,21 @@ save(resultFile, ...
     'moveDecay', 'mmaDamping', 'useComplianceNormalization', ...
     'E', 'nu', 'r', 'R', 'h', 'alpha_deg', 'res_th');
 fprintf('Saved results to %s\n', resultFile);
+saveHistoryCsv(resultDir, history, loadNames);
+saveSummaryCsv(resultDir, finalObjective, finalVolumeFraction, finalConstraint, ...
+    topOpt.change, mmaConverged, volumeActive, nonuniformTopology, ...
+    noDominatingLoad, freeRhoStd, freeRhoRange, fd, loadContributions, loadNames);
 
 % ----- Plot optimized density field and compliance history ---------------
-figure('Name', 'Reference module multi-load SIMP density');
+fig = figure('Name', 'Reference module multi-load SIMP density');
 plotElementDensityField(mdl, finalRho, const_elems);
 title(sprintf('Multi-load p-norm SIMP density, vf=%.3f, J=%.4e', ...
     finalVolumeFraction, finalObjective));
+saveas(fig, fullfile(resultDir, 'referenceModuleMultiLoad_density.png'));
+savefig(fig, fullfile(resultDir, 'referenceModuleMultiLoad_density.fig'));
+close(fig);
 
-figure('Name', 'Reference module multi-load thresholded topology');
+fig = figure('Name', 'Reference module multi-load thresholded topology');
 hold on; axis on; daspect([1 1 1]); view(45, 35);
 sortedFreeRho = sort(freeRho);
 denseFreeThreshold = sortedFreeRho(max(1, ceil(0.80 * numel(sortedFreeRho))));
@@ -232,8 +240,11 @@ mdl.fe.plotSolidSelected(mdl.mesh.nodes, denseFreeElems, [0.15 0.15 0.15]);
 mdl.fe.plotSolidSelected(mdl.mesh.nodes, const_elems, [0.70 0.70 0.70]);
 xlabel('x'); ylabel('y'); zlabel('z');
 title(sprintf('Densest free elements, rho >= %.3f', denseFreeThreshold));
+saveas(fig, fullfile(resultDir, 'referenceModuleMultiLoad_thresholded.png'));
+savefig(fig, fullfile(resultDir, 'referenceModuleMultiLoad_thresholded.fig'));
+close(fig);
 
-figure('Name', 'Multi-load SIMP convergence history');
+fig = figure('Name', 'Multi-load SIMP convergence history');
 tiledlayout(3, 1);
 nexttile;
 plot(history.iteration, history.objective, '-o', 'LineWidth', 1.0);
@@ -246,6 +257,9 @@ nexttile;
 plot(history.iteration, history.volumeFraction, '-o', 'LineWidth', 1.0);
 hold on; yline(volFracTarget, '--');
 grid on; xlabel('Iteration'); ylabel('Volume fraction');
+saveas(fig, fullfile(resultDir, 'referenceModuleMultiLoad_history.png'));
+savefig(fig, fullfile(resultDir, 'referenceModuleMultiLoad_history.fig'));
+close(fig);
 
 assert(allLoadsPassed, 'At least one load validation failed.');
 assert(fd.maxRelativeError < gradTol, ...
@@ -272,6 +286,45 @@ function history = trimHistory(history)
     for i = 1:numel(fields)
         history.(fields{i}) = history.(fields{i})(keep, :);
     end
+end
+
+function saveHistoryCsv(resultDir, history, loadNames)
+    T = table(history.iteration(:), history.objective(:), history.volumeFraction(:), ...
+        history.constraint(:), history.change(:), ...
+        'VariableNames', {'iteration', 'objective', 'volumeFraction', 'constraint', 'change'});
+
+    complianceNames = prefixedNames('compliance', loadNames);
+    normalizedNames = prefixedNames('normalizedCompliance', loadNames);
+    T = [T array2table(history.compliance, 'VariableNames', complianceNames)]; %#ok<AGROW>
+    T = [T array2table(history.normalizedCompliance, 'VariableNames', normalizedNames)]; %#ok<AGROW>
+
+    writetable(T, fullfile(resultDir, 'referenceModuleMultiLoad_history.csv'));
+end
+
+function saveSummaryCsv(resultDir, finalObjective, finalVolumeFraction, finalConstraint, ...
+        finalChange, mmaConverged, volumeActive, nonuniformTopology, ...
+        noDominatingLoad, freeRhoStd, freeRhoRange, fd, loadContributions, loadNames)
+    row.finalObjective = finalObjective;
+    row.finalVolumeFraction = finalVolumeFraction;
+    row.finalConstraint = finalConstraint;
+    row.finalChange = finalChange;
+    row.mmaConverged = mmaConverged;
+    row.volumeActive = volumeActive;
+    row.nonuniformTopology = nonuniformTopology;
+    row.noDominatingLoad = noDominatingLoad;
+    row.freeRhoStd = freeRhoStd;
+    row.freeRhoRange = freeRhoRange;
+    row.fdMaxRelativeError = fd.maxRelativeError;
+    for i = 1:numel(loadNames)
+        field = matlab.lang.makeValidName(sprintf('contribution_%s', char(loadNames(i))));
+        row.(field) = loadContributions(i);
+    end
+    writetable(struct2table(row), fullfile(resultDir, 'referenceModuleMultiLoad_summary.csv'));
+end
+
+function names = prefixedNames(prefix, loadNames)
+    names = arrayfun(@(s) matlab.lang.makeValidName(sprintf('%s_%s', prefix, char(s))), ...
+        loadNames, 'UniformOutput', false);
 end
 
 function tf = objectiveHistoryConverged(history, tol)

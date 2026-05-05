@@ -15,13 +15,16 @@ addpath(genpath(projectRoot));   % prepends → takes priority
 clear classes;                   % flush any stale class cache
 
 % ----- Model parameters --------------------------------------------------
-E         = 2.0e9;     % Young's modulus [Pa]
-nu        = 0.35;      % Poisson's ratio
-r         = 0.13;      % inner radius [m]
-R         = 0.14;      % outer radius [m]
-h         = 0.15;      % segment length [m]
-alpha_deg = 22.5;      % inclination angle [deg]
-res_th    = 2;         % radial resolution
+arm = armModelDefaults("thin");
+E = arm.E;
+nu = arm.nu;
+R = arm.R;
+alpha_deg = arm.alpha_deg;
+
+% Local diagnostic mesh override for load-resultant validation.
+r = 0.13;
+h = 0.15;
+res_th = 2;
 
 tol = 0.02;            % 2% resultant accuracy target
 

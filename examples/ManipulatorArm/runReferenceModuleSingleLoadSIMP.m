@@ -15,35 +15,34 @@ projectRoot = fullfile(scriptDir, '..', '..');
 rng(2, 'twister');
 
 % ----- Model parameters --------------------------------------------------
-E         = 2.0e9;
-nu        = 0.35;
-R         = 0.14;
-r         = 0.08;
-alpha     = 22.5;
-segmentLength = 0.25;
-res       = 15; %#ok<NASGU>  % kept for consistency with coupledExamples.m
-res_thickness = 4;
-
-h         = segmentLength;
-alpha_deg = alpha;
-res_th    = res_thickness;
+arm = armModelDefaults("thin");
+E = arm.E;
+nu = arm.nu;
+R = arm.R;
+r = arm.r;
+alpha = arm.alpha;
+segmentLength = arm.segmentLength;
+res = arm.res; %#ok<NASGU>  % kept for consistency with coupledExamples.m
+h = arm.h;
+alpha_deg = arm.alpha_deg;
+res_th = arm.res_th;
 
 % ----- Optimization parameters ------------------------------------------
 loadCase      = struct('My', 1.0);
 loadTol       = 0.02;
 volFracTarget = 0.50;
 penal         = 3.0;
-Rfilter       = 1.25 * (R - r);
+Rfilter       = arm.Rfilter;
 maxIterations = 120;
 minIterations = 20;
-changeTol     = 1.0e-3;
+changeTol     = arm.mma.changeTol;
 objectiveTol  = 5.0e-3;
 volumeTol     = 5.0e-3;
 objectiveScale = [];
-moveLimit     = 0.05;
-minMoveLimit  = 0.003;
-moveDecay     = 0.95;
-mmaDamping    = 0.25;
+moveLimit     = arm.mma.moveLimit;
+minMoveLimit  = arm.mma.minMoveLimit;
+moveDecay     = arm.mma.moveDecay;
+mmaDamping    = arm.mma.mmaDamping;
 fdElemCount   = 8;
 fdStep        = 1.0e-5;
 gradTol       = 1.0e-3;
@@ -61,15 +60,14 @@ mdl.applyLoadCase(loadCase);
 loadValidation = mdl.validateLoadApplication(loadCase, loadTol);
 assert(loadValidation.passed, 'Pure bending load validation failed.');
 
-fixedNodeIds = find(mdl.fixedFaceSelector.select(mdl.mesh.nodes));
-const_elems = find(any(ismember(mdl.mesh.elems, [mdl.loaded_node_ids(:); fixedNodeIds(:)]), 2));
-const_elems = unique(const_elems(:));
-fprintf('  Const elems on loaded/fixed faces: %d\n', numel(const_elems));
+const_elems = armConstRingElementIds(mdl, arm, "reference");
+fprintf('  Const ring elems: %d (end=%d, middle=%d)\n', ...
+    numel(const_elems), arm.constEndRing, arm.constMiddleRing);
 
 % ----- Create optimizer and lock the loaded/fixed face elements ----------
 resCirc = round(2*pi*R / (R-r) * res_th);
-Rfilter = R * 3 * pi / resCirc;
-fprintf('  Rfilter from coupled model resolution: %.6g\n', Rfilter);
+fprintf('  Rfilter = %.6g (3 x nominal FE size %.6g)\n', ...
+    Rfilter, arm.nominalElementSize);
 
 topOpt = SIMP_MMA_TopologyOptimizationElasticCompliance( ...
     Rfilter, mdl.analysis, penal, volFracTarget, true);
@@ -175,14 +173,21 @@ save(resultFile, ...
     'moveLimit', 'minMoveLimit', 'moveDecay', 'mmaDamping', 'loadCase', ...
     'E', 'nu', 'r', 'R', 'h', 'alpha_deg', 'res_th');
 fprintf('Saved results to %s\n', resultFile);
+saveHistoryCsv(resultDir, history);
+saveSummaryCsv(resultDir, finalVolumeFraction, finalCompliance, finalConstraint, ...
+    topOpt.change, mmaConverged, volumeActive, nonuniformTopology, freeRhoStd, ...
+    freeRhoRange, fd, loadValidation);
 
 % ----- Plot optimized density field --------------------------------------
-figure('Name', 'Reference module SIMP density');
+fig = figure('Name', 'Reference module SIMP density');
 plotElementDensityField(mdl, finalRho, const_elems);
 title(sprintf('Single-load SIMP density, My=1, vf=%.3f, C=%.4e', ...
     finalVolumeFraction, finalCompliance));
+saveas(fig, fullfile(resultDir, 'referenceModuleSingleLoad_density.png'));
+savefig(fig, fullfile(resultDir, 'referenceModuleSingleLoad_density.fig'));
+close(fig);
 
-figure('Name', 'Reference module SIMP thresholded topology');
+fig = figure('Name', 'Reference module SIMP thresholded topology');
 hold on; axis on; daspect([1 1 1]); view(45, 35);
 sortedFreeRho = sort(freeRho);
 denseFreeThreshold = sortedFreeRho(max(1, ceil(0.70 * numel(sortedFreeRho))));
@@ -192,8 +197,11 @@ mdl.fe.plotSolidSelected(mdl.mesh.nodes, denseFreeElems, [0.15 0.15 0.15]);
 mdl.fe.plotSolidSelected(mdl.mesh.nodes, const_elems, [0.70 0.70 0.70]);
 xlabel('x'); ylabel('y'); zlabel('z');
 title(sprintf('Densest free elements, rho >= %.3f', denseFreeThreshold));
+saveas(fig, fullfile(resultDir, 'referenceModuleSingleLoad_thresholded.png'));
+savefig(fig, fullfile(resultDir, 'referenceModuleSingleLoad_thresholded.fig'));
+close(fig);
 
-figure('Name', 'SIMP convergence history');
+fig = figure('Name', 'SIMP convergence history');
 tiledlayout(2, 1);
 nexttile;
 plot(history.iteration, history.compliance, '-o', 'LineWidth', 1.0);
@@ -202,6 +210,9 @@ nexttile;
 plot(history.iteration, history.volumeFraction, '-o', 'LineWidth', 1.0);
 hold on; yline(volFracTarget, '--');
 grid on; xlabel('Iteration'); ylabel('Volume fraction');
+saveas(fig, fullfile(resultDir, 'referenceModuleSingleLoad_history.png'));
+savefig(fig, fullfile(resultDir, 'referenceModuleSingleLoad_history.fig'));
+close(fig);
 
 assert(mmaConverged, 'MMA did not converge within %d iterations.', maxIterations);
 assert(volumeActive, 'Volume constraint is not active enough: g = %.3e.', finalConstraint);
@@ -222,6 +233,30 @@ function history = trimHistory(history)
     for i = 1:numel(fields)
         history.(fields{i}) = history.(fields{i})(keep);
     end
+end
+
+function saveHistoryCsv(resultDir, history)
+    T = table(history.iteration(:), history.compliance(:), history.volumeFraction(:), ...
+        history.constraint(:), history.change(:), ...
+        'VariableNames', {'iteration', 'compliance', 'volumeFraction', 'constraint', 'change'});
+    writetable(T, fullfile(resultDir, 'referenceModuleSingleLoad_history.csv'));
+end
+
+function saveSummaryCsv(resultDir, finalVolumeFraction, finalCompliance, finalConstraint, ...
+        finalChange, mmaConverged, volumeActive, nonuniformTopology, freeRhoStd, ...
+        freeRhoRange, fd, loadValidation)
+    row.finalVolumeFraction = finalVolumeFraction;
+    row.finalCompliance = finalCompliance;
+    row.finalConstraint = finalConstraint;
+    row.finalChange = finalChange;
+    row.mmaConverged = mmaConverged;
+    row.volumeActive = volumeActive;
+    row.nonuniformTopology = nonuniformTopology;
+    row.freeRhoStd = freeRhoStd;
+    row.freeRhoRange = freeRhoRange;
+    row.fdMaxRelativeError = fd.maxRelativeError;
+    row.loadValidationPassed = loadValidation.passed;
+    writetable(struct2table(row), fullfile(resultDir, 'referenceModuleSingleLoad_summary.csv'));
 end
 
 function tf = objectiveHistoryConverged(history, tol)

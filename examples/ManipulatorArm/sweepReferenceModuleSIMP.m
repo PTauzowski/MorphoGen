@@ -15,41 +15,38 @@ addpath(genpath(projectRoot));
 rng(4, 'twister');
 
 % ----- Model parameters from coupledExamples.m ---------------------------
-E = 2.0e9;
-nu = 0.35;
-R = 0.14;
-r = 0.08;
-alpha = 22.5;
-segmentLength = 0.25;
-res_thickness = 4;
-
-h = segmentLength;
-alpha_deg = alpha;
-res_th = res_thickness;
+arm = armModelDefaults("thin");
+E = arm.E;
+nu = arm.nu;
+R = arm.R;
+r = arm.r;
+alpha = arm.alpha;
+segmentLength = arm.segmentLength;
+h = arm.h;
+alpha_deg = arm.alpha_deg;
+res_th = arm.res_th;
 wallThickness = R - r;
+Rfilter = arm.Rfilter;
 
 % ----- Sweep parameters --------------------------------------------------
 thresholdValues = [0.5, 0.7];
+useParallel = license('test', 'Distrib_Computing_Toolbox');
 
 caseSpecs = {
     makeCaseParams('single', 'My_only', string({'My'}), ...
-        {struct('My', 1.0)}, 0.4, 0.5, NaN, wallThickness);
+        {struct('My', 1.0)}, 0.4, Rfilter, NaN, wallThickness);
     makeCaseParams('single', 'Ms_only', string({'Ms'}), ...
-        {struct('Ms', 1.0)}, 0.4, 0.5, NaN, wallThickness);
+        {struct('Ms', 1.0)}, 0.4, Rfilter, NaN, wallThickness);
     makeCaseParams('single', 'Ty_only', string({'Ty'}), ...
-        {struct('Ty', 1.0)}, 0.4, 0.5, NaN, wallThickness);
-    makeCaseParams('multi', 'My_Mz_Ms_Ty_Tz_baseline', string({'My','Mz','Ms','Ty','Tz'}), ...
-        {struct('My', 1.0), struct('Mz', 1.0), struct('Ms', 1.0), struct('Ty', 1.0), struct('Tz', 1.0)}, 0.5, 1.5, 4, wallThickness);
-    makeCaseParams('multi', 'My_Mz_Ms_Ty_Tz_vf040_rmin150', string({'My','Mz','Ms','Ty','Tz'}), ...
-        {struct('My', 1.0), struct('Mz', 1.0), struct('Ms', 1.0), struct('Ty', 1.0), struct('Tz', 1.0)}, 0.4, 1.5, 4, wallThickness);
-    makeCaseParams('multi', 'My_Mz_Ms_Ty_Tz_vf030_rmin150', string({'My','Mz','Ms','Ty','Tz'}), ...
-        {struct('My', 1.0), struct('Mz', 1.0), struct('Ms', 1.0), struct('Ty', 1.0), struct('Tz', 1.0)}, 0.3, 1.5, 4, wallThickness);
-    makeCaseParams('multi', 'My_Mz_Ms_Ty_Tz_vf040_rmin100', string({'My','Mz','Ms','Ty','Tz'}), ...
-        {struct('My', 1.0), struct('Mz', 1.0), struct('Ms', 1.0), struct('Ty', 1.0), struct('Tz', 1.0)}, 0.4, 1.0, 4, wallThickness);
-    makeCaseParams('multi', 'My_Mz_Ms_Ty_Tz_vf040_rmin050_p04', string({'My','Mz','Ms','Ty','Tz'}), ...
-        {struct('My', 1.0), struct('Mz', 1.0), struct('Ms', 1.0), struct('Ty', 1.0), struct('Tz', 1.0)}, 0.4, 0.5, 4, wallThickness);
-    makeCaseParams('multi', 'My_Mz_Ms_Ty_Tz_vf040_rmin050_p08', string({'My','Mz','Ms','Ty','Tz'}), ...
-        {struct('My', 1.0), struct('Mz', 1.0), struct('Ms', 1.0), struct('Ty', 1.0), struct('Tz', 1.0)}, 0.4, 0.5, 8, wallThickness);
+        {struct('Ty', 1.0)}, 0.4, Rfilter, NaN, wallThickness);
+    makeCaseParams('multi', 'My_Mz_Ms_Ty_Tz', string({'My','Mz','Ms','Ty','Tz'}), ...
+        {struct('My', 1.0), struct('Mz', 1.0), struct('Ms', 1.0), struct('Ty', 1.0), struct('Tz', 1.0)}, 0.5, Rfilter, 4, wallThickness);
+    makeCaseParams('multi', 'My_Mz_Ms_Ty_Tz', string({'My','Mz','Ms','Ty','Tz'}), ...
+        {struct('My', 1.0), struct('Mz', 1.0), struct('Ms', 1.0), struct('Ty', 1.0), struct('Tz', 1.0)}, 0.4, Rfilter, 4, wallThickness);
+    makeCaseParams('multi', 'My_Mz_Ms_Ty_Tz', string({'My','Mz','Ms','Ty','Tz'}), ...
+        {struct('My', 1.0), struct('Mz', 1.0), struct('Ms', 1.0), struct('Ty', 1.0), struct('Tz', 1.0)}, 0.3, Rfilter, 4, wallThickness);
+    makeCaseParams('multi', 'My_Mz_Ms_Ty_Tz', string({'My','Mz','Ms','Ty','Tz'}), ...
+        {struct('My', 1.0), struct('Mz', 1.0), struct('Ms', 1.0), struct('Ty', 1.0), struct('Tz', 1.0)}, 0.4, Rfilter, 8, wallThickness);
 };
 
 % ----- Optimization controls copied from Stage 2B/2C scripts -------------
@@ -58,13 +55,13 @@ penal = 4.0;
 useComplianceNormalization = true;
 maxIterations = 140;
 minIterations = 25;
-changeTol = 1.0e-3;
+changeTol = arm.mma.changeTol;
 objectiveTol = 5.0e-3;
 volumeTol = 5.0e-3;
-moveLimit = 0.05;
-minMoveLimit = 0.003;
-moveDecay = 0.95;
-mmaDamping = 0.25;
+moveLimit = arm.mma.moveLimit;
+minMoveLimit = arm.mma.minMoveLimit;
+moveDecay = arm.mma.moveDecay;
+mmaDamping = arm.mma.mmaDamping;
 
 resultRoot = fullfile(scriptDir, 'results', 'referenceModuleSIMP_sweep');
 if ~exist(resultRoot, 'dir')
@@ -75,14 +72,25 @@ summaryRows = {};
 totalCases = numel(caseSpecs);
 
 fprintf('Reference-module SIMP diagnostic sweep: %d cases\n', totalCases);
-fprintf('Results root: %s\n\n', resultRoot);
+fprintf('Results root: %s\n', resultRoot);
+fprintf('Parallel outer case sweep: %d\n\n', useParallel);
 
 % ----- Requested diagnostic cases ---------------------------------------
-for caseIndex = 1:totalCases
-    params = caseSpecs{caseIndex};
-    params.resultRoot = resultRoot;
-    fprintf('\n[%03d/%03d] %s\n', caseIndex, totalCases, params.caseName);
-    summaryRows{end+1, 1} = runCase(params); %#ok<SAGROW>
+if useParallel
+    summaryRows = cell(totalCases, 1);
+    parfor caseIndex = 1:totalCases
+        params = caseSpecs{caseIndex};
+        params.resultRoot = resultRoot;
+        fprintf('\n[%03d/%03d] %s\n', caseIndex, totalCases, params.caseName);
+        summaryRows{caseIndex, 1} = runCase(params);
+    end
+else
+    for caseIndex = 1:totalCases
+        params = caseSpecs{caseIndex};
+        params.resultRoot = resultRoot;
+        fprintf('\n[%03d/%03d] %s\n', caseIndex, totalCases, params.caseName);
+        summaryRows{end+1, 1} = runCase(params); %#ok<SAGROW>
+    end
 end
 
 summaryTable = struct2table(vertcat(summaryRows{:}));
@@ -91,7 +99,8 @@ writetable(summaryTable, summaryFile);
 fprintf('\nSaved summary table to %s\n', summaryFile);
 
 % =========================================================================
-function params = makeCaseParams(mode, loadSetName, loadNames, loadCases, volFracTarget, RminFactor, pAgg, wallThickness)
+function params = makeCaseParams(mode, loadSetName, loadNames, loadCases, volFracTarget, Rfilter, pAgg, wallThickness)
+    RminFactor = Rfilter / wallThickness;
     if strcmp(mode, 'single')
         caseName = sprintf('%s_vf%03d_rmin%03d', ...
             loadSetName, round(100 * volFracTarget), round(100 * RminFactor));
@@ -106,7 +115,7 @@ function params = makeCaseParams(mode, loadSetName, loadNames, loadCases, volFra
     params.loadCases = loadCases(:);
     params.volFracTarget = volFracTarget;
     params.RminFactor = RminFactor;
-    params.Rfilter = RminFactor * wallThickness;
+    params.Rfilter = Rfilter;
     params.pAgg = pAgg;
     params.caseName = caseName;
 end
@@ -117,26 +126,29 @@ function row = runCase(params)
         mkdir(caseDir);
     end
 
-    E = 2.0e9;
-    nu = 0.35;
-    R = 0.14;
-    r = 0.08;
-    h = 0.25;
-    alpha_deg = 22.5;
-    res_th = 4;
+    arm = armModelDefaults("thin");
+    E = arm.E;
+    nu = arm.nu;
+    R = arm.R;
+    r = arm.r;
+    h = arm.h;
+    alpha_deg = arm.alpha_deg;
+    res_th = arm.res_th;
+    params.Rfilter = arm.Rfilter;
+    params.RminFactor = params.Rfilter / (R - r);
 
     loadTol = 0.02;
     penal = 4.0;
     useComplianceNormalization = true;
     maxIterations = 140;
     minIterations = 25;
-    changeTol = 1.0e-3;
+    changeTol = arm.mma.changeTol;
     objectiveTol = 5.0e-3;
     volumeTol = 5.0e-3;
-    moveLimit = 0.05;
-    minMoveLimit = 0.003;
-    moveDecay = 0.95;
-    mmaDamping = 0.25;
+    moveLimit = arm.mma.moveLimit;
+    minMoveLimit = arm.mma.minMoveLimit;
+    moveDecay = arm.mma.moveDecay;
+    mmaDamping = arm.mma.mmaDamping;
     thresholdValues = [0.5, 0.7];
 
     row = emptySummaryRow(params, caseDir);
@@ -152,9 +164,7 @@ function row = runCase(params)
             allLoadsPassed = allLoadsPassed && loadValidation{k}.passed;
         end
 
-        fixedNodeIds = find(mdl.fixedFaceSelector.select(mdl.mesh.nodes));
-        const_elems = find(any(ismember(mdl.mesh.elems, [mdl.loaded_node_ids(:); fixedNodeIds(:)]), 2));
-        const_elems = unique(const_elems(:));
+        const_elems = armConstRingElementIds(mdl, arm, "reference");
 
         if strcmp(params.mode, 'single')
             mdl.applyLoadCase(params.loadCases{1});
@@ -211,6 +221,7 @@ function row = runCase(params)
         densityHistogram.counts = histcounts(rho_opt, densityHistogram.edges);
 
         saveCaseOutputs(caseDir, mdl, rho_opt, const_elems, thresholdValues, params.caseName);
+        saveHistoryCsv(caseDir, history);
 
         resultFile = fullfile(caseDir, 'result.mat');
         save(resultFile, ...
@@ -472,6 +483,7 @@ function saveCaseOutputs(caseDir, mdl, rho, const_elems, thresholdValues, caseNa
     plotElementDensityField(mdl, rho, const_elems);
     title(sprintf('%s density', strrep(caseName, '_', '\_')));
     saveas(fig, fullfile(caseDir, 'final_topology.png'));
+    savefig(fig, fullfile(caseDir, 'final_topology.fig'));
     close(fig);
 
     fig = figure('Visible', 'off', 'Name', [caseName ' histogram']);
@@ -479,6 +491,7 @@ function saveCaseOutputs(caseDir, mdl, rho, const_elems, thresholdValues, caseNa
     grid on; xlabel('\rho'); ylabel('Element count');
     title(sprintf('%s density histogram', strrep(caseName, '_', '\_')));
     saveas(fig, fullfile(caseDir, 'density_histogram.png'));
+    savefig(fig, fullfile(caseDir, 'density_histogram.fig'));
     close(fig);
 
     for i = 1:numel(thresholdValues)
@@ -491,8 +504,30 @@ function saveCaseOutputs(caseDir, mdl, rho, const_elems, thresholdValues, caseNa
         xlabel('x'); ylabel('y'); zlabel('z');
         title(sprintf('%s, \\rho > %.1f', strrep(caseName, '_', '\_'), t));
         saveas(fig, fullfile(caseDir, sprintf('threshold_rho_gt_%02d.png', round(10 * t))));
+        savefig(fig, fullfile(caseDir, sprintf('threshold_rho_gt_%02d.fig', round(10 * t))));
         close(fig);
     end
+end
+
+function saveHistoryCsv(caseDir, history)
+    T = table(history.iteration(:), history.objective(:), ...
+        history.volumeFraction(:), history.constraint(:), history.change(:), ...
+        'VariableNames', {'iteration', 'objective', 'volumeFraction', 'constraint', 'change'});
+
+    if isfield(history, 'compliance')
+        T = [T array2table(history.compliance, ...
+            'VariableNames', numberedNames('compliance', size(history.compliance, 2)))]; %#ok<AGROW>
+    end
+    if isfield(history, 'normalizedCompliance')
+        T = [T array2table(history.normalizedCompliance, ...
+            'VariableNames', numberedNames('normalizedCompliance', size(history.normalizedCompliance, 2)))]; %#ok<AGROW>
+    end
+
+    writetable(T, fullfile(caseDir, 'history.csv'));
+end
+
+function names = numberedNames(prefix, n)
+    names = arrayfun(@(i) sprintf('%s_%d', prefix, i), 1:n, 'UniformOutput', false);
 end
 
 function plotElementDensityField(mdl, rho, const_elems)

@@ -3,6 +3,7 @@ classdef (Abstract) FEAnalysis < handle
     properties
         felems, mesh, ndofs, supports, rotations, Pnodal, qnodal, Pfem, qfem;
         selTolerance;
+        matrixIndexCache;
     end
   
     methods
@@ -24,6 +25,7 @@ classdef (Abstract) FEAnalysis < handle
             obj.Pfem = []; %zeros( size(mesh.nodes,1) * size(obj.ndofs,2), 1 );
             obj.qnodal = zeros( size(mesh.nodes,1), size(obj.ndofs,2) );
             obj.supports = zeros( size(mesh.nodes,1), size(obj.ndofs,2) );
+            obj.matrixIndexCache = [];
         end
         function dim = getTaskDim(obj)
             dim = size(obj.mesh.nodes,1)*size(obj.ndofs,2);
@@ -84,14 +86,30 @@ classdef (Abstract) FEAnalysis < handle
             F=reshape(Fe,size(obj.ndofs,2),size(obj.mesh.nodes,1))';
         end
         function K = globalMatrixAggregation(obj, fname)
-            K = [];
-            for k=1:max(size(obj.felems))
+            parts = cell(numel(obj.felems), 1);
+            for k=1:numel(obj.felems)
                 if ismethod(obj.felems{k},fname)
-                    K = [ K obj.felems{k}.(fname)(obj.mesh.nodes) ];
+                    parts{k} = obj.felems{k}.(fname)(obj.mesh.nodes);
                 else
-                    error("Class " + class(fe) + " or its predecessors not implements function :"+fname);
+                    error("Class " + class(obj.felems{k}) + " or its predecessors not implements function :" + fname);
                 end
             end
+            K = vertcat(parts{:});
+        end
+        function K = globalMatrixAggregationWeighted(obj, fname, x)
+            parts = cell(numel(obj.felems), 1);
+            ei = obj.getElemIndices();
+            if numel(x) == 1
+                x = ones(obj.getTotalElemsNumber(), 1);
+            end
+            for k = 1:numel(obj.felems)
+                if ismethod(obj.felems{k}, fname)
+                    parts{k} = obj.felems{k}.(fname)(obj.mesh.nodes, x(ei{k}));
+                else
+                    error("Class " + class(obj.felems{k}) + " or its predecessors not implements function :" + fname);
+                end
+            end
+            K = vertcat(parts{:});
         end
         function K = globalSolutionDependendMatrixAggregation(obj, fname )
             K = [];
@@ -104,6 +122,13 @@ classdef (Abstract) FEAnalysis < handle
             end
         end
         function [I,J,V,Ksize] = globalMatrixIndices(obj)
+            if ~isempty(obj.matrixIndexCache)
+                I = obj.matrixIndexCache.I;
+                J = obj.matrixIndexCache.J;
+                V = obj.matrixIndexCache.V;
+                Ksize = obj.matrixIndexCache.Ksize;
+                return
+            end
             I=[];
             J=[];
             V=[];
@@ -115,6 +140,7 @@ classdef (Abstract) FEAnalysis < handle
                 V = [ V; reshape(Ve',[],1) ];
                 Ksize = Ksize + Kesize;
             end
+            obj.matrixIndexCache = struct('I', I, 'J', J, 'V', V, 'Ksize', Ksize);
         end
         function id = findDOFsIndices(obj,dofnames)
             % Resolve DOFs in the same order requested by the caller.
@@ -233,8 +259,10 @@ classdef (Abstract) FEAnalysis < handle
             for l=1:max(size(obj.felems))
                 el = obj.felems{l}.elems;
                 sfv=obj.felems{l}.sf.getRecoveryMatrix();
+                nElemResults = size(obj.felems{l}.results.gp.all, 1);
                 for k=1:size(el,1)
-                  neres=tensorprod(sfv, obj.felems{l}.results.gp.all(:,k,:),1,3);
+                  gpValues = reshape(obj.felems{l}.results.gp.all(:,k,:), nElemResults, []);
+                  neres = sfv * gpValues.';
                   nres( el( k, : ), : ) = nres( el( k, : ), : ) + neres;
                   ires( el( k, : ), : ) = ires( el( k, : ), : ) + 1;
                 end

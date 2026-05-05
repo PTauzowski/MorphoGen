@@ -17,5 +17,6 @@ function plotHistory(history, configs, resultRoot)
     grid on; xlabel('Iteration'); ylabel('Volume fraction');
 
     saveas(fig, fullfile(resultRoot, 'convergence_history.png'));
+    savefig(fig, fullfile(resultRoot, 'convergence_history.fig'));
     close(fig);
 end

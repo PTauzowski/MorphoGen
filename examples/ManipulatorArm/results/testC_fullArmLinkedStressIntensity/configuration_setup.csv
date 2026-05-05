@@ -1,7 +1,7 @@
-configName,configLabel,nNodes,nElems,nTaskDofs,nSupportedDofs,nLoadedDofsBeforeSolve
-min_bending,Min M_z,60475,48144,181425,885,295
-min_torsion,Min M_s,60475,48144,181425,885,295
-min_shear,Min T_y,60475,48144,181425,885,295
-max_bending,Max M_z,60475,48144,181425,885,295
-max_torsion,Max M_s,60475,48144,181425,885,295
-max_shear,Max T_y,60475,48144,181425,885,295
+configName,configLabel,nNodes,nElems,nTaskDofs,nSupportedDofs,nLoadedDofsBeforeSolve,analysisClass,useSecondOrderBuckling,bucklingLambdaFactor
+min_bending,Min M_z,195800,97680,587400,1320,440,LinearElasticityWeighted,0,0.95
+min_torsion,Min M_s,195800,97680,587400,1320,440,LinearElasticityWeighted,0,0.95
+min_shear,Min T_y,195800,97680,587400,1320,440,LinearElasticityWeighted,0,0.95
+max_bending,Max M_z,195800,97680,587400,1320,440,LinearElasticityWeighted,0,0.95
+max_torsion,Max M_s,195800,97680,587400,1320,440,LinearElasticityWeighted,0,0.95
+max_shear,Max T_y,195800,97680,587400,1320,440,LinearElasticityWeighted,0,0.95

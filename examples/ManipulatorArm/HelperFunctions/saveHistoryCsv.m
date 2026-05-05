@@ -6,6 +6,9 @@ function saveHistoryCsv(resultRoot, history, configs)
         rows(i).J = history.J(i);
         rows(i).volumeFraction = history.volumeFraction(i);
         rows(i).change = history.change(i);
+        if isfield(history, 'iterationTimeSec')
+            rows(i).iterationTimeSec = history.iterationTimeSec(i);
+        end
         for k = 1:numel(configs)
             fieldName = ['C_' configs{k}.name];
             rows(i).(fieldName) = history.C(i, k);

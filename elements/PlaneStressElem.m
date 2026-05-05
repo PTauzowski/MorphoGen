@@ -104,7 +104,7 @@ classdef PlaneStressElem < PlaneElem
             obj.results.gp.all(15,:,:) = maxs(1,:,:);
             obj.results.gp.all(16,:,:) = stheta(1,:,:);
             obj.results.gp.all(17,:,:) = sHM(1,:,:);
-            obj.results.gp.all(18,:,:) = repmat(x,1,nip);
+            obj.results.gp.all(18,:,:) = repmat(reshape(x(:)', 1, nelems, 1), 1, 1, nip);
         end
         function [HMs, dHMs] = computeHMstress(obj,nodes, nelem, q, ddq, penalty, varargin)
             nelems = size(obj.elems,1);
@@ -185,4 +185,3 @@ classdef PlaneStressElem < PlaneElem
         
     end
 end
-

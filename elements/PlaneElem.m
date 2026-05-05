@@ -18,48 +18,87 @@ classdef PlaneElem < FiniteElement
                 N(2,2:2:nd*nnodes,k) = Nsf(k,:);
             end
         end
+        function [Jinv, detJ] = jacobianInversePages(obj, nodes, elemIds, dNtr)
+            elemX = obj.elementNodePages(nodes, elemIds);
+            nelems = numel(elemIds);
+            nip = size(dNtr, 3);
+            detJ = zeros(1, 1, nelems, nip);
+            Jinv = zeros(2, 2, nelems, nip);
+            for ip = 1:nip
+                J = pagemtimes(dNtr(:, :, ip), elemX);
+                detJ(:, :, :, ip) = J(1,1,:) .* J(2,2,:) - J(1,2,:) .* J(2,1,:);
+                dj = detJ(:, :, :, ip);
+                Jinv(1,1,:,ip) =  J(2,2,:) ./ dj;
+                Jinv(1,2,:,ip) = -J(1,2,:) ./ dj;
+                Jinv(2,1,:,ip) = -J(2,1,:) ./ dj;
+                Jinv(2,2,:,ip) =  J(1,1,:) ./ dj;
+            end
+        end
+        function B = strainBPages(obj, Jinv, dNtr)
+            nnodes = size(obj.elems, 2);
+            dim = 2 * nnodes;
+            nelems = size(Jinv, 3);
+            nip = size(Jinv, 4);
+            B = zeros(3, dim, nelems, nip);
+            for ip = 1:nip
+                dNx = pagemtimes(Jinv(:, :, :, ip), dNtr(:, :, ip));
+                cols = 1:nnodes;
+                c1 = 2 * cols - 1;
+                c2 = 2 * cols;
+                B(1, c1, :, ip) = dNx(1, cols, :);
+                B(2, c2, :, ip) = dNx(2, cols, :);
+                B(3, c1, :, ip) = dNx(2, cols, :);
+                B(3, c2, :, ip) = dNx(1, cols, :);
+            end
+        end
+        function Sg = geometricGradientPages(~, Jinv, dNtr)
+            nelems = size(Jinv, 3);
+            nip = size(Jinv, 4);
+            nnodes = size(dNtr, 2);
+            Sg = zeros(2, nnodes, nelems, nip);
+            for ip = 1:nip
+                Sg(:, :, :, ip) = pagemtimes(Jinv(:, :, :, ip), dNtr(:, :, ip));
+            end
+        end
+        function s = geometricStressPages(obj, elemIds, nip)
+            nelems = numel(elemIds);
+            s = zeros(2, 2, nelems, nip);
+            stress = obj.results.gp.stress(:, elemIds, :);
+            s(1,1,:,:) = reshape(stress(1,:,:), 1, 1, nelems, nip);
+            s(2,2,:,:) = reshape(stress(2,:,:), 1, 1, nelems, nip);
+            s(1,2,:,:) = reshape(stress(3,:,:), 1, 1, nelems, nip);
+            s(2,1,:,:) = reshape(stress(3,:,:), 1, 1, nelems, nip);
+        end
+        function K = composeGeometricPages(~, So, scale)
+            nnodes = size(So, 1);
+            nelems = size(So, 3);
+            dim = 2 * nnodes;
+            K = zeros(dim, dim, nelems);
+            So = So .* reshape(scale, 1, 1, []);
+            K(1:2:dim, 1:2:dim, :) = So;
+            K(2:2:dim, 2:2:dim, :) = So;
+        end
         function K = computeStifnessMatrix(obj, nodes, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
             ndofs = size( obj.ndofs,2);
             dim = nnodes * ndofs;
             integrator = obj.sf.createIntegrator();
-            nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
-            nnd = size(dN,1); 
+            dN = obj.sf.computeGradient(integrator.points);
             dNtr = permute(dN,[2,1,3]);
-            dNtrc = cell(size(dNtr,3),1);
-            if ( nargin == 3 )
-                x=varargin{1};
-            else
-                x=ones(nelems,1);
-            end
-            for i=1:nip
-                dNtrc{i}=dNtr(:,:,i);
-            end
-            K = zeros( dim , dim, nelems );
-            B = zeros(3,dim);
-            weights = integrator.weights;
+            x = obj.elementScale(nelems, varargin{:});
+            K = zeros(dim, dim, nelems);
+            chunkSize = obj.assemblyChunkSize(dim);
             D = obj.mat.D;
             h = obj.props.h;
-            for k=1:nelems
-                elemX = nodes(obj.elems(k,:),:);
-                Ke = zeros( dim , dim );
-                for i=1:nip
-                    J = dNtrc{i}*elemX;
-                    detJ = J(1,1) * J(2,2) - J(1,2) * J(2,1);
-                    dNx = (1 / detJ * [ J(2,2) -J(1,2); -J(2,1)  J(1,1) ]) * dNtrc{i};
-                    for j = 1:nnd
-                      B(1, 2*j-1) = dNx(1,j);
-                      B(2, 2*j)   = dNx(2,j);
-                      B(3, 2*j-1) = dNx(2,j);
-                      B(3, 2*j)   = dNx(1,j);
-                    end
-                    Ke = Ke + abs(detJ) * weights(i) * h * B'*D*B;
-                end
-                K(:,:,k) = x(k)*Ke;
+            for first = 1:chunkSize:nelems
+                elemIds = first:min(first + chunkSize - 1, nelems);
+                [Jinv, detJ] = obj.jacobianInversePages(nodes, elemIds, dNtr);
+                B = obj.strainBPages(Jinv, dNtr);
+                K(:, :, elemIds) = obj.integratePagematrix(B, D, detJ, ...
+                    integrator.weights, h * x(elemIds));
             end
-            K=K(:);
+            K = obj.flattenElementMatrices(K);
         end
         function K = computeGeometricStifnessMatrix(obj, nodes, varargin)
             nelems = size(obj.elems,1);
@@ -67,50 +106,21 @@ classdef PlaneElem < FiniteElement
             ndofs = size( obj.ndofs,2);
             dim = nnodes * ndofs;
             integrator = obj.sf.createIntegrator();
-            nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
+            dN = obj.sf.computeGradient(integrator.points);
             dNtr = permute(dN,[2,1,3]);
-            dNtrc = cell(size(dNtr,3),1);
-            if ( nargin == 3 )
-                x=varargin{1};
-            else
-                x=ones(nelems,1);
-            end
-            for i=1:nip
-                dNtrc{i}=dNtr(:,:,i);
-            end
-            K = zeros( dim , dim, nelems );
-            Sg = zeros(2,nnodes);
-            weights = integrator.weights;
-            s = zeros(2,2);
+            x = obj.elementScale(nelems, varargin{:});
+            K = zeros(dim, dim, nelems);
+            chunkSize = obj.assemblyChunkSize(dim);
             h = obj.props.h;
-            for k=1:nelems
-                elemX = nodes(obj.elems(k,:),:);
-                So=zeros(nnodes,nnodes);
-                %Kg = zeros( dim , dim );
-                for i=1:nip
-                    J = dNtrc{i}*elemX;
-                    detJ = J(1,1) * J(2,2) - J(1,2) * J(2,1);
-                    dNx = (1 / detJ * [ J(2,2) -J(1,2); -J(2,1)  J(1,1) ]) * dNtrc{i};
-                    
-                    s(1,1)=obj.results.gp.stress(1,k,i);
-                    s(2,2)=obj.results.gp.stress(2,k,i);
-                    s(2,1)=obj.results.gp.stress(3,k,i);
-                    s(1,2)=obj.results.gp.stress(3,k,i);
-                    for j = 1:nnodes
-                       Sg(1,j) = dNx(1,j);
-                       Sg(2,j) = dNx(2,j);  
-                    end
-                    So = So + abs(detJ) * integrator.weights(i) * Sg'*s*Sg;
-                    %Kg=Kg+abs(detJ) * integrator.weights(i) * Sg'*s*Sg;
-                end
-                %K(1:nnodes,1:nnodes,k) = x(k)*h*So;
-                %K(nnodes+1:2*nnodes,nnodes+1:2*nnodes,k) = x(k)*h*So;
-                %K(:,:,k) = x(k)*h*Kg;
-                K(1:2:dim,1:2:dim,k) = x(k)*So;
-                K(2:2:dim,2:2:dim,k) = x(k)*So;
+            for first = 1:chunkSize:nelems
+                elemIds = first:min(first + chunkSize - 1, nelems);
+                [Jinv, detJ] = obj.jacobianInversePages(nodes, elemIds, dNtr);
+                Sg = obj.geometricGradientPages(Jinv, dNtr);
+                s = obj.geometricStressPages(elemIds, size(integrator.points, 1));
+                So = obj.integratePagematrix(Sg, s, detJ, integrator.weights, ones(numel(elemIds), 1));
+                K(:, :, elemIds) = obj.composeGeometricPages(So, h * x(elemIds));
             end
-            K=K(:);
+            K = obj.flattenElementMatrices(K);
         end
         function M = computeMassMatrix(obj, nodes, varargin)
             nelems = size(obj.elems,1);
@@ -118,33 +128,32 @@ classdef PlaneElem < FiniteElement
             ndofs = size( obj.ndofs,2);
             dim = nnodes * ndofs;
             integrator = obj.sf.createIntegrator();
-            nip = size(integrator.points,1);
-            N = obj.shapeMatrix( integrator.points );
-            dN = obj.sf.computeGradient( integrator.points );
+            N = obj.shapeMatrix(integrator.points);
+            dN = obj.sf.computeGradient(integrator.points);
             dNtr = permute(dN,[2,1,3]);
-            dNtrc = cell(size(dNtr,3),1);
-            if ( nargin == 3 )
-                x=varargin{1};
+            x = obj.elementScale(nelems, varargin{:});
+            M = zeros(dim, dim, nelems);
+            chunkSize = obj.assemblyChunkSize(dim);
+            h = obj.props.h;
+            if isprop(obj.mat, 'M') && ~isempty(obj.mat.M)
+                massMatrix = obj.mat.M;
+            elseif isprop(obj.mat, 'rho') && ~isempty(obj.mat.rho)
+                massMatrix = obj.mat.rho * eye(ndofs);
             else
-                x=ones(nelems,1);
+                massMatrix = eye(ndofs);
             end
-            for i=1:nip
-                dNtrc{i}=dNtr(:,:,i);
-            end
-            M = zeros( dim , dim, nelems );
-            weights = integrator.weights;
-            rho=obj.mat.rho;
-            for k=1:nelems
-                elemX = nodes(obj.elems(k,:),:);
-                Me = zeros( dim , dim );
-                for i=1:nip
-                    J = dNtrc{i}*elemX;
-                    detJ = J(1,1) * J(2,2) - J(1,2) * J(2,1);
-                    Me = Me + abs(detJ) * weights(i)  * N(:,:,i)' * N(:,:,i);
+            for first = 1:chunkSize:nelems
+                elemIds = first:min(first + chunkSize - 1, nelems);
+                [~, detJ] = obj.jacobianInversePages(nodes, elemIds, dNtr);
+                nc = numel(elemIds);
+                Npages = zeros(ndofs, dim, nc, size(integrator.points, 1));
+                for ip = 1:size(integrator.points, 1)
+                    Npages(:, :, :, ip) = repmat(N(:, :, ip), 1, 1, nc);
                 end
-                M(:,:,k) = x(k) * h * rho * Me;
+                M(:, :, elemIds) = obj.integratePagematrix(Npages, massMatrix, detJ, ...
+                    integrator.weights, h * x(elemIds));
             end
-            M=M(:);
+            M = obj.flattenElementMatrices(M);
         end
         function dK = computeStifnessMatrixGradMat(obj, nodes, q, varargin)
             nelems = size(obj.elems,1);
@@ -153,42 +162,22 @@ classdef PlaneElem < FiniteElement
             nsens = size(obj.mat.dD,3);
             dim = nnodes * ndofs;
             integrator = obj.sf.createIntegrator();
-            nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
-            nnd = size(dN,1); 
+            dN = obj.sf.computeGradient(integrator.points);
             dNtr = permute(dN,[2,1,3]);
-            dNtrc = cell(size(dNtr,3),1);
-            if ( nargin == 4 )
-                x=varargin{1};
-            else
-                x=ones(nelems,1);
-            end
-            for i=1:nip
-                dNtrc{i}=dNtr(:,:,i);
-            end
+            x = obj.elementScale(nelems, varargin{:});
             dK = zeros( dim, nelems, nsens );
-            B = zeros(3,dim);
-            weights = integrator.weights;
             h = obj.props.h;
             qelems = reshape( q( obj.elems',:)', nnodes * ndofs, nelems );
-            for k=1:nelems
-                elemX = nodes(obj.elems(k,:),:);
+            chunkSize = obj.assemblyChunkSize(dim);
+            for first = 1:chunkSize:nelems
+                elemIds = first:min(first + chunkSize - 1, nelems);
+                [Jinv, detJ] = obj.jacobianInversePages(nodes, elemIds, dNtr);
+                B = obj.strainBPages(Jinv, dNtr);
+                qpages = reshape(qelems(:, elemIds), dim, 1, []);
                 for s=1:nsens
-                    dD = obj.mat.dD(:,:,s);
-                    Ke = zeros( dim , dim );
-                    for i=1:nip
-                        J = dNtrc{i}*elemX;
-                        detJ = J(1,1) * J(2,2) - J(1,2) * J(2,1);
-                        dNx = (1 / detJ * [ J(2,2) -J(1,2); -J(2,1)  J(1,1) ]) * dNtrc{i};
-                        for j = 1:nnd
-                          B(1, 2*j-1) = dNx(1,j);
-                          B(2, 2*j)   = dNx(2,j);
-                          B(3, 2*j-1) = dNx(2,j);
-                          B(3, 2*j)   = dNx(1,j);
-                        end
-                        Ke = Ke + abs(detJ) * weights(i) * h * B'*dD*B;
-                    end
-                    dK(:,k,s) = x(k)*Ke*qelems(:,k);
+                    Ke = obj.integratePagematrix(B, obj.mat.dD(:,:,s), detJ, ...
+                        integrator.weights, h * x(elemIds));
+                    dK(:, elemIds, s) = squeeze(pagemtimes(Ke, qpages));
                 end
             end
             dK=reshape(dK,[nnodes * ndofs*nelems nsens]);
@@ -197,44 +186,23 @@ classdef PlaneElem < FiniteElement
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
             ndofs = size( obj.ndofs,2);
-            nsens = size(obj.mat.dD,3);
             dim = nnodes * ndofs;
             integrator = obj.sf.createIntegrator();
-            nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
-            nnd = size(dN,1); 
+            dN = obj.sf.computeGradient(integrator.points);
             dNtr = permute(dN,[2,1,3]);
-            dNtrc = cell(size(dNtr,3),1);
-            if ( nargin == 4 )
-                x=varargin{1};
-            else
-                x=ones(nelems,1);
-            end
-            for i=1:nip
-                dNtrc{i}=dNtr(:,:,i);
-            end
+            x = obj.elementScale(nelems, varargin{:});
             dK = zeros( dim, nelems );
-            B = zeros(3,dim);
-            weights = integrator.weights;
             h = obj.props.h;
             qelems = reshape( q( obj.elems',:)', nnodes * ndofs, nelems );
             D=obj.mat.D;
-            for k=1:nelems
-                elemX = nodes(obj.elems(k,:),:);
-                Ke = zeros( dim , dim );
-                for i=1:nip
-                    J = dNtrc{i}*elemX;
-                    detJ = J(1,1) * J(2,2) - J(1,2) * J(2,1);
-                    dNx = (1 / detJ * [ J(2,2) -J(1,2); -J(2,1)  J(1,1) ]) * dNtrc{i};
-                    for j = 1:nnd
-                      B(1, 2*j-1) = dNx(1,j);
-                      B(2, 2*j)   = dNx(2,j);
-                      B(3, 2*j-1) = dNx(2,j);
-                      B(3, 2*j)   = dNx(1,j);
-                    end
-                    Ke = Ke + abs(detJ) * weights(i) * h * B'*D*B;
-                end
-                dK(:,k) = Ke*qelems(:,k);
+            chunkSize = obj.assemblyChunkSize(dim);
+            for first = 1:chunkSize:nelems
+                elemIds = first:min(first + chunkSize - 1, nelems);
+                [Jinv, detJ] = obj.jacobianInversePages(nodes, elemIds, dNtr);
+                B = obj.strainBPages(Jinv, dNtr);
+                Ke = obj.integratePagematrix(B, D, detJ, integrator.weights, h * x(elemIds));
+                qpages = reshape(qelems(:, elemIds), dim, 1, []);
+                dK(:, elemIds) = squeeze(pagemtimes(Ke, qpages));
             end
         end
         function K = computeStifnessMatrixConst(obj, nodes, x)
@@ -243,37 +211,16 @@ classdef PlaneElem < FiniteElement
             ndofs = size( obj.ndofs,2);
             dim = nnodes * ndofs;
             integrator = obj.sf.createIntegrator();
-            nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
-            nnd = size(dN,1); 
+            dN = obj.sf.computeGradient(integrator.points);
             dNtr = permute(dN,[2,1,3]);
-            dNtrc = cell(size(dNtr,3),1);
-            for i=1:nip
-                dNtrc{i}=dNtr(:,:,i);
-            end
-            K = zeros( dim , dim, nelems );
-            B = zeros(3,dim);
-            weights = integrator.weights;
             D = obj.mat.D;
             h = obj.props.h;
-            elemX = nodes(obj.elems(1,:),:);
-            Ke = zeros( dim , dim );
-            for i=1:nip
-                J = dNtrc{i}*elemX;
-                detJ = J(1,1)*J(2,2)-J(1,2)*J(2,1);
-                dNx = (1/detJ*[ J(2,2) -J(1,2); -J(2,1)  J(1,1) ])*dNtrc{i};
-                for j = 1:nnd
-                  B(1, 2*j-1) = dNx(1,j);
-                  B(2, 2*j)   = dNx(2,j);
-                  B(3, 2*j-1) = dNx(2,j);
-                  B(3, 2*j)   = dNx(1,j);
-                end
-                Ke=Ke+abs(detJ)*weights(i)*h*B'*D*B;
-            end
-            for k=1:nelems    
-                K(:,:,k) = x(k)*Ke;
-            end
-            K=K(:);
+            x = obj.elementScale(nelems, x);
+            [Jinv, detJ] = obj.jacobianInversePages(nodes, 1, dNtr);
+            B = obj.strainBPages(Jinv, dNtr);
+            Ke = obj.integratePagematrix(B, D, detJ, integrator.weights, h);
+            K = Ke .* reshape(x, 1, 1, []);
+            K = obj.flattenElementMatrices(K);
         end
         function [P, volume] = loadLineIntegral(obj, mode, nodes, edges, dofnames, di, P, valueFn)
             inds = obj.findDofIndices( dofnames );

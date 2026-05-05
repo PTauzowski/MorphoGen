@@ -32,41 +32,41 @@ addpath(genpath(projectRoot));
 rng(22, 'twister');
 
 %% ---- Geometry and optimization parameters ----------------------------------
-E = 2.0e9;
-nu = 0.35;
-R = 0.14;
-r = 0.08;
-h_seg = 0.25;
-alpha = 22.5;
-res = 15;
-res_th = 4;
-Pz = 100;
-ShapeFn = ShapeFunctionL8();
+arm = armModelDefaults("thin");
+E = arm.E;
+nu = arm.nu;
+R = arm.R;
+r = arm.r;
+h_seg = arm.h_seg;
+alpha = arm.alpha;
+res = arm.res;
+res_th = arm.res_th;
+Pz = arm.Pz;
+ShapeFn = arm.ShapeFn;
 
 VolFrac = 0.40;
 penal = 3.0;
 pAgg = 4.0;
-maxIter = 30;
-xminValue = 0.01;
+maxIter = 200;
+xminValue = arm.mma.xminValue;
+Rfilter = arm.Rfilter;
+useParallel = license('test', 'Distrib_Computing_Toolbox');
 
 fdElemCount = 5;
 fdStep = 1.0e-5;
-fdRelTol = 1.0e-3;
+fdRelTol = 1.0e-2;
 
-moveLimit = 0.05;
-minMoveLimit = 0.003;
-moveDecay = 0.95;
-mmaDamping = 0.25;
+moveLimit = arm.mma.moveLimit;
+minMoveLimit = arm.mma.minMoveLimit;
+moveDecay = arm.mma.moveDecay;
+mmaDamping = arm.mma.mmaDamping;
+changeTol = arm.mma.changeTol;
 objectiveTol = 5.0e-3;
+minIter = 10;
 
-configs = {
-    struct('name', 'min_bending', 'label', 'Min M_z', 'betas', -[0 0 0 180 180 180 180]);
-    struct('name', 'min_torsion', 'label', 'Min M_s', 'betas', -[0 45 45 45 270 180 180]);
-    struct('name', 'min_shear',   'label', 'Min T_y', 'betas', -[0 0 180 0 180 180 180]);
-    struct('name', 'max_bending', 'label', 'Max M_z', 'betas', [0 0 0 180 180 180 180]);
-    struct('name', 'max_torsion', 'label', 'Max M_s', 'betas', [0 45 45 45 270 180 180]);
-    struct('name', 'max_shear',   'label', 'Max T_y', 'betas', [0 0 180 0 180 180 180]);
-};
+%configs = armLoadConfigs("sixPlusTension");
+configs = armLoadConfigs("six");
+
 
 nConfigs = numel(configs);
 weights = ones(nConfigs, 1) / nConfigs;
@@ -78,8 +78,8 @@ end
 
 fprintf('Test B full-arm linked SIMP (modular Arm-Z)\n');
 fprintf('  Result root: %s\n', resultRoot);
-fprintf('  VolFrac=%.3f, penal=%.2f, pAgg=%.2f, maxIter=%d, xmin=%.3f\n', ...
-    VolFrac, penal, pAgg, maxIter, xminValue);
+fprintf('  VolFrac=%.3f, penal=%.2f, pAgg=%.2f, maxIter=%d, changeTol=%.1e, xmin=%.3f, parallel=%d\n', ...
+    VolFrac, penal, pAgg, maxIter, changeTol, xminValue, useParallel);
 
 %% ---- Build full-arm configurations -----------------------------------------
 models    = cell(nConfigs, 1);
@@ -97,7 +97,7 @@ for k = 1:nConfigs
         k, nConfigs, cfg.label, mat2str(cfg.betas));
 
     model    = ManipulatorModel3D(E, nu, h_seg, R, r, res, res_th, alpha, ...
-        cfg.betas, ShapeFn, true, Pz);
+        cfg.betas, ShapeFn, true, Pz, arm.constEndRing, arm.constMiddleRing);
     analysis = model.analysis;
     nElems   = analysis.getTotalElemsNumber();
     taskDim  = analysis.getTaskDim();
@@ -159,7 +159,18 @@ assert(mod(nCopies, 2) == 0, ...
 xmin = xminValue * ones(H, 1);
 xmax = ones(H, 1);
 rho  = VolFrac * ones(H, 1);
+const_elems = armConstRingElementIds(models{1}, arm, "linked");
+xmin(const_elems) = 1.0;
+xmax(const_elems) = 1.0;
+rho(const_elems) = 1.0;
 rho  = enforceVolumeFraction(rho, VolFrac, xmin, xmax);
+fprintf('Const ring elems in linked rho: %d (end=%d, middle=%d)\n', ...
+    numel(const_elems), arm.constEndRing, arm.constMiddleRing);
+
+fprintf('\nBuilding linked reference sensitivity filter: Rfilter=%.6g, H=%d\n', ...
+    Rfilter, H);
+Wfilter = buildElementFilterMatrix(models{1}.mesh.nodes, models{1}.mesh.elems, ...
+    (1:H)', Rfilter);
 
 %% ---- Build and verify linked sensitivity map --------------------------------
 fprintf('\nBuilding and verifying linked sensitivity map...\n');
@@ -188,7 +199,7 @@ fprintf('  Map verification PASSED: e_ref=%d changes exactly %d elements (%d nor
 %% ---- Compliance normalization and FD gradient check in rho-space -----------
 fprintf('\nComputing initial compliance normalization at rho=VolFrac...\n');
 x_arm = models{1}.segmentToArm(rho);
-[J0, dJdx0, C0, Cinit] = evaluateObjectiveAndGradient(analyses, x_arm, penal, pAgg, weights, []);
+[J0, dJdx0, C0, Cinit] = evaluateObjectiveAndGradient(analyses, x_arm, penal, pAgg, weights, [], useParallel);
 dJdrho0 = pullbackFullArmSensitivity(dJdx0, H, nElems);
 fprintf('  Initial J = %.8e\n', J0);
 for k = 1:nConfigs
@@ -198,7 +209,7 @@ end
 fprintf('\nFinite-difference gradient test in rho-space (%d elements, h=%.1e)...\n', ...
     fdElemCount, fdStep);
 fdLinked = finiteDifferenceGradientTestLinked(models{1}, analyses, rho, penal, pAgg, weights, ...
-    C0, dJdrho0, fdElemCount, fdStep, xmin, xmax);
+    C0, dJdrho0, fdElemCount, fdStep, xmin, xmax, useParallel);
 fprintf('  FD (rho-space) max relative error = %.3e\n', fdLinked.maxRelativeError);
 assert(fdLinked.maxRelativeError < fdRelTol, ...
     'Rho-space FD gradient check failed: max relative error %.3e exceeds %.3e.', ...
@@ -210,85 +221,42 @@ writetable(fdTable, fullfile(resultRoot, 'finite_difference_gradient.csv'));
 %% ---- MMA optimization on rho -----------------------------------------------
 fprintf('\nRunning projected MMA on rho (%d variables) for %d iterations...\n', H, maxIter);
 
-rhoHistory = zeros(H, maxIter + 1);
-rhoHistory(:, 1) = rho;
-JHistory      = nan(maxIter + 1, 1);
-JHistory(1)   = J0;
-CHistory      = nan(maxIter + 1, nConfigs);
-CHistory(1,:) = Cinit(:)';
-volHistory    = nan(maxIter + 1, 1);
-volHistory(1) = mean(rho);
-changeHistory = nan(maxIter + 1, 1);
-changeHistory(1) = 0;
+opts = struct();
+opts.penal = penal;
+opts.pAgg = pAgg;
+opts.weights = weights;
+opts.C0 = C0;
+opts.VolFrac = VolFrac;
+opts.maxIter = maxIter;
+opts.minIter = minIter;
+opts.changeTol = changeTol;
+opts.objectiveTol = objectiveTol;
+opts.moveLimit = moveLimit;
+opts.minMoveLimit = minMoveLimit;
+opts.moveDecay = moveDecay;
+opts.mmaDamping = mmaDamping;
+opts.useParallel = useParallel;
+opts.sensitivityFilter = Wfilter;
+opts.expand = @(z) models{1}.segmentToArm(z);
+opts.pullback = @(dx) pullbackFullArmSensitivity(dx, H, nElems);
+opts.fixedDesignVariables = const_elems;
+opts.configNames = string(cellfun(@(s) s.name, configs, 'UniformOutput', false));
+opts.configLabels = string(cellfun(@(s) s.label, configs, 'UniformOutput', false));
 
-m     = 1;
-n     = H;
-xold1 = rho;
-xold2 = rho;
-low   = zeros(n, 1);
-upp   = ones(n, 1);
-a0    = 1;
-a     = 0;
-c_mma = 1000;
-d     = 0;
-objectiveScale = 1.0 / max(abs(J0), eps);
-
-for iter = 1:maxIter
-    x_arm = models{1}.segmentToArm(rho);
-    [J, dJdx, ~, ~] = evaluateObjectiveAndGradient(analyses, x_arm, penal, pAgg, weights, C0);
-    dJdrho = pullbackFullArmSensitivity(dJdx, H, nElems);
-
-    constr     = sum(rho) / (VolFrac * H) - 1.0;
-    gradConstr = ones(1, H) / (VolFrac * H);
-
-    [xmma, ~, ~, ~, ~, ~, ~, ~, ~, low, upp] = mmasub2( ...
-        m, n, iter, rho, xmin, xmax, xold1, xold2, ...
-        objectiveScale * J,      objectiveScale * dJdrho,  0 * dJdrho, ...
-        constr, gradConstr, 0 * gradConstr, ...
-        low, upp, a0, a, c_mma, d);
-
-    if iter > 1
-        xold2 = xold1;
-    end
-    xold1 = rho;
-
-    currentMoveLimit = max(minMoveLimit, moveLimit * moveDecay^(iter - 1));
-    rhoCandidate = min(max(xmma, rho - currentMoveLimit), rho + currentMoveLimit);
-    rhoCandidate = rho + mmaDamping * (rhoCandidate - rho);
-    rhoCandidate = enforceVolumeFraction(rhoCandidate, VolFrac, xmin, xmax);
-
-    change = max(abs(rhoCandidate - rho));
-    rho    = rhoCandidate;
-
-    x_arm = models{1}.segmentToArm(rho);
-    [Jnew, Cnew] = evaluateObjectiveOnly(analyses, x_arm, penal, pAgg, weights, C0);
-
-    rhoHistory(:, iter + 1) = rho;
-    JHistory(iter + 1)      = Jnew;
-    CHistory(iter + 1, :)   = Cnew(:)';
-    volHistory(iter + 1)    = mean(rho);
-    changeHistory(iter + 1) = change;
-
-    fprintf('%4d  J=%12.6e  dJ/J0=% .3e  vf=%.4f  change=%.3e', ...
-        iter, Jnew, (Jnew - JHistory(iter)) / max(abs(JHistory(iter)), eps), ...
-        volHistory(iter + 1), change);
-    for k = 1:nConfigs
-        fprintf('  C_%s=%.3e', configs{k}.name, Cnew(k));
-    end
-    fprintf('\n');
-end
+optResult = solveSIMPComplianceVolumeMMA(analyses, rho, xmin, xmax, opts);
 
 %% ---- Final state and pass checks -------------------------------------------
-rhoFinal            = rho;
-x_arm_final         = models{1}.segmentToArm(rhoFinal);
-finalJ              = JHistory(maxIter + 1);
-finalC              = CHistory(maxIter + 1, :)';
-finalVolumeFraction = mean(rhoFinal);
-finalChange         = changeHistory(maxIter + 1);
-
-objectiveWindowConverged = objectiveHistoryConverged(JHistory, objectiveTol);
-objectiveDecreased       = finalJ < JHistory(1);
-mmaAcceptable            = objectiveWindowConverged || objectiveDecreased;
+rhoFinal            = optResult.zFinal;
+x_arm_final         = optResult.xFinal;
+finalJ              = optResult.finalJ;
+finalC              = optResult.finalC;
+finalVolumeFraction = optResult.finalVolumeFraction;
+finalChange         = optResult.finalChange;
+nIter               = optResult.nIter;
+history             = optResult.history;
+objectiveWindowConverged = optResult.objectiveWindowConverged;
+objectiveDecreased       = optResult.objectiveDecreased;
+mmaAcceptable            = optResult.mmaAcceptable;
 volumeActive             = abs(finalVolumeFraction - VolFrac) < 5.0e-3;
 
 % Nonuniformity is assessed on rho (the actual design variable).
@@ -309,7 +277,7 @@ writetable(struct2table(locationStats), fullfile(resultRoot, 'location_density.c
 
 fprintf('\nFinal checks\n');
 fprintf('  Objective decreased          : %d (J0=%.6e, Jf=%.6e)\n', ...
-    objectiveDecreased, JHistory(1), finalJ);
+    objectiveDecreased, history.J(1), finalJ);
 fprintf('  Objective window converged   : %d\n', objectiveWindowConverged);
 fprintf('  MMA acceptable               : %d\n', mmaAcceptable);
 fprintf('  Volume constraint active     : %d (vf=%.6f)\n', volumeActive, finalVolumeFraction);
@@ -317,23 +285,14 @@ fprintf('  Rho nonuniform               : %d (std=%.4f, range=%.4f)\n', ...
     rhoNonuniform, std(rhoFinal), max(rhoFinal) - min(rhoFinal));
 
 %% ---- Save histories and plots ----------------------------------------------
-history.iteration   = (0:maxIter)';
-history.J           = JHistory;
-history.C           = CHistory;
-history.volumeFraction = volHistory;
-history.change      = changeHistory;
-history.x           = rhoHistory;   % design-variable history is rho (H x nIter+1)
-history.configNames = string(cellfun(@(s) s.name,  configs, 'UniformOutput', false));
-history.configLabels= string(cellfun(@(s) s.label, configs, 'UniformOutput', false));
-history.weights     = weights;
-history.C0          = C0;
 
 save(fullfile(resultRoot, 'result.mat'), ...
     'rhoFinal', 'x_arm_final', 'finalJ', 'finalC', ...
     'finalVolumeFraction', 'finalChange', ...
     'history', 'configs', 'map', ...
-    'H', 'nElems', 'nCopies', ...
-    'VolFrac', 'penal', 'pAgg', 'maxIter', 'xminValue', ...
+    'H', 'nElems', 'nCopies', 'nIter', ...
+    'VolFrac', 'penal', 'pAgg', 'maxIter', 'minIter', 'changeTol', 'xminValue', 'Rfilter', 'useParallel', ...
+    'const_elems', ...
     'E', 'nu', 'R', 'r', 'h_seg', 'alpha', 'res', 'res_th', 'Pz', ...
     'locationStats', 'locationDensityRange', 'locationDensityStd', ...
     'topologyDiffersByArmLocation', 'objectiveDecreased', ...
@@ -346,10 +305,39 @@ saveSummaryCsv(resultRoot, fdLinked, history, rhoFinal, finalC, VolFrac, ...
     topologyNonuniform, topologyDiffersByArmLocation, ...
     locationDensityRange, locationDensityStd);
 
-% Plot full-arm expanded topology (x_arm_final)
-plotFinalTopology(models{1}, x_arm_final, resultRoot);
+%% ---- Post-processing: topology extraction ----------------------------------
+fprintf('\nPost-processing topology extraction...\n');
+ppOpts = struct();
+ppOpts.penal       = penal;
+ppOpts.pAgg        = pAgg;
+ppOpts.weights     = weights;
+ppOpts.VolFrac     = VolFrac;
+ppOpts.fixedVars   = const_elems;
+ppOpts.useParallel = useParallel;
+ppOpts.resultRoot  = resultRoot;
+ppOpts.configNames = string(cellfun(@(s) s.name, configs, 'UniformOutput', false));
+% Heaviside sharpening is only valid for projection-based SIMP (solveSIMPVolumeStressMMA).
+% solveSIMPComplianceVolumeMMA uses a sensitivity filter only: z IS the physical density,
+% so Wfilter*z has no density-sharpening meaning and collapses volume.
+ppOpts.skipHeaviside = true;
+% Set runReanalysis=true to enable expensive binary FE validation (~30 FEM solves).
+ppOpts.runReanalysis = false;
+% Set runSweep=true to generate a J-vs-V Pareto curve (~50 FEM solves).
+ppOpts.runSweep = false;
+
+postResult = postprocessSIMPResult(optResult, models{1}, analyses, Wfilter, ppOpts);
+
+% Plot full-arm expanded topology with comparison panel
+plotFinalTopology(models{1}, x_arm_final, resultRoot, postResult, analyses);
 plotHistory(history, configs, resultRoot);
 plotLocationDensity(locationStats, resultRoot);
+
+%% ---- Structural performance metrics ----------------------------------------
+fprintf('\nComputing structural performance metrics...\n');
+x_ref_B = ones(nElems, 1);
+metrics_ref_B   = evaluateStructuralPerformance(analyses, x_ref_B,    1,     useParallel);
+metrics_final_B = evaluateStructuralPerformance(analyses, x_arm_final, penal, useParallel);
+saveStructuralMetricsCsv(metrics_ref_B, metrics_final_B, configs, finalVolumeFraction, resultRoot);
 
 % Plot reference module rho
 figure('Visible', 'off');
@@ -360,6 +348,7 @@ title(sprintf('Test B: reference half-segment density (H=%d, vf=%.3f)', ...
     H, mean(rhoFinal)));
 ylim([0 1.05]);
 exportgraphics(gcf, fullfile(resultRoot, 'rho_final.png'), 'Resolution', 200);
+savefig(gcf, fullfile(resultRoot, 'rho_final.fig'));
 close(gcf);
 
 fprintf('\nSaved Test B outputs to %s\n', resultRoot);

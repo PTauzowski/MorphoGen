@@ -31,23 +31,25 @@ addpath(genpath(projectRoot));
 rng(0, 'twister');
 
 %% ---- Geometry (must match Stage 2 / stage3A) ----------------------------
-E      = 2.0e9;
-nu     = 0.35;
-R      = 0.14;
-r      = 0.08;
-h_seg  = 0.25;
-alpha  = 22.5;
-res_th = 4;
-Pz     = 100;
-ShapeFn = ShapeFunctionL8();
+arm = armModelDefaults("thin");
+E = arm.E;
+nu = arm.nu;
+R = arm.R;
+r = arm.r;
+h_seg = arm.h_seg;
+alpha = arm.alpha;
+res_th = arm.res_th;
+Pz = arm.Pz;
+ShapeFn = arm.ShapeFn;
+useParallel = license('test', 'Distrib_Computing_Toolbox');
 
 %% ---- Load module designs ------------------------------------------------
 sweepRoot = fullfile(scriptDir, 'results', 'referenceModuleSIMP_sweep');
 
-dA   = load(fullfile(sweepRoot, 'My_only_vf040_rmin050', 'result.mat'), 'rho_opt');
+dA   = load(fullfile(sweepRoot, 'My_only_vf040_rmin300', 'result.mat'), 'rho_opt');
 rhoA = dA.rho_opt;
 dB   = load(fullfile(sweepRoot, ...
-    'My_Mz_Ms_Ty_Tz_vf040_rmin050_p04_vf040_rmin050_p04', 'result.mat'), 'rho_opt');
+    'My_Mz_Ms_Ty_Tz_vf040_rmin300_p04', 'result.mat'), 'rho_opt');
 rhoB = dB.rho_opt;
 
 designs = {
@@ -70,6 +72,7 @@ nConf = numel(configs);
 %% ---- Result directory ---------------------------------------------------
 resultRoot = fullfile(scriptDir, 'results', 'stage3A_fullArmVerification');
 if ~exist(resultRoot, 'dir'), mkdir(resultRoot); end
+fprintf('Parallel extended-metrics sweep: %d\n', useParallel);
 
 %% ---- Required fields to consider a .mat cache valid --------------------
 REQUIRED_FIELDS = {'x_arm', 'elemHM_Pa', 'elemSED', 'qnodal_m'};
@@ -83,117 +86,32 @@ threshNames = {'gt05', 'gt03'};
 rows = {};
 
 %% ---- Main sweep ---------------------------------------------------------
+jobs = {};
 for ci = 1:nConf
-    cfg = configs{ci};
-    fprintf('\n=== Config %d/%d: %s ===\n', ci, nConf, cfg.label);
-
     for di = 1:nDes
-        des = designs{di};
-        caseTag = sprintf('%s__%s', cfg.name, des.name);
-        matFile = fullfile(resultRoot, [caseTag '.mat']);
-
-        %% -- Load or solve ------------------------------------------------
-        needSolve = true;
-        if exist(matFile, 'file')
-            tmp = load(matFile);
-            if all(isfield(tmp, REQUIRED_FIELDS))
-                x_arm     = tmp.x_arm;
-                elemHM_Pa = tmp.elemHM_Pa;
-                elemSED   = tmp.elemSED;
-                qnodal_m  = tmp.qnodal_m;
-                needSolve = false;
-                fprintf('  [%s] loaded from cache.\n', des.label);
-            end
-        end
-
-        if needSolve
-            fprintf('  [%s] solving ... ', des.label);
-            tic;
-            try
-                model = ManipulatorModel3D(E, nu, h_seg, R, r, 15, res_th, alpha, ...
-                    cfg.betas, ShapeFn, true, Pz);
-                nArmElems = model.analysis.getTotalElemsNumber();
-
-                if isempty(des.rhoSeg)
-                    x_arm = ones(nArmElems, 1);
-                else
-                    x_arm = model.segmentToArm(des.rhoSeg);
-                end
-
-                [~, ~] = model.frameBasedSolver(x_arm);
-
-                %% Extract element HM (mean over GPs): [nElems × 1]
-                gpHM = squeeze(model.fe.results.gp.all(13, :, :));  % [nElems × nGP]
-                elemHM_Pa = mean(gpHM, 2);                          % [nElems × 1]
-
-                %% Strain energy density per element (mean over GPs): [nElems × 1]
-                gpStress = model.fe.results.gp.stress;  % [nElems × nGP × 6]
-                gpStrain = model.fe.results.gp.strain;  % [nElems × nGP × 6]
-                gpSED    = 0.5 * sum(gpStress .* gpStrain, 3);  % [nElems × nGP]
-                elemSED  = mean(gpSED, 2);                       % [nElems × 1]
-
-                %% Nodal displacements
-                qnodal_m = model.analysis.qnodal;  % [nNodes × 3]
-
-                elapsed = toc;
-                fprintf('done (%.1f s)\n', elapsed);
-
-                %% Save cache
-                save(matFile, 'x_arm', 'elemHM_Pa', 'elemSED', 'qnodal_m', ...
-                    'cfg', 'des', '-v7.3');
-                fprintf('  [%s] cache saved to %s\n', des.label, matFile);
-
-            catch ME
-                fprintf('FAILED: %s\n', ME.message);
-                save(fullfile(resultRoot, sprintf('failed_%s_%s.mat', cfg.name, des.name)), ...
-                    'ME', 'cfg', 'des');
-                continue;
-            end
-        end
-
-        %% -- Compute metrics for each threshold ---------------------------
-        nElems   = numel(x_arm);
-        totalSED = sum(elemSED);
-
-        for ti = 1:numel(thresholds)
-            thr  = thresholds(ti);
-            mask = x_arm > thr;
-            if ~any(mask), mask = true(nElems, 1); end
-
-            hmActive  = elemHM_Pa(mask) / 1e6;    % MPa
-            sedActive = elemSED(mask);
-
-            row.configName  = cfg.name;
-            row.configLabel = cfg.label;
-            row.designName  = des.name;
-            row.designLabel = des.label;
-            row.threshold   = thr;
-            row.threshName  = threshNames{ti};
-
-            row.volFrac        = mean(x_arm);
-            row.activeCount    = sum(mask);
-            row.activeVolFrac  = sum(x_arm(mask)) / nElems;
-
-            row.maxHM_MPa     = max(hmActive);
-            row.pct99HM_MPa   = prctile(hmActive, 99);
-            row.pct95HM_MPa   = prctile(hmActive, 95);
-            row.meanHM_MPa    = mean(hmActive);
-
-            row.totalSED_J    = totalSED;
-            row.activeSED_J   = sum(sedActive);
-            row.activeSEDfrac = sum(sedActive) / (totalSED + eps);
-
-            % Normalise peak HM by volume fraction (same material budget)
-            row.maxHM_normVF  = row.maxHM_MPa / (row.volFrac + eps);
-            row.pct99HM_normVF = row.pct99HM_MPa / (row.volFrac + eps);
-
-            % Tip displacement
-            dispNorm = sqrt(sum(qnodal_m.^2, 2));
-            row.maxDisp_mm = max(dispNorm) * 1e3;
-
-            rows{end+1} = row; %#ok<SAGROW>
-        end
+        jobs{end+1, 1} = struct('ci', ci, 'di', di, 'cfg', configs{ci}, 'des', designs{di}); %#ok<SAGROW>
     end
+end
+jobRows = cell(numel(jobs), 1);
+
+if useParallel
+    parfor ji = 1:numel(jobs)
+        job = jobs{ji};
+        jobRows{ji} = runStage3AExtendedCase(job.cfg, job.des, ...
+            E, nu, h_seg, R, r, res_th, alpha, ShapeFn, Pz, resultRoot, ...
+            REQUIRED_FIELDS, thresholds, threshNames);
+    end
+else
+    for ji = 1:numel(jobs)
+        job = jobs{ji};
+        jobRows{ji} = runStage3AExtendedCase(job.cfg, job.des, ...
+            E, nu, h_seg, R, r, res_th, alpha, ShapeFn, Pz, resultRoot, ...
+            REQUIRED_FIELDS, thresholds, threshNames);
+    end
+end
+
+for ji = 1:numel(jobRows)
+    rows = [rows; jobRows{ji}(:)]; %#ok<AGROW>
 end
 
 %% ---- Write extended summary CSV -----------------------------------------
@@ -251,6 +169,7 @@ for thi = 1:numel(thresholds)
         fname = fullfile(resultRoot, ...
             sprintf('ext_%s_%s.png', shortTag, thrName));
         saveas(fig, fname);
+        savefig(fig, strrep(fname, '.png', '.fig'));
         close(fig);
     end
 end
@@ -258,6 +177,107 @@ end
 fprintf('\nComparison figures saved to %s\n', resultRoot);
 
 % =========================================================================
+function rows = runStage3AExtendedCase(cfg, des, ...
+        E, nu, h_seg, R, r, res_th, alpha, ShapeFn, Pz, resultRoot, ...
+        REQUIRED_FIELDS, thresholds, threshNames)
+    rows = {};
+    caseTag = sprintf('%s__%s', cfg.name, des.name);
+    matFile = fullfile(resultRoot, [caseTag '.mat']);
+
+    needSolve = true;
+    if exist(matFile, 'file')
+        tmp = load(matFile);
+        if all(isfield(tmp, REQUIRED_FIELDS))
+            x_arm     = tmp.x_arm;
+            elemHM_Pa = tmp.elemHM_Pa;
+            elemSED   = tmp.elemSED;
+            qnodal_m  = tmp.qnodal_m;
+            needSolve = false;
+            fprintf('  [%s / %s] loaded from cache.\n', cfg.label, des.label);
+        end
+    end
+
+    if needSolve
+        fprintf('  [%s / %s] solving ... ', cfg.label, des.label);
+        tic;
+        try
+            model = ManipulatorModel3D(E, nu, h_seg, R, r, 15, res_th, alpha, ...
+                cfg.betas, ShapeFn, true, Pz, arm.constEndRing, arm.constMiddleRing);
+            nArmElems = model.analysis.getTotalElemsNumber();
+
+            if isempty(des.rhoSeg)
+                x_arm = ones(nArmElems, 1);
+            else
+                x_arm = model.segmentToArm(des.rhoSeg);
+            end
+
+            [~, ~] = model.frameBasedSolver(x_arm);
+
+            gpHM = squeeze(model.fe.results.gp.all(13, :, :));
+            elemHM_Pa = mean(gpHM, 2);
+
+            gpStress = model.fe.results.gp.stress;
+            gpStrain = model.fe.results.gp.strain;
+            gpSED    = 0.5 * sum(gpStress .* gpStrain, 3);
+            elemSED  = mean(gpSED, 2);
+
+            qnodal_m = model.analysis.qnodal;
+
+            elapsed = toc;
+            fprintf('done (%.1f s)\n', elapsed);
+
+            save(matFile, 'x_arm', 'elemHM_Pa', 'elemSED', 'qnodal_m', ...
+                'cfg', 'des', '-v7.3');
+            fprintf('  [%s / %s] cache saved to %s\n', cfg.label, des.label, matFile);
+
+        catch ME
+            fprintf('FAILED: %s\n', ME.message);
+            save(fullfile(resultRoot, sprintf('failed_%s_%s.mat', cfg.name, des.name)), ...
+                'ME', 'cfg', 'des');
+            return;
+        end
+    end
+
+    nElems   = numel(x_arm);
+    totalSED = sum(elemSED);
+    dispNorm = sqrt(sum(qnodal_m.^2, 2));
+
+    for ti = 1:numel(thresholds)
+        thr  = thresholds(ti);
+        mask = x_arm > thr;
+        if ~any(mask), mask = true(nElems, 1); end
+
+        hmActive  = elemHM_Pa(mask) / 1e6;
+        sedActive = elemSED(mask);
+
+        row.configName  = cfg.name;
+        row.configLabel = cfg.label;
+        row.designName  = des.name;
+        row.designLabel = des.label;
+        row.threshold   = thr;
+        row.threshName  = threshNames{ti};
+
+        row.volFrac        = mean(x_arm);
+        row.activeCount    = sum(mask);
+        row.activeVolFrac  = sum(x_arm(mask)) / nElems;
+
+        row.maxHM_MPa     = max(hmActive);
+        row.pct99HM_MPa   = prctile(hmActive, 99);
+        row.pct95HM_MPa   = prctile(hmActive, 95);
+        row.meanHM_MPa    = mean(hmActive);
+
+        row.totalSED_J    = totalSED;
+        row.activeSED_J   = sum(sedActive);
+        row.activeSEDfrac = sum(sedActive) / (totalSED + eps);
+
+        row.maxHM_normVF  = row.maxHM_MPa / (row.volFrac + eps);
+        row.pct99HM_normVF = row.pct99HM_MPa / (row.volFrac + eps);
+        row.maxDisp_mm = max(dispNorm) * 1e3;
+
+        rows{end+1, 1} = row; %#ok<AGROW>
+    end
+end
+
 function extBarComparison(data, configLabels, designLabels, colors, yLab, titleStr)
     nConf = size(data, 1);
     nDes  = size(data, 2);

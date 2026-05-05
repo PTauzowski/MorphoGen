@@ -17,6 +17,7 @@ classdef SIMP_MMA_ReferenceModuleMultiLoadCompliance < SIMP_MMA_TopologyOptimiza
         complianceValues;
         normalizedComplianceValues;
         complianceGradientValues;
+        useParallel;
     end
 
     methods
@@ -44,6 +45,7 @@ classdef SIMP_MMA_ReferenceModuleMultiLoadCompliance < SIMP_MMA_TopologyOptimiza
             obj.complianceValues = zeros(numel(obj.loadCases), 1);
             obj.normalizedComplianceValues = zeros(numel(obj.loadCases), 1);
             obj.complianceGradientValues = zeros(obj.totalFENumber, numel(obj.loadCases));
+            obj.useParallel = false;
         end
 
         function resetAnalysis(obj)
@@ -66,10 +68,32 @@ classdef SIMP_MMA_ReferenceModuleMultiLoadCompliance < SIMP_MMA_TopologyOptimiza
             nLoads = numel(obj.loadCases);
             C = zeros(nLoads, 1);
             dC = zeros(obj.totalFENumber, nLoads);
+            qnodal = cell(nLoads, 1);
+            loadPnodal = cell(nLoads, 1);
 
             for k = 1:nLoads
                 obj.ReferenceModel.applyLoadCase(obj.loadCases{k});
-                [C(k), dC(:, k)] = obj.computeCurrentLoadComplianceWithGradient(x);
+                loadPnodal{k} = obj.FEAnalysis.Pnodal;
+            end
+
+            useParallel = obj.useParallel && license('test', 'Distrib_Computing_Toolbox');
+            if useParallel
+                FEAnalysis = obj.FEAnalysis;
+                penal = obj.penal;
+                is_const = obj.is_const;
+                totalFENumber = obj.totalFENumber;
+                parfor k = 1:nLoads
+                    [C_k, dC_k, qnodal_k] = SIMP_MMA_ReferenceModuleMultiLoadCompliance.computeLoadComplianceWithGradient( ...
+                        FEAnalysis, loadPnodal{k}, x, penal, is_const, totalFENumber);
+                    C(k) = C_k;
+                    dC(:, k) = dC_k;
+                    qnodal{k} = qnodal_k;
+                end
+            else
+                for k = 1:nLoads
+                    [C(k), dC(:, k), qnodal{k}] = SIMP_MMA_ReferenceModuleMultiLoadCompliance.computeLoadComplianceWithGradient( ...
+                        obj.FEAnalysis, loadPnodal{k}, x, obj.penal, obj.is_const, obj.totalFENumber);
+                end
             end
 
             if obj.useComplianceNormalization
@@ -96,6 +120,9 @@ classdef SIMP_MMA_ReferenceModuleMultiLoadCompliance < SIMP_MMA_TopologyOptimiza
             obj.complianceGradientValues = dC;
             obj.FobjValue = J;
             obj.gradFobjValue = dJ;
+            obj.qnodal = qnodal{end};
+            obj.FEAnalysis.qnodal = qnodal{end};
+            obj.FEAnalysis.Pnodal = loadPnodal{end};
         end
 
         function computeConstraintsAndGradient(obj, x)
@@ -113,36 +140,36 @@ classdef SIMP_MMA_ReferenceModuleMultiLoadCompliance < SIMP_MMA_TopologyOptimiza
         end
     end
 
-    methods (Access = private)
-        function [C, dC] = computeCurrentLoadComplianceWithGradient(obj, x)
-            tne = obj.FEAnalysis.getTotalElemsNumber();
+    methods (Static, Access = private)
+        function [C, dC, qnodal] = computeLoadComplianceWithGradient(FEAnalysis, Pnodal, x, penal, is_const, tne)
             C = 0;
             dC = zeros(tne, 1);
             xOnes = ones(tne, 1);
-            xPhys = x(:) .^ obj.penal;
+            xPhys = x(:) .^ penal;
 
-            if obj.is_const
+            if is_const
                 fsName = 'computeStifnessMatrixConst';
             else
                 fsName = 'computeStifnessMatrix';
             end
 
-            obj.qnodal = obj.FEAnalysis.fromFEMVector(obj.FEAnalysis.solveWeighted(xPhys));
-            obj.FEAnalysis.computeElementResults(xPhys);
+            FEAnalysis.Pnodal = Pnodal;
+            qnodal = FEAnalysis.fromFEMVector(FEAnalysis.solveWeighted(xPhys));
+            FEAnalysis.computeElementResults(xPhys);
 
             ind = 1;
-            for i = 1:numel(obj.FEAnalysis.felems)
-                fe = obj.FEAnalysis.felems{i};
+            for i = 1:numel(FEAnalysis.felems)
+                fe = FEAnalysis.felems{i};
                 nelems = size(fe.elems, 1);
                 nnodes = size(fe.elems, 2);
                 ndofs = size(fe.ndofs, 2);
                 dim = nnodes * ndofs;
-                K = reshape(fe.(fsName)(obj.FEAnalysis.mesh.nodes, xOnes), dim, dim, nelems);
-                qelems = fe.createElemSolutionVectors(obj.qnodal);
+                K = reshape(fe.(fsName)(FEAnalysis.mesh.nodes, xOnes), dim, dim, nelems);
+                qelems = fe.createElemSolutionVectors(qnodal);
                 for j = 1:nelems
                     elemEnergy = qelems(:, j)' * K(:, :, j) * qelems(:, j);
-                    C = C + x(ind)^obj.penal * elemEnergy;
-                    dC(ind) = -obj.penal * x(ind)^(obj.penal - 1) * elemEnergy;
+                    C = C + x(ind)^penal * elemEnergy;
+                    dC(ind) = -penal * x(ind)^(penal - 1) * elemEnergy;
                     ind = ind + 1;
                 end
             end

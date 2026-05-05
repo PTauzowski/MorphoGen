@@ -82,20 +82,10 @@ classdef Frame3D < FiniteElement
 
 
         function K = computeStifnessMatrix(obj, nodes, varargin)
-              nelems = size(obj.elems,1);
-              nnodes = size(obj.elems,2);
-              ndofs = size( obj.ndofs,2);
-              dim = nnodes * ndofs;
-              K  = zeros( dim , dim, nelems );
               Kl = obj.computeLocalStifnessMatrix(nodes,varargin);
               L = obj.computeTransformationMatrixAnsys(nodes);
-              %L  = obj.computeTransformationMatrixAnsys2(nodes,'gamma_deg',obj.betas);
-              %L  = obj.computeTransformationMatrixRotated(nodes,'gamma_deg',obj.betas); 
-              %L  = obj.computeTransformationMatrix(nodes);  
-              for k=1:nelems
-                 K(:,:,k) = L(:,:,k)' * Kl(:,:,k) * L(:,:,k);
-              end
-              K=K(:);
+              K = pagemtimes(pagemtimes(L, 'transpose', Kl, 'none'), L);
+              K = obj.flattenElementMatrices(K);
         end
 
         function K = computeLocalStifnessMatrix(obj, nodes, varargin)
@@ -410,5 +400,4 @@ classdef Frame3D < FiniteElement
         
         end
 end
-
 

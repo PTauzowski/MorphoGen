@@ -31,12 +31,9 @@ function [C, dC] = computeComplianceAndGradient(analysis, x, penal)
         K0 = reshape(fe.(stiffnessFunction)(analysis.mesh.nodes, xOnes(elemIds)), ...
             dim, dim, nelems);
         qelems = fe.createElemSolutionVectors(q);
-
-        for e = 1:nelems
-            globalElem = elemOffset + e;
-            elemEnergy = qelems(:, e)' * K0(:, :, e) * qelems(:, e);
-            dC(globalElem) = -penal * x(globalElem)^(penal - 1) * elemEnergy;
-        end
+        Kq = pagemtimes(K0, reshape(qelems, dim, 1, nelems));
+        elemEnergy = squeeze(pagemtimes(reshape(qelems, 1, dim, nelems), Kq));
+        dC(elemIds) = -penal * x(elemIds).^(penal - 1) .* elemEnergy(:);
         elemOffset = elemOffset + nelems;
     end
 end

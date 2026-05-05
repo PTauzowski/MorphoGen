@@ -24,20 +24,17 @@ end
 
 close all;
 
-% PLA (printed)
-E = 2.0e9; % Pa
-nu = 0.35;
-
-ShapeFn = ShapeFunctionL8;
-
-R = 0.14; % m, outer radius
-r = 0.08; % m, inner radius
-alpha = 22.5; % deg, segment connection inclination
-segmentLength = 0.25; % m, segment length
-res = 15;
-res_thickness = 4;
-
-Pz = 100; % N - vertical tip force magnitude
+arm = armModelDefaults("thin");
+E = arm.E;
+nu = arm.nu;
+ShapeFn = arm.ShapeFn;
+R = arm.R;
+r = arm.r;
+alpha = arm.alpha;
+segmentLength = arm.segmentLength;
+res = arm.res;
+res_thickness = arm.res_th;
+Pz = arm.Pz;
 
 examples = struct( ...
     'name', { ...
@@ -150,12 +147,12 @@ for k = 1:numel(examples)
 
     coupledModel = ManipulatorModel3D( ...
         E, nu, segmentLength, R, r, res, res_thickness, alpha, ...
-        example.sample, ShapeFn, true, Pz);
+        example.sample, ShapeFn, true, Pz, arm.constEndRing, arm.constMiddleRing);
     [qCoupled, ~] = coupledModel.frameBasedSolver(1);
 
     directModel = ManipulatorModel3D( ...
         E, nu, segmentLength, R, r, res, res_thickness, alpha, ...
-        example.sample, ShapeFn, true, Pz);
+        example.sample, ShapeFn, true, Pz, arm.constEndRing, arm.constMiddleRing);
     directModel.compute(1);
     qDirect = directModel.analysis.qnodal;
 

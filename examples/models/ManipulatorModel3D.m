@@ -4,15 +4,24 @@ classdef ManipulatorModel3D < handle
     properties
         analysis, frame_analysis, fixedEdgeSelector, alpha, R, r, mesh, frame_mesh, elems, fe, xEnd, frameNodes, frameElem
         const_elems, upper_nodes, loadSurfaceNodes, fixedSurfaceNodes, halfSegmentNelems, use_offset, qnodal_solid, qnodal_top;
+        constEndRing, constMiddleRing;
         couplingSections, debugCoupling;
     end
     
     methods                       
-        function obj = ManipulatorModel3D(E,nu,ls,R,r, res, res_th, alpha, betas, ShapeFn, use_offset, Pz)
+        function obj = ManipulatorModel3D(E,nu,ls,R,r, res, res_th, alpha, betas, ShapeFn, use_offset, Pz, constEndRing, constMiddleRing)
+            if nargin < 13 || isempty(constEndRing)
+                constEndRing = true;
+            end
+            if nargin < 14 || isempty(constMiddleRing)
+                constMiddleRing = true;
+            end
             alpha=alpha*pi/180;
             obj.alpha = alpha;
             obj.R = R;
             obj.r = r;
+            obj.constEndRing = logical(constEndRing);
+            obj.constMiddleRing = logical(constMiddleRing);
             obj.debugCoupling = false;
             betas=betas*pi/180;
 
@@ -113,7 +122,7 @@ classdef ManipulatorModel3D < handle
             % elements in ONE end slice (k = last along length):
             sliceElems = resTh * resCirc;
             ne = size(obj.elems,1);
-            obj.const_elems = (ne - sliceElems + 1 : ne).';
+            obj.const_elems = obj.localConstRingIds(1, ne, sliceElems);
         
             obj.mesh.nodes = obj.mesh.nodes * rotBeta;
             selector = Selector(@(x)(x(:,3) < 1.0E-4));
@@ -148,6 +157,7 @@ classdef ManipulatorModel3D < handle
                 mesh1.nodes = (mesh1.nodes + [0 0 ls]) * rotCut * rotBeta * prevRot + obj.xEnd;
                 startSectionCoords = mesh1.nodes(startSectionLocal, :);
                 endSectionCoords = mesh1.nodes(endSectionLocal, :);
+                prevElemCount = size(obj.elems, 1);
                 obj.elems = [obj.elems; obj.mesh.merge(mesh1.nodes, elems1)];
 
                 nextFrameNode = size(xEnds, 1) + 1;
@@ -158,7 +168,11 @@ classdef ManipulatorModel3D < handle
         
                 % update const_elems for this newly appended part:
                 ne = size(obj.elems,1);
-                obj.const_elems = [obj.const_elems; (ne - sliceElems + 1 : ne).'];
+                for blockStart = prevElemCount + 1:obj.halfSegmentNelems:ne
+                    blockEnd = min(blockStart + obj.halfSegmentNelems - 1, ne);
+                    obj.const_elems = [obj.const_elems; ...
+                        obj.localConstRingIds(blockStart, blockEnd, sliceElems)]; %#ok<AGROW>
+                end
         
                 if k < length(betas)
                     obj.xEnd = obj.xEnd + [0 0 2*ls] * rotCut * rotBeta * prevRot;
@@ -172,6 +186,42 @@ classdef ManipulatorModel3D < handle
             tNodes = (obj.mesh.nodes - repmat(obj.xEnd, size(obj.mesh.nodes,1), 1)) * prevRot' * rotCut;
             obj.loadSurfaceNodes = abs(tNodes(:,3)) < 1.0E-4;
             obj.frameNodes = xEnds;
+            nCopies = size(obj.elems, 1) / obj.halfSegmentNelems;
+            obj.const_elems = obj.fullArmPhysicalRingIds(round(nCopies), sliceElems);
+        end
+
+        function ids = localConstRingIds(obj, firstElem, lastElem, sliceElems)
+            ids = zeros(0, 1);
+            if obj.constEndRing
+                ids = [ids; (firstElem:firstElem + sliceElems - 1)']; %#ok<AGROW>
+            end
+            if obj.constMiddleRing
+                ids = [ids; (lastElem - sliceElems + 1:lastElem)']; %#ok<AGROW>
+            end
+        end
+
+        function ids = fullArmPhysicalRingIds(obj, nCopies, sliceElems)
+            H = obj.halfSegmentNelems;
+            ids = zeros(0, 1);
+
+            if obj.constEndRing
+                ids = [ids; (1:sliceElems)']; %#ok<AGROW>
+                for b = 2:2:nCopies
+                    blockStart = (b - 1) * H + 1;
+                    blockEnd = blockStart + H - 1;
+                    ids = [ids; (blockEnd - sliceElems + 1:blockEnd)']; %#ok<AGROW>
+                end
+            end
+
+            if obj.constMiddleRing
+                for b = 1:2:nCopies-1
+                    blockStart = (b - 1) * H + 1;
+                    blockEnd = blockStart + H - 1;
+                    ids = [ids; (blockEnd - sliceElems + 1:blockEnd)']; %#ok<AGROW>
+                end
+            end
+
+            ids = unique(ids(:));
         end
 
 

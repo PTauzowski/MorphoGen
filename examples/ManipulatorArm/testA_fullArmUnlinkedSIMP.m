@@ -28,46 +28,40 @@ addpath(genpath(projectRoot));
 rng(11, 'twister');
 
 %% ---- Geometry and optimization parameters ------------------------------
-E = 2.0e9;
-nu = 0.35;
-R = 0.14;
-r = 0.08;
-h_seg = 0.25;
-alpha = 22.5;
-res = 15;
-res_th = 4;
-Pz = 100;
-ShapeFn = ShapeFunctionL8();
+arm = armModelDefaults("thin");
+E = arm.E;
+nu = arm.nu;
+R = arm.R;
+r = arm.r;
+h_seg = arm.h_seg;
+alpha = arm.alpha;
+res = arm.res;
+res_th = arm.res_th;
+Pz = arm.Pz;
+ShapeFn = arm.ShapeFn;
 
 VolFrac = 0.40;
 penal = 3.0;
 pAgg = 4.0;
-maxIter = 30;
-xminValue = 0.01;
+maxIter = 500;
+xminValue = arm.mma.xminValue;
+Rfilter = arm.Rfilter;
+useParallel = license('test', 'Distrib_Computing_Toolbox');
 
 fdElemCount = 8;
 fdStep = 1.0e-5;
-fdRelTol = 1.0e-2;   % p-norm aggregation + 48k elems: FD noise ~ 4-8e-3 expected for low-sensitivity elements
+fdRelTol = 1.0e-2;
 
-moveLimit = 0.05;
-minMoveLimit = 0.003;
-moveDecay = 0.95;
-mmaDamping = 0.25;
+moveLimit = arm.mma.moveLimit;
+minMoveLimit = arm.mma.minMoveLimit;
+moveDecay = arm.mma.moveDecay;
+mmaDamping = arm.mma.mmaDamping;
+changeTol = arm.mma.changeTol;
 objectiveTol = 5.0e-3;
+minIter = 10;
 
-sampleMinN_smooth=[0 180 180 180 180 180 180]; %  0  164.4607  177.0448  215.1802  214.3430  186.1769  240.6389
-sampleMaxMz_smooth=[0 0 0 180 180 180 180];     %  0  343.7190   54.9144  125.4541  163.9858  169.3933  110.6999
-sampleMaxTy_smooth=[ 0  0  180 0 180  180  180]; %  0    0.0253  246.2603  287.9922  340.8601  106.8641  112.8238
-sampleMaxMs_smooth=[ 0  45 45 45  270  180 180]; %  0 0   33.5628   56.5082   36.2258  278.0525  195.3981  122.2441
-
-configs = {
-    struct('name', 'min_bending', 'label', 'Min M_z', 'betas', -[0 0 0 180 180 180 180]);
-    struct('name', 'min_torsion', 'label', 'Min M_s', 'betas', -[0 45 45 45 270 180 180]);
-    struct('name', 'min_shear',   'label', 'Min T_y', 'betas', -[0 0 180 0 180 180 180]);
-    struct('name', 'max_bending', 'label', 'Max M_z', 'betas', [0 0 0 180 180 180 180]);
-    struct('name', 'max_torsion', 'label', 'Max M_s', 'betas', [0 45 45 45 270 180 180]);
-    struct('name', 'max_shear',   'label', 'Max T_y', 'betas', [0 0 180 0 180 180 180]);
-};
+%configs = armLoadConfigs("sixPlusTension");
+configs = armLoadConfigs("six");
 nConfigs = numel(configs);
 weights = ones(nConfigs, 1) / nConfigs;
 
@@ -78,8 +72,8 @@ end
 
 fprintf('Test A full-arm unlinked SIMP diagnostic\n');
 fprintf('  Result root: %s\n', resultRoot);
-fprintf('  VolFrac=%.3f, penal=%.2f, pAgg=%.2f, maxIter=%d, xmin=%.3f\n', ...
-    VolFrac, penal, pAgg, maxIter, xminValue);
+fprintf('  VolFrac=%.3f, penal=%.2f, pAgg=%.2f, maxIter=%d, changeTol=%.1e, xmin=%.3f, parallel=%d\n', ...
+    VolFrac, penal, pAgg, maxIter, changeTol, xminValue, useParallel);
 
 %% ---- Build full-arm configurations -------------------------------------
 models = cell(nConfigs, 1);
@@ -97,7 +91,7 @@ for k = 1:nConfigs
         k, nConfigs, cfg.label, mat2str(cfg.betas));
 
     model = ManipulatorModel3D(E, nu, h_seg, R, r, res, res_th, alpha, ...
-        cfg.betas, ShapeFn, true, Pz);
+        cfg.betas, ShapeFn, true, Pz, arm.constEndRing, arm.constMiddleRing);
     analysis = model.analysis;
     nElems = analysis.getTotalElemsNumber();
     taskDim = analysis.getTaskDim();
@@ -149,20 +143,31 @@ nDesign = referenceElemCount;
 xmin = xminValue * ones(nDesign, 1);
 xmax = ones(nDesign, 1);
 x = VolFrac * ones(nDesign, 1);
+const_elems = armConstRingElementIds(models{1}, arm, "full");
+xmin(const_elems) = 1.0;
+xmax(const_elems) = 1.0;
+x(const_elems) = 1.0;
 x = enforceVolumeFraction(x, VolFrac, xmin, xmax);
+fprintf('\nConst ring elems: %d (end=%d, middle=%d)\n', ...
+    numel(const_elems), arm.constEndRing, arm.constMiddleRing);
+
+fprintf('\nBuilding full-arm sensitivity filter: Rfilter=%.6g, nDesign=%d\n', ...
+    Rfilter, nDesign);
+Wfilter = buildElementFilterMatrix(models{1}.mesh.nodes, models{1}.mesh.elems, ...
+    (1:nDesign)', Rfilter);
 
 %% ---- Compliance normalization and finite-difference gradient check -------
 fprintf('\nComputing initial compliance normalization at x=VolFrac...\n');
-[J0, grad0, C0, Cinit] = evaluateObjectiveAndGradient(analyses, x, penal, pAgg, weights, []);
+[J0, grad0, C0, Cinit] = evaluateObjectiveAndGradient(analyses, x, penal, pAgg, weights, [], useParallel);
 fprintf('  Initial J = %.8e\n', J0);
 for k = 1:nConfigs
     fprintf('    %-12s C0 = %.8e\n', configs{k}.name, C0(k));
 end
 
-fprintf('\nFinite-difference gradient test (%d random elements, h=%.1e)...\n', ...
+fprintf('\nFinite-difference gradient test (%d random elements, nominal h=%.1e)...\n', ...
     fdElemCount, fdStep);
 fd = finiteDifferenceGradientTest(analyses, x, penal, pAgg, weights, C0, ...
-    grad0, fdElemCount, fdStep, xmin, xmax);
+    grad0, fdElemCount, fdStep, xmin, xmax, useParallel);
 fprintf('  FD max relative error = %.3e\n', fd.maxRelativeError);
 assert(fd.maxRelativeError < fdRelTol, ...
     'FD gradient check failed: max relative error %.3e exceeds %.3e.', ...
@@ -174,77 +179,38 @@ writetable(fdTable, fullfile(resultRoot, 'finite_difference_gradient.csv'));
 %% ---- MMA optimization ---------------------------------------------------
 fprintf('\nRunning projected MMA for %d iterations...\n', maxIter);
 
-xHistory = zeros(nDesign, maxIter + 1);
-xHistory(:, 1) = x;
-JHistory = nan(maxIter + 1, 1);
-JHistory(1) = J0;
-CHistory = nan(maxIter + 1, nConfigs);
-CHistory(1, :) = Cinit(:)';
-volHistory = nan(maxIter + 1, 1);
-volHistory(1) = mean(x);
-changeHistory = nan(maxIter + 1, 1);
-changeHistory(1) = 0;
+opts = struct();
+opts.penal = penal;
+opts.pAgg = pAgg;
+opts.weights = weights;
+opts.C0 = C0;
+opts.VolFrac = VolFrac;
+opts.maxIter = maxIter;
+opts.minIter = minIter;
+opts.changeTol = changeTol;
+opts.objectiveTol = objectiveTol;
+opts.moveLimit = moveLimit;
+opts.minMoveLimit = minMoveLimit;
+opts.moveDecay = moveDecay;
+opts.mmaDamping = mmaDamping;
+opts.useParallel = useParallel;
+opts.sensitivityFilter = Wfilter;
+opts.fixedDesignVariables = const_elems;
+opts.configNames = string(cellfun(@(s) s.name, configs, 'UniformOutput', false));
+opts.configLabels = string(cellfun(@(s) s.label, configs, 'UniformOutput', false));
 
-m = 1;
-n = nDesign;
-xold1 = x;
-xold2 = x;
-low = zeros(n, 1);
-upp = ones(n, 1);
-a0 = 1;
-a = 0;
-c = 1000;
-d = 0;
-objectiveScale = 1.0 / max(abs(J0), eps);
+optResult = solveSIMPComplianceVolumeMMA(analyses, x, xmin, xmax, opts);
 
-for iter = 1:maxIter
-    [J, gradJ, ~, ~] = evaluateObjectiveAndGradient(analyses, x, penal, pAgg, weights, C0);
-    constr = sum(x) / (VolFrac * nDesign) - 1.0;
-    gradConstr = ones(1, nDesign) / (VolFrac * nDesign);
-
-    [xmma, ~, ~, ~, ~, ~, ~, ~, ~, low, upp] = mmasub2( ...
-        m, n, iter, x, xmin, xmax, xold1, xold2, ...
-        objectiveScale * J, objectiveScale * gradJ, 0 * gradJ, ...
-        constr, gradConstr, 0 * gradConstr, ...
-        low, upp, a0, a, c, d);
-
-    if iter > 1
-        xold2 = xold1;
-    end
-    xold1 = x;
-
-    currentMoveLimit = max(minMoveLimit, moveLimit * moveDecay^(iter - 1));
-    xCandidate = min(max(xmma, x - currentMoveLimit), x + currentMoveLimit);
-    xCandidate = x + mmaDamping * (xCandidate - x);
-    xCandidate = enforceVolumeFraction(xCandidate, VolFrac, xmin, xmax);
-
-    change = max(abs(xCandidate - x));
-    x = xCandidate;
-
-    [Jnew, Cnew] = evaluateObjectiveOnly(analyses, x, penal, pAgg, weights, C0);
-    xHistory(:, iter + 1) = x;
-    JHistory(iter + 1) = Jnew;
-    CHistory(iter + 1, :) = Cnew(:)';
-    volHistory(iter + 1) = mean(x);
-    changeHistory(iter + 1) = change;
-
-    fprintf('%4d  J=%12.6e  dJ/J0=% .3e  vf=%.4f  change=%.3e', ...
-        iter, Jnew, (Jnew - JHistory(iter)) / max(abs(JHistory(iter)), eps), ...
-        volHistory(iter + 1), change);
-    for k = 1:nConfigs
-        fprintf('  C_%s=%.3e', configs{k}.name, Cnew(k));
-    end
-    fprintf('\n');
-end
-
-finalX = x;
-finalJ = JHistory(maxIter + 1);
-finalC = CHistory(maxIter + 1, :)';
-finalVolumeFraction = mean(finalX);
-finalChange = changeHistory(maxIter + 1);
-objectiveWindowConverged = objectiveHistoryConverged(JHistory, objectiveTol);
-objectiveDecreased = finalJ < JHistory(1);
-mmaAcceptable = objectiveWindowConverged || objectiveDecreased;
+finalX = optResult.zFinal;
+finalJ = optResult.finalJ;
+finalC = optResult.finalC;
+finalVolumeFraction = optResult.finalVolumeFraction;
+finalChange = optResult.finalChange;
+nIter = optResult.nIter;
+history = optResult.history;
+objectiveWindowConverged = optResult.objectiveWindowConverged;
+objectiveDecreased = optResult.objectiveDecreased;
+mmaAcceptable = optResult.mmaAcceptable;
 volumeActive = abs(finalVolumeFraction - VolFrac) < 5.0e-3;
 topologyNonuniform = std(finalX) > 0.03 && (max(finalX) - min(finalX)) > 0.15;
 
@@ -258,7 +224,7 @@ writetable(struct2table(locationStats), fullfile(resultRoot, 'location_density.c
 
 fprintf('\nFinal checks\n');
 fprintf('  Objective decreased          : %d (J0=%.6e, Jf=%.6e)\n', ...
-    objectiveDecreased, JHistory(1), finalJ);
+    objectiveDecreased, history.J(1), finalJ);
 fprintf('  Objective window converged   : %d\n', objectiveWindowConverged);
 fprintf('  MMA acceptable               : %d\n', mmaAcceptable);
 fprintf('  Volume constraint active     : %d (vf=%.6f)\n', volumeActive, finalVolumeFraction);
@@ -268,21 +234,12 @@ fprintf('  Differs by arm location      : %d (half-seg mean range=%.4f)\n', ...
     topologyDiffersByArmLocation, locationDensityRange);
 
 %% ---- Save histories and plots ------------------------------------------
-history.iteration = (0:maxIter)';
-history.J = JHistory;
-history.C = CHistory;
-history.volumeFraction = volHistory;
-history.change = changeHistory;
-history.x = xHistory;
-history.configNames = string(cellfun(@(s) s.name, configs, 'UniformOutput', false));
-history.configLabels = string(cellfun(@(s) s.label, configs, 'UniformOutput', false));
-history.weights = weights;
-history.C0 = C0;
 
 save(fullfile(resultRoot, 'result.mat'), ...
     'finalX', 'finalJ', 'finalC', 'finalVolumeFraction', 'finalChange', ...
-    'history', 'configs', 'VolFrac', 'penal', 'pAgg', 'maxIter', ...
-    'xminValue', 'E', 'nu', 'R', 'r', 'h_seg', 'alpha', 'res', 'res_th', ...
+    'history', 'configs', 'nIter', 'VolFrac', 'penal', 'pAgg', 'maxIter', 'minIter', 'changeTol', ...
+    'xminValue', 'Rfilter', 'E', 'nu', 'R', 'r', 'h_seg', 'alpha', 'res', 'res_th', ...
+    'useParallel', 'const_elems', 'C0', 'Wfilter', ...
     'Pz', 'locationStats', 'locationDensityRange', 'locationDensityStd', ...
     'topologyDiffersByArmLocation', 'objectiveDecreased', ...
     'objectiveWindowConverged', 'mmaAcceptable', 'volumeActive', ...
@@ -294,7 +251,31 @@ saveSummaryCsv(resultRoot, fd, history, finalX, finalC, VolFrac, ...
     topologyNonuniform, topologyDiffersByArmLocation, ...
     locationDensityRange, locationDensityStd);
 
-plotFinalTopology(models{1}, finalX, resultRoot);
+%% ---- Post-processing: topology extraction ----------------------------------
+fprintf('\nPost-processing topology extraction...\n');
+ppOpts = struct();
+ppOpts.penal        = penal;
+ppOpts.pAgg         = pAgg;
+ppOpts.weights      = weights;
+ppOpts.VolFrac      = VolFrac;
+ppOpts.fixedVars    = const_elems;
+ppOpts.useParallel  = useParallel;
+ppOpts.resultRoot   = resultRoot;
+ppOpts.configNames  = string(cellfun(@(s) s.name, configs, 'UniformOutput', false));
+%% ---- Structural performance metrics ----------------------------------------
+fprintf('\nComputing structural performance metrics...\n');
+x_ref_A = ones(nDesign, 1);
+metrics_ref_A   = evaluateStructuralPerformance(analyses, x_ref_A, 1,     useParallel);
+metrics_final_A = evaluateStructuralPerformance(analyses, finalX,  penal, useParallel);
+saveStructuralMetricsCsv(metrics_ref_A, metrics_final_A, configs, finalVolumeFraction, resultRoot);
+
+ppOpts.skipHeaviside = true;  % sensitivity-filtered SIMP: z IS physical density
+ppOpts.runReanalysis = false;
+ppOpts.runSweep     = false;
+
+postResult = postprocessSIMPResult(optResult, models{1}, analyses, Wfilter, ppOpts);
+
+plotFinalTopology(models{1}, finalX, resultRoot, postResult, analyses);
 plotHistory(history, configs, resultRoot);
 plotLocationDensity(locationStats, resultRoot);
 
