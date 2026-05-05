@@ -44,6 +44,13 @@ function arm = armModelDefaults(preset)
     arm.constEndRing = true;
     arm.constMiddleRing = true;
 
+    % Circumferential divisor for rotation-aware linking (Option 1).
+    % resCirc is snapped to the nearest multiple of nCircDiv so that every
+    % joint angle used in armLoadConfigs("six") is an exact integer multiple
+    % of the mesh angular step 2*pi/resCirc.
+    % nCircDiv = 8 covers all multiples of 45° (GCD of {45,90,180,270}).
+    arm.nCircDiv = 8;
+
     arm.mma = struct();
     arm.mma.xminValue = 0.01;
     arm.mma.changeTol = 1.0e-3;

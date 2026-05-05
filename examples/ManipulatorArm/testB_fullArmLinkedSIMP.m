@@ -1,10 +1,18 @@
 % testB_fullArmLinkedSIMP
 % Test B: full-arm linked multi-configuration SIMP for modular Arm-Z design.
 %
+% Linking mode: rotation-aware (use_offset=false, nCircDiv=arm.nCircDiv).
+%   resCirc is snapped to the nearest multiple of nCircDiv so every joint
+%   angle is an exact integer multiple of 2*pi/resCirc.  Each half-segment
+%   mesh is generated in its LOCAL frame (no phase trick); junction nodes
+%   align automatically.  rho(e) then corresponds to the SAME local
+%   circumferential position in every segment — a true repeating module.
+%
 % Formulation:
 %   Design variables: rho [H x 1] — reference half-segment densities.
 %   Full-arm expansion: x_arm = model.segmentToArm(rho)
 %   Pattern: [rho; flip(rho); rho; flip(rho); ...]
+%   (flip handles the reversed element ordering of 2b half-segments)
 %
 %   All configurations share the same x_arm; compliance and sensitivity are
 %   computed on the full solid FEM for each configuration, then pulled back
@@ -97,7 +105,7 @@ for k = 1:nConfigs
         k, nConfigs, cfg.label, mat2str(cfg.betas));
 
     model    = ManipulatorModel3D(E, nu, h_seg, R, r, res, res_th, alpha, ...
-        cfg.betas, ShapeFn, true, Pz, arm.constEndRing, arm.constMiddleRing);
+        cfg.betas, ShapeFn, false, Pz, arm.constEndRing, arm.constMiddleRing, arm.nCircDiv);
     analysis = model.analysis;
     nElems   = analysis.getTotalElemsNumber();
     taskDim  = analysis.getTaskDim();

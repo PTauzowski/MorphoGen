@@ -6,16 +6,22 @@ classdef ManipulatorModel3D < handle
         const_elems, upper_nodes, loadSurfaceNodes, fixedSurfaceNodes, halfSegmentNelems, use_offset, qnodal_solid, qnodal_top;
         constEndRing, constMiddleRing;
         couplingSections, debugCoupling;
+        % Mesh resolution stored for linkage diagnostics and rotation-aware mode.
+        resCirc, resLen, resTh, nCircDiv;
     end
     
     methods                       
-        function obj = ManipulatorModel3D(E,nu,ls,R,r, res, res_th, alpha, betas, ShapeFn, use_offset, Pz, constEndRing, constMiddleRing)
+        function obj = ManipulatorModel3D(E,nu,ls,R,r, res, res_th, alpha, betas, ShapeFn, use_offset, Pz, constEndRing, constMiddleRing, nCircDiv)
             if nargin < 13 || isempty(constEndRing)
                 constEndRing = true;
             end
             if nargin < 14 || isempty(constMiddleRing)
                 constMiddleRing = true;
             end
+            if nargin < 15 || isempty(nCircDiv)
+                nCircDiv = 1;
+            end
+            obj.nCircDiv = nCircDiv;
             alpha=alpha*pi/180;
             obj.alpha = alpha;
             obj.R = R;
@@ -32,7 +38,7 @@ classdef ManipulatorModel3D < handle
             end
 
             obj.mesh=Mesh();
-            obj.geterateManipulator( ls, R, r, res, res_th, alpha, betas, ShapeFn );
+            obj.geterateManipulator( ls, R, r, res, res_th, alpha, betas, ShapeFn, nCircDiv );
             obj.fe = SolidElasticElem( ShapeFn, obj.elems );
 
             obj.fe.props.h=1;
@@ -90,18 +96,33 @@ classdef ManipulatorModel3D < handle
             ns = ceil((nhs - 1) / 2) + 1;
         end
 
-        function geterateManipulator(obj, ls, R, r, res, res_th, alpha, betas, sf )
+        function geterateManipulator(obj, ls, R, r, res, res_th, alpha, betas, sf, nCircDiv)
+            if nargin < 10 || isempty(nCircDiv)
+                nCircDiv = 1;
+            end
             Th = R - r;
             obj.couplingSections = struct('frameNode', {}, 'adjacentFrameNode', {}, ...
                 'nodes', {}, 'label', {});
-        
+
             % --- thickness resolution (radial) ---
             resTh = max(1, round(res_th));
-        
+
             % --- choose circum + length resolution consistently with resTh ---
             % (your original logic: scale with Th so elements stay ~ isotropic)
             resCirc = max(3, round(2*pi*R/Th * resTh));
             resLen  = max(1, round(ls/Th * resTh));
+
+            % --- rotation-aware linking (use_offset=0): snap resCirc so every
+            %     joint angle is an exact integer multiple of 2*pi/resCirc.
+            %     Junction nodes then align without the phase trick.
+            if ~obj.use_offset && nCircDiv > 1
+                resCirc = round(resCirc / nCircDiv) * nCircDiv;
+                resCirc = max(resCirc, nCircDiv);
+            end
+
+            obj.resCirc = resCirc;
+            obj.resLen  = resLen;
+            obj.resTh   = resTh;
         
             % rotations...
             c=cos(alpha); s=sin(alpha);
