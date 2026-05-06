@@ -853,8 +853,23 @@ classdef PillarModel < ModelLinear
             %  nodes = round(obj.mesh.nodes / tol) * tol;
             nodes = obj.mesh.nodes;
 
+            % ---- Winkler surface elements on the bottom face ----------------
+            % H27 local indices for the ζ=-1 face in FEAP Q9 node order:
+            %   corners (1,3,9,7) → edge mids (2,6,8,4) → centre (5)
+            winkFaceIdx = [1, 3, 9, 7, 2, 6, 8, 4, 5];
+            z_min_val   = min(obj.mesh.nodes(:,3));
+            tol_w       = obj.z_tolerance;
+            winkElems   = zeros(0, 9, 'uint32');
+            for kk = 1:size(obj.mesh.elems,1)
+                bfGlobal = obj.mesh.elems(kk, winkFaceIdx);
+                if all( abs(obj.mesh.nodes(bfGlobal, 3) - z_min_val) < tol_w )
+                    winkElems(end+1, :) = bfGlobal; %#ok<AGROW>
+                end
+            end
+            nWink = size(winkElems, 1);
+
             fprintf(myfile, "feap * * pillar \n  %d %d 0 3 5 27 \n\n", ...
-                size(obj.mesh.nodes,1), size(obj.mesh.elems,1));
+                size(obj.mesh.nodes,1), size(obj.mesh.elems,1) + nWink);
             fprintf(myfile, "COORdinates\n");
             for k = 1:size(obj.mesh.nodes, 1)
                 fprintf(myfile, "%d   0   %.6f   %.6f   %.5f\n", ...
@@ -873,6 +888,14 @@ classdef PillarModel < ModelLinear
                 end
                 fprintf(myfile, "\n");
             end
+            % Winkler surface elements (material 2, 9 active nodes, zero-padded to nen=27)
+            nVol = size(obj.mesh.elems, 1);
+            for k = 1:nWink
+                fprintf(myfile, "%d 0 2", nVol + k);
+                fprintf(myfile, " %d", winkElems(k,:));          % 9 face nodes
+                fprintf(myfile, " 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"); % pad to 27
+                fprintf(myfile, "\n");
+            end
             fprintf(myfile, "\n");
 
             fprintf(myfile, "\n BOUNdary");
@@ -885,7 +908,7 @@ classdef PillarModel < ModelLinear
             fprintf(myfile, "2 0.0   0 1 0  1 1 ! plane y = 0  -> fix u_y\n");
             fprintf(myfile, "1 %.3f   1 0 0  1 1 ! plane x = 0  -> fix u_x\n",obj.tile_size);
             fprintf(myfile, "2 %.3f   0 1 0  1 1 ! plane y = 0  -> fix u_y\n",obj.tile_size);
-            fprintf(myfile, "3 %7.5E   1 1 1  1 1  ! plane z = min  -> fix u_x,u_y,u_z\n", ...
+            fprintf(myfile, "3 %7.5E   1 1 0  1 1  ! plane z = min  -> fix u_x,u_y; Winkler in u_z\n", ...
                 min(obj.mesh.nodes(:,3)));
 
             [chem_pillar, chem_ground, lays_between_layers] = obj.feapChemChannelsFromZ(obj.z_coords);
@@ -914,6 +937,11 @@ classdef PillarModel < ModelLinear
             fprintf(myfile, "div(x_n) -1 1  -4\n");
             fprintf(myfile, "3.533E-10   5.693E-10\n");
             fprintf(myfile, "3.189E-10 5.185E-10\n");
+            fprintf(myfile, "\n");
+            fprintf(myfile, "mate,2\n");
+            fprintf(myfile, "WINKler\n");
+            fprintf(myfile, "ELAStic 390.0d9\n");
+            fprintf(myfile, "QUAD 3 2\n");
             fprintf(myfile, "\n");
             fprintf(myfile, "end\n\n");
             fprintf(myfile, "TIE\n\n");

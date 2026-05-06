@@ -36,7 +36,7 @@ p.pillar_res = [ 1   8   2   1   2 ];
 %  (same order as pillar_layers).
 
 % ---- Ground / substrate geometry ------------------------------------
-p.ground_layers = [ 200   50   300 ];
+p.ground_layers = [ 600   50   300 ];
 %  Layer thicknesses of the ground substrate, ordered BOTTOM → TOP.
 %  Layer 1 (200):  deep substrate
 %  Layer 2 ( 50):  transition zone
@@ -169,5 +169,5 @@ model_width.plotLayerColors(fe2);
 %  EXPORT
 % ======================================================================
 
-model.FEAP_Export("Pillar18.i");
-model_width.FEAP_Export("Pillar18w.i");
+model.FEAP_Export("Pillar20.i");
+model_width.FEAP_Export("Pillar20w.i");
