@@ -1,0 +1,2 @@
+order,id,label,group,script,resultDir,status,errorMessage,durationSec,expectedOutputsPresent,completedAt
+1,testB,Test B full-arm linked SIMP,full_arm_simp,/Users/piotrek/Programming/Matlab/MorphoGenCAS_Arm/examples/ManipulatorArm/testB_fullArmLinkedSIMP.m,/Users/piotrek/Programming/Matlab/MorphoGenCAS_Arm/examples/ManipulatorArm/results/testB_fullArmLinkedSIMP,ok,,5893.632690125,1,2026-05-06 02:16:42
