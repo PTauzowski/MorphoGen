@@ -34,7 +34,7 @@ analyses = cell(nConfigs, 1);
 for k = 1:nConfigs
     cfg      = configs{k};
     model    = ManipulatorModel3D(r.E, r.nu, r.h_seg, r.R, r.r, r.res, r.res_th, ...
-        r.alpha, cfg.betas, arm.ShapeFn, true, r.Pz, arm.constEndRing, arm.constMiddleRing);
+        r.alpha, cfg.betas, arm.ShapeFn, false, r.Pz, arm.constEndRing, arm.constMiddleRing, arm.nCircDiv);
     models{k}   = model;
     analyses{k} = model.analysis;
 end

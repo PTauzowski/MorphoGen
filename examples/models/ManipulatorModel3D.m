@@ -112,10 +112,15 @@ classdef ManipulatorModel3D < handle
             resCirc = max(3, round(2*pi*R/Th * resTh));
             resLen  = max(1, round(ls/Th * resTh));
 
-            % --- rotation-aware linking (use_offset=0): snap resCirc so every
+            % --- rotation-aware mode (use_offset=false): snap resCirc so every
             %     joint angle is an exact integer multiple of 2*pi/resCirc.
-            %     Junction nodes then align without the phase trick.
-            if ~obj.use_offset && nCircDiv > 1
+            %     Junction nodes then align without the phase trick, and element e
+            %     covers the same local circumferential band in every configuration.
+            %     nCircDiv must be > 1 (use arm.nCircDiv=8 for the standard configs).
+            if ~obj.use_offset
+                assert(nCircDiv > 1, ...
+                    ['ManipulatorModel3D: use_offset=false requires nCircDiv > 1 so that ' ...
+                     'resCirc is snapped and junction nodes align. Pass arm.nCircDiv (e.g. 8).']);
                 resCirc = round(resCirc / nCircDiv) * nCircDiv;
                 resCirc = max(resCirc, nCircDiv);
             end

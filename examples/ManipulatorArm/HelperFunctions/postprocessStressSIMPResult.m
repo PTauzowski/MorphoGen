@@ -152,8 +152,13 @@ function postResult = postprocessStressSIMPResult(optResult, model, analyses, Wf
 
     %% -- 5. Save to disk ---------------------------------------------------
     if ~isempty(resultRoot)
+        unwrappedMode = "allSegments";
+        if numel(z) == model.halfSegmentNelems
+            unwrappedMode = "linked";
+        end
+        fullPipeMetrics = evaluateStructuralPerformance(analyses, ones(nElemsArm, 1), 1, useParallel);
         saveStressPostprocessResults(model, allCandidates, configNames, resultRoot, ...
-            plotModels, plotConfigs);
+            plotModels, plotConfigs, unwrappedMode, fullPipeMetrics, string(bestCandidate.label));
     end
 end
 
@@ -201,6 +206,7 @@ function cand = buildCandidateStress(solidRaw, solid, x_continuous, analyses, pe
     perfMetrics  = evaluateStructuralPerformance(analyses, x_bin, 1, useParallel);
     cand.sHM_max = perfMetrics.sHM_max;
     cand.u_max   = perfMetrics.u_max;
+    cand.uz_max  = perfMetrics.uz_max;
 
     % Binary reanalysis (expensive, opt-in)
     cand.S_binary            = NaN(nConstraints, 1);
@@ -249,7 +255,7 @@ end
 
 % -------------------------------------------------------------------------
 function saveStressPostprocessResults(model, allCandidates, configNames, resultRoot, ...
-        plotModels, plotConfigs)
+        plotModels, plotConfigs, unwrappedMode, fullPipeMetrics, bestLabel)
 
     % Summary CSV
     nCands = numel(allCandidates);
@@ -265,6 +271,9 @@ function saveStressPostprocessResults(model, allCandidates, configNames, resultR
         row.feasibleSelected     = double(c.feasibleSelected);
         row.selectedScore        = c.selectedScore;
         row.selectedBy           = string(c.selectedBy);
+        row.sHM_max              = c.sHM_max;
+        row.u_max                = c.u_max;
+        row.uz_max               = c.uz_max;
         row.nSolidRaw            = sum(c.solidRaw);
         row.nSolidElems          = sum(c.solid);
         rows{i} = row;
@@ -280,12 +289,17 @@ function saveStressPostprocessResults(model, allCandidates, configNames, resultR
         fig  = figure('Visible', 'off', 'Name', c.label);
         hold on; axis off; daspect([1 1 1]); view(45, 35);
         model.fe.plotSolidSelected(model.mesh.nodes, c.solid, [0.45 0.60 0.80]);
-        title(sprintf('%s  |  V=%.3f  %s=%.3f  sHM=%.3e  u=%.3e', ...
+        title(sprintf('%s  |  V=%.3f  %s=%.3f  sHM=%.3e  uz=%.3e', ...
             strrep(c.label,'_',' '), c.volFrac, char(c.selectedBy), c.selectedScore, ...
-            c.sHM_max, c.u_max), 'Interpreter', 'tex');
+            c.sHM_max, c.uz_max), 'Interpreter', 'tex');
         saveas(fig, fullfile(resultRoot, [stem '.png']));
         savefig(fig, fullfile(resultRoot, [stem '.fig']));
         close(fig);
+
+        saveArmUnwrappedTopology(model, double(c.solid), resultRoot, ...
+            [stem '_unwrapped'], ...
+            sprintf('%s  |  V=%.3f', strrep(c.label,'_',' '), c.volFrac), ...
+            struct('threshold', 0.5, 'mode', unwrappedMode));
 
         if ~isempty(plotModels)
             plotTopologyConfigurations(plotModels, c.solid, resultRoot, ...
@@ -293,6 +307,9 @@ function saveStressPostprocessResults(model, allCandidates, configNames, resultR
                 sprintf('%s by configuration', strrep(c.label, '_', ' ')), plotConfigs);
         end
     end
+
+    writeTopologyPerformanceComparisonCsv(resultRoot, ...
+        'postprocess_stress_topology_vs_full_pipe.csv', fullPipeMetrics, allCandidates, bestLabel);
 end
 
 % -------------------------------------------------------------------------

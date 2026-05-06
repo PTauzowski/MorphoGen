@@ -20,6 +20,11 @@ function plotFinalTopology(model, x, resultRoot, postResult, analyses, opts)
     thresholds = optField(opts, 'thresholds', 0.5);
     computeMetrics = optField(opts, 'computeMetrics', false) && ~isempty(analyses);
     saveFigFiles = optField(opts, 'saveFigFiles', false);
+    saveUnwrapped = optField(opts, 'saveUnwrapped', true);
+    unwrappedMode = optField(opts, 'unwrappedMode', "auto");
+    if string(unwrappedMode) == "auto" && isLikelyLinkedTopology(model, x)
+        unwrappedMode = "linked";
+    end
 
     fig = figure('Name', 'Final density', 'Visible', 'off');
     plotElementDensityField(model, x);
@@ -30,6 +35,12 @@ function plotFinalTopology(model, x, resultRoot, postResult, analyses, opts)
     end
     close(fig);
 
+    if saveUnwrapped
+        saveArmUnwrappedTopology(model, x, resultRoot, 'final_unwrapped_density', ...
+            sprintf('Final density, vf=%.3f', mean(x)), ...
+            struct('threshold', [], 'mode', unwrappedMode));
+    end
+
     xVoid = 1e-6;
     for i = 1:numel(thresholds)
         t    = thresholds(i);
@@ -39,8 +50,8 @@ function plotFinalTopology(model, x, resultRoot, postResult, analyses, opts)
         if computeMetrics
             x_bin_t = double(solid_t) + xVoid * double(~solid_t);
             perf    = evaluateStructuralPerformance(analyses, x_bin_t, 1, false);
-            titleStr = sprintf('Final topology  \\rho > %.1f  |  V=%.3f  sHM=%.3e  u=%.3e', ...
-                t, mean(solid_t), perf.sHM_max, perf.u_max);
+            titleStr = sprintf('Final topology  \\rho > %.1f  |  V=%.3f  sHM=%.3e  uz=%.3e', ...
+                t, mean(solid_t), perf.sHM_max, perf.uz_max);
         else
             titleStr = sprintf('Final topology  \\rho > %.1f', t);
         end
@@ -54,6 +65,12 @@ function plotFinalTopology(model, x, resultRoot, postResult, analyses, opts)
             savefig(fig, fullfile(resultRoot, [stem '.fig']));
         end
         close(fig);
+
+        if saveUnwrapped
+            saveArmUnwrappedTopology(model, double(solid_t), resultRoot, ...
+                [stem '_unwrapped'], titleStr, ...
+                struct('threshold', 0.5, 'mode', unwrappedMode));
+        end
     end
 
     % Optional: comparison panel when post-processing result is available
@@ -83,8 +100,12 @@ function plotFinalTopology(model, x, resultRoot, postResult, analyses, opts)
         metricStr = '';
     end
     if isfield(best, 'sHM_max')
-        title(sprintf('%s  (V=%.3f, %s, sHM=%.3e, u=%.3e)', ...
-            strrep(best.label,'_',' '), best.volFrac, metricStr, best.sHM_max, best.u_max), ...
+        uzBest = NaN;
+        if isfield(best, 'uz_max')
+            uzBest = best.uz_max;
+        end
+        title(sprintf('%s  (V=%.3f, %s, sHM=%.3e, uz=%.3e)', ...
+            strrep(best.label,'_',' '), best.volFrac, metricStr, best.sHM_max, uzBest), ...
             'Interpreter', 'tex');
     else
         title(sprintf('%s  (V=%.3f, %s)', strrep(best.label,'_',' '), best.volFrac, metricStr), ...
@@ -97,8 +118,34 @@ function plotFinalTopology(model, x, resultRoot, postResult, analyses, opts)
         savefig(fig, fullfile(resultRoot, 'final_best_topology.fig'));
     end
     close(fig);
+
+    if saveUnwrapped
+        saveArmUnwrappedTopology(model, double(best.solid), resultRoot, ...
+            'final_best_topology_unwrapped', ...
+            sprintf('%s  (V=%.3f)', strrep(best.label,'_',' '), best.volFrac), ...
+            struct('threshold', 0.5, 'mode', unwrappedMode));
+    end
 end
 
 function v = optField(s, field, default)
     if isfield(s, field), v = s.(field); else, v = default; end
+end
+
+function tf = isLikelyLinkedTopology(model, x)
+    H = model.halfSegmentNelems;
+    x = x(:);
+    if numel(x) == H
+        tf = true;
+        return;
+    end
+    if mod(numel(x), H) ~= 0
+        tf = false;
+        return;
+    end
+    try
+        xLinked = model.segmentToArm(x(1:H));
+        tf = numel(xLinked) == numel(x) && max(abs(xLinked(:) - x)) < 1e-10;
+    catch
+        tf = false;
+    end
 end

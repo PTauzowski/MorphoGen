@@ -1,0 +1,13 @@
+function printCurveMetrics(label, metrics, configs)
+% printCurveMetrics  Console report for curve-parametric optimization.
+
+    fprintf('\n%s\n', label);
+    fprintf('  objective=%.6e, stressObj=%.6e, dispObj=%.6e, vf=%.5f\n', ...
+        metrics.objective, metrics.stressObjective, metrics.dispObjective, ...
+        metrics.volumeFraction);
+    for k = 1:numel(configs)
+        fprintf('  %-12s maxHM=%.6e Pa, stressAgg=%.6e Pa, tipUz=%.6e m, maxDisp=%.6e m\n', ...
+            configs{k}.name, metrics.maxHM(k), metrics.stressAggregateByConfig(k), ...
+            metrics.tipUz(k), metrics.maxDisp(k));
+    end
+end

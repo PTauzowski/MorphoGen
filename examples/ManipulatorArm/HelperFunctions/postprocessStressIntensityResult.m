@@ -137,7 +137,14 @@ function postResult = postprocessStressIntensityResult(history, model, analyses,
 
     %% -- Save to disk -------------------------------------------------------
     if ~isempty(resultRoot)
-        saveESOPostprocessResults(model, candidates, resultRoot, plotModels, plotConfigs);
+        unwrappedMode = "allSegments";
+        if size(history.x, 1) == model.halfSegmentNelems
+            unwrappedMode = "linked";
+        end
+        nElemsArm = analyses{1}.getTotalElemsNumber();
+        fullPipeMetrics = evaluateStructuralPerformance(analyses, ones(nElemsArm, 1), 1, useParallel);
+        saveESOPostprocessResults(model, candidates, resultRoot, plotModels, plotConfigs, ...
+            unwrappedMode, fullPipeMetrics);
     end
 end
 
@@ -165,6 +172,7 @@ function cand = buildCandidateESO(solid, x_nearBinary, analyses, penal, pAgg, ..
     perfMetrics  = evaluateStructuralPerformance(analyses, x_bin_perf, 1, useParallel);
     cand.sHM_max = perfMetrics.sHM_max;
     cand.u_max   = perfMetrics.u_max;
+    cand.uz_max  = perfMetrics.uz_max;
 
     % Binary reanalysis (optional)
     cand.J_binary = NaN;
@@ -180,7 +188,8 @@ function cand = buildCandidateESO(solid, x_nearBinary, analyses, penal, pAgg, ..
 end
 
 % -------------------------------------------------------------------------
-function saveESOPostprocessResults(model, candidates, resultRoot, plotModels, plotConfigs)
+function saveESOPostprocessResults(model, candidates, resultRoot, plotModels, plotConfigs, ...
+        unwrappedMode, fullPipeMetrics)
 
     % Summary CSV
     nCands = numel(candidates);
@@ -192,6 +201,9 @@ function saveESOPostprocessResults(model, candidates, resultRoot, plotModels, pl
         row.volFrac     = c.volFrac;
         row.J_direct    = c.J_direct;
         row.J_binary    = c.J_binary;
+        row.sHM_max     = c.sHM_max;
+        row.u_max       = c.u_max;
+        row.uz_max      = c.uz_max;
         row.nSolidElems = sum(c.solid);
         rows{i} = row;
     end
@@ -206,12 +218,17 @@ function saveESOPostprocessResults(model, candidates, resultRoot, plotModels, pl
         fig  = figure('Visible', 'off', 'Name', c.label);
         hold on; axis off; daspect([1 1 1]); view(45, 35);
         model.fe.plotSolidSelected(model.mesh.nodes, c.solid, [0.45 0.60 0.80]);
-        title(sprintf('%s  |  V=%.3f  J=%.4f  sHM=%.3e  u=%.3e', ...
-            strrep(c.label,'_',' '), c.volFrac, c.J_direct, c.sHM_max, c.u_max), ...
+        title(sprintf('%s  |  V=%.3f  J=%.4f  sHM=%.3e  uz=%.3e', ...
+            strrep(c.label,'_',' '), c.volFrac, c.J_direct, c.sHM_max, c.uz_max), ...
             'Interpreter', 'tex');
         saveas(fig, fullfile(resultRoot, [stem '.png']));
         savefig(fig, fullfile(resultRoot, [stem '.fig']));
         close(fig);
+
+        saveArmUnwrappedTopology(model, double(c.solid), resultRoot, ...
+            [stem '_unwrapped'], ...
+            sprintf('%s  |  V=%.3f', strrep(c.label,'_',' '), c.volFrac), ...
+            struct('threshold', 0.5, 'mode', unwrappedMode));
 
         if ~isempty(plotModels)
             plotTopologyConfigurations(plotModels, c.solid, resultRoot, ...
@@ -219,6 +236,12 @@ function saveESOPostprocessResults(model, candidates, resultRoot, plotModels, pl
                 sprintf('%s by configuration', strrep(c.label, '_', ' ')), plotConfigs);
         end
     end
+
+    Jvals = cellfun(@(c) c.J_direct, candidates);
+    [~, bestIdx] = min(Jvals);
+    writeTopologyPerformanceComparisonCsv(resultRoot, ...
+        'postprocess_eso_topology_vs_full_pipe.csv', fullPipeMetrics, candidates, ...
+        string(candidates{bestIdx}.label));
 
     % J vs VF comparison bar chart (if more than one candidate)
     if nCands > 1

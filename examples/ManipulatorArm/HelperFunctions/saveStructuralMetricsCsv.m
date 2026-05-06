@@ -25,6 +25,9 @@ function saveStructuralMetricsCsv(metrics_ref, metrics_final, configs, volFrac, 
         row.u_ref        = metrics_ref.u_perConfig(k);
         row.u_final      = metrics_final.u_perConfig(k);
         row.u_ratio      = metrics_final.u_perConfig(k) / max(metrics_ref.u_perConfig(k), eps);
+        row.uz_ref       = metrics_ref.uz_perConfig(k);
+        row.uz_final     = metrics_final.uz_perConfig(k);
+        row.uz_ratio     = metrics_final.uz_perConfig(k) / max(metrics_ref.uz_perConfig(k), eps);
         rows{k} = row;
     end
 
@@ -37,12 +40,16 @@ function saveStructuralMetricsCsv(metrics_ref, metrics_final, configs, volFrac, 
     row.u_ref        = metrics_ref.u_max;
     row.u_final      = metrics_final.u_max;
     row.u_ratio      = metrics_final.u_max / max(metrics_ref.u_max, eps);
+    row.uz_ref       = metrics_ref.uz_max;
+    row.uz_final     = metrics_final.uz_max;
+    row.uz_ratio     = metrics_final.uz_max / max(metrics_ref.uz_max, eps);
     rows{end} = row;
 
     T = struct2table(vertcat(rows{:}));
     writetable(T, fullfile(resultRoot, 'structural_metrics.csv'));
-    fprintf('[structural metrics] sHM: %.3e -> %.3e (x%.2f)  u: %.3e -> %.3e (x%.2f)  vf=%.3f\n', ...
+    fprintf('[structural metrics] sHM: %.3e -> %.3e (x%.2f)  u: %.3e -> %.3e (x%.2f)  uz: %.3e -> %.3e (x%.2f)  vf=%.3f\n', ...
         metrics_ref.sHM_max, metrics_final.sHM_max, metrics_final.sHM_max/max(metrics_ref.sHM_max,eps), ...
         metrics_ref.u_max,   metrics_final.u_max,   metrics_final.u_max  /max(metrics_ref.u_max,  eps), ...
+        metrics_ref.uz_max,  metrics_final.uz_max,  metrics_final.uz_max /max(metrics_ref.uz_max, eps), ...
         volFrac);
 end

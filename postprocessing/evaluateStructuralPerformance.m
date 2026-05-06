@@ -6,6 +6,7 @@ function result = evaluateStructuralPerformance(analyses, x, penal, useParallel)
 %   For each load configuration, solves the weighted FEM problem and extracts:
 %     - Max element-averaged nodal Huber-Mises (HM) stress
 %     - Max nodal displacement magnitude (L2 norm of ux,uy,uz)
+%     - Max absolute vertical displacement |uz|
 %
 %   Inputs:
 %     analyses     {nConfigs x 1}  FEAnalysis objects
@@ -17,8 +18,10 @@ function result = evaluateStructuralPerformance(analyses, x, penal, useParallel)
 %   Output: result struct with fields
 %     .sHM_perConfig  [nConfigs x 1]  max HM stress per config
 %     .u_perConfig    [nConfigs x 1]  max displacement magnitude per config
+%     .uz_perConfig   [nConfigs x 1]  max absolute vertical displacement per config
 %     .sHM_max        scalar          max over all configs
 %     .u_max          scalar          max over all configs
+%     .uz_max         scalar          max over all configs
 
     if nargin < 4, useParallel = false; end
 
@@ -29,28 +32,31 @@ function result = evaluateStructuralPerformance(analyses, x, penal, useParallel)
 
     sHM_k = zeros(nConfigs, 1);
     u_k   = zeros(nConfigs, 1);
+    uz_k  = zeros(nConfigs, 1);
 
     if useParallel
         parfor k = 1:nConfigs
-            [sHM_k(k), u_k(k)] = evalOneConfig(analyses{k}, xPenal);
+            [sHM_k(k), u_k(k), uz_k(k)] = evalOneConfig(analyses{k}, xPenal);
         end
     else
         for k = 1:nConfigs
-            [sHM_k(k), u_k(k)] = evalOneConfig(analyses{k}, xPenal);
+            [sHM_k(k), u_k(k), uz_k(k)] = evalOneConfig(analyses{k}, xPenal);
         end
     end
 
     result.sHM_perConfig = sHM_k;
     result.u_perConfig   = u_k;
+    result.uz_perConfig  = uz_k;
     result.sHM_max       = max(sHM_k);
     result.u_max         = max(u_k);
+    result.uz_max        = max(uz_k);
 end
 
 % =========================================================================
 % Local helpers
 % =========================================================================
 
-function [sHM_max, u_max] = evalOneConfig(analysis, xPenal)
+function [sHM_max, u_max, uz_max] = evalOneConfig(analysis, xPenal)
     nElems = analysis.getTotalElemsNumber();
 
     analysis.solveWeighted(xPenal, false);
@@ -74,4 +80,8 @@ function [sHM_max, u_max] = evalOneConfig(analysis, xPenal)
     % Max displacement magnitude (L2 norm of ux,uy,uz at each node)
     dispIdx = analysis.findDOFsIndices(["ux", "uy", "uz"]);
     u_max   = max(vecnorm(analysis.qnodal(:, dispIdx), 2, 2));
+
+    % Max absolute vertical displacement
+    uzIdx  = analysis.findDOFsIndices("uz");
+    uz_max = max(abs(analysis.qnodal(:, uzIdx)));
 end

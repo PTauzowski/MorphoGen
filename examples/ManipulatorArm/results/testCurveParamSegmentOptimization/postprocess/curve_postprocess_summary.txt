@@ -1,0 +1,21 @@
+Curve-parametric postprocess summary
+Target volume fraction: 0.400000
+
+Best parameters:
+  angleDeg             45
+  phaseFrac            1e-08
+  spacingFactor        18
+  widthFactor          0.9
+  helixPlusWeight      0.8
+  helixMinusWeight     0.8
+  axialWeight          0.35
+  bendingWeight        0.35
+  ringWeight           4e-09
+  ringSpacingFactor    32
+  jointRingWeight      0.75
+  baseDensity          0.04
+
+Metrics by variant/config:
+  continuous         min_bending  maxHM= 5.889876e+06 stressAgg= 2.852550e+06 tipUz=-6.578428e-02 maxDisp= 6.677037e-02 vf=0.40000
+  threshold_05       min_bending  maxHM= 8.623596e+06 stressAgg= 3.785067e+06 tipUz=-5.603327e-02 maxDisp= 5.691228e-02 vf=0.36250
+  threshold_volume   min_bending  maxHM= 8.492562e+06 stressAgg= 3.674371e+06 tipUz=-4.727986e-02 maxDisp= 4.803219e-02 vf=0.40600

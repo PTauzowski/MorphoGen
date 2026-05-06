@@ -89,7 +89,7 @@ for k = 1:nConfigs
         k, nConfigs, cfg.label, mat2str(cfg.betas));
 
     model = ManipulatorModel3D(E, nu, h_seg, R, r, res, res_th, alpha, ...
-        cfg.betas, ShapeFn, true, Pz, arm.constEndRing, arm.constMiddleRing);
+        cfg.betas, ShapeFn, false, Pz, arm.constEndRing, arm.constMiddleRing, arm.nCircDiv);
     analysis = model.analysis;
     nElems = analysis.getTotalElemsNumber();
     taskDim = analysis.getTaskDim();
