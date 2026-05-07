@@ -1,12 +1,20 @@
 function configs = armLoadConfigs(kind)
 % armLoadConfigs  Standard full-arm load-configuration sets.
 %
-%   "six" returns the symmetric min/max bending, torsion, and shear cases.
-%   "sixPlusTension" adds the straight-arm axial/tension case.
+%   "six"            symmetric min/max bending, torsion, and shear (6 cases).
+%   "sixPlusTension" as above plus the straight-arm axial/tension case (7).
+%   "statistical"    statistically-derived extremal configurations loaded
+%                    from the data file produced by coupledExamples.m.
+%                    Run coupledExamples.m first to generate the file.
     if nargin < 1
         kind = "six";
     end
-    kind = string(validatestring(char(kind), {'six', 'sixPlusTension'}));
+    kind = string(validatestring(char(kind), {'six', 'sixPlusTension', 'statistical'}));
+
+    if kind == "statistical"
+        configs = loadStatisticalConfigs();
+        return;
+    end
 
     configs = {
         struct('name', 'min_bending', 'label', 'Min M_z', 'betas', -[0 0 0 180 180 180 180]);
@@ -21,4 +29,15 @@ function configs = armLoadConfigs(kind)
         configs{end + 1, 1} = struct('name', 'max_tension', 'label', 'Max N', ...
             'betas', [0 0 0 0 0 0 0]);
     end
+end
+
+function configs = loadStatisticalConfigs()
+    dataFile = fullfile(fileparts(mfilename('fullpath')), '..', 'data', 'extremalLoadConfigs.mat');
+    if ~exist(dataFile, 'file')
+        error('armLoadConfigs:missingData', ...
+            ['Statistical extremal configs not found.\n' ...
+             'Run coupledExamples.m to generate: %s'], dataFile);
+    end
+    S = load(dataFile, 'configs');
+    configs = S.configs;
 end

@@ -6,6 +6,18 @@ function testCurveParamSegmentOptimization(varargin)
 % axial, and circumferential curve families, then expanded to the full arm
 % through ManipulatorModel3D.segmentToArm.  This is a low-dimensional,
 % manufacturability-oriented alternative to element-wise SIMP.
+%
+% Objective modes:
+%   "stress"            minimize stress aggregate at fixed VolFrac  (fminsearch)
+%   "uz"                minimize tip displacement at fixed VolFrac   (fminsearch)
+%   "combined"          weighted stress + displacement               (fminsearch)
+%   "min_volume_stress" minimize VF s.t. stress  <= stressConstraintRatio * full_pipe  (fmincon)
+%   "min_volume_disp"   minimize VF s.t. tipUz   <= dispConstraintRatio  * full_pipe  (fmincon)
+%   "min_volume"        minimize VF s.t. both stress and disp constraints              (fmincon)
+%
+% Usage examples:
+%   testCurveParamSegmentOptimization('objectiveMode','min_volume_stress','stressConstraintRatio',3.0)
+%   testCurveParamSegmentOptimization('objectiveMode','min_volume','stressConstraintRatio',3.0,'dispConstraintRatio',8.0)
 
 close all; clc;
 
@@ -32,22 +44,39 @@ ShapeFn = arm.ShapeFn;
 VolFrac = 0.40;
 penal = 3.0;
 
-% objectiveMode: "stress", "uz", or "combined"
 objectiveMode = runOpts.objectiveMode;
-stressWeight = 0.70;      % used only by "combined"
-dispWeight = 0.30;        % used only by "combined"
-pElem = 12.0;             % smooth stress aggregation over elements
-pConfigStress = 4.0;      % smooth stress aggregation over configurations
-pConfigDisp = 4.0;        % smooth displacement aggregation over configurations
+isMinVolumeMode = startsWith(objectiveMode, "min_volume");
+stressWeight = 0.70;
+dispWeight = 0.30;
+pElem = 12.0;
+pConfigStress = 4.0;
+pConfigDisp = 4.0;
 
 maxIter = runOpts.maxIter;
 maxFunEvals = runOpts.maxFunEvals;
 
-configs = armLoadConfigs("sixPlusTension");
+configs = armLoadConfigs("statistical");
 if isfinite(runOpts.configLimit)
     configs = configs(1:min(numel(configs), runOpts.configLimit));
 end
 nConfigs = numel(configs);
+
+if isempty(gcp('nocreate'))
+    parpool('local', min(nConfigs, feature('numcores')));
+end
+
+% Auto-generate result tag for min_volume modes if not manually set.
+if strlength(runOpts.resultTag) == 0 && isMinVolumeMode
+    tag = strrep(objectiveMode, 'min_volume_', '') ;
+    if tag == "min_volume", tag = "vol"; end
+    if isfinite(runOpts.stressConstraintRatio)
+        tag = tag + sprintf("_s%.1f", runOpts.stressConstraintRatio);
+    end
+    if isfinite(runOpts.dispConstraintRatio)
+        tag = tag + sprintf("_d%.1f", runOpts.dispConstraintRatio);
+    end
+    runOpts.resultTag = tag;
+end
 
 resultName = 'testCurveParamSegmentOptimization';
 if strlength(runOpts.resultTag) > 0
@@ -57,8 +86,13 @@ resultRoot = fullfile(scriptDir, 'results', char(resultName));
 if ~exist(resultRoot, 'dir'), mkdir(resultRoot); end
 
 fprintf('Curve-parametrized linked segment optimization\n');
-fprintf('  objective=%s, VolFrac=%.3f, penal=%.2f, pElem=%.1f\n', ...
-    objectiveMode, VolFrac, penal, pElem);
+fprintf('  objective=%s, penal=%.2f, pElem=%.1f\n', objectiveMode, penal, pElem);
+if isMinVolumeMode
+    fprintf('  stressConstraintRatio=%.2f, dispConstraintRatio=%.2f\n', ...
+        runOpts.stressConstraintRatio, runOpts.dispConstraintRatio);
+else
+    fprintf('  VolFrac=%.3f\n', VolFrac);
+end
 fprintf('  Result root: %s\n', resultRoot);
 
 %% ---- Build full-arm configurations -----------------------------------------
@@ -106,7 +140,7 @@ fprintf('\nReference half-segment elements: %d\n', H);
 fprintf('Constant linked ring elements : %d\n', numel(constRef));
 fprintf('Constant full-arm ring elems  : %d\n', numel(constFull));
 
-%% ---- Curve-density setup ----------------------------------------------------
+%% ---- Curve-density setup ---------------------------------------------------
 curveOpts = struct();
 curveOpts.VolFrac = VolFrac;
 curveOpts.penal = penal;
@@ -117,7 +151,7 @@ curveOpts.elemSize = arm.nominalElementSize;
 curveOpts.pElem = pElem;
 curveOpts.pConfigStress = pConfigStress;
 curveOpts.pConfigDisp = pConfigDisp;
-curveOpts.objectiveMode = objectiveMode;
+curveOpts.objectiveMode = selectInnerObjectiveMode(objectiveMode);
 curveOpts.stressWeight = stressWeight;
 curveOpts.dispWeight = dispWeight;
 curveOpts.resultRoot = resultRoot;
@@ -130,54 +164,139 @@ p0 = defaultCurveParamInitial(arm);
 u0 = curveParamsToUnconstrained(p0, paramBounds);
 
 fprintf('\nInitial curve parameters:\n');
-disp(struct2table(p0));
+disp(struct2table(curveParamsToDisplayStruct(p0)));
 
-%% ---- Baseline and optimization ---------------------------------------------
-fprintf('\nEvaluating uniform baseline at VolFrac=%.3f...\n', VolFrac);
-rhoUniformFull = uniformDensityWithFixedVolume(referenceElemCount, VolFrac, ...
-    arm.mma.xminValue, constFull);
-rhoUniformRef = rhoUniformFull(1:H);
-rhoUniformFull(constFull) = 1.0;
-[baselineMetrics, baselineRaw] = evaluateLinkedDensityMetrics(analyses, rhoUniformFull, curveOpts);
-printCurveMetrics('Uniform baseline', baselineMetrics, configs);
-curveOpts.stressRef = baselineMetrics.stressAggregateByConfig;
-curveOpts.dispRef = abs(baselineMetrics.tipUz);
-[baselineMetrics, baselineRaw] = evaluateLinkedDensityMetrics(analyses, rhoUniformFull, curveOpts);
-
+%% ---- Reference metrics and optimization ------------------------------------
 evalCount = 0;
 historyRows = struct([]);
-objectiveFn = @(u) objectiveFromUnconstrained(u);
 
-options = optimset('Display', 'iter', ...
-    'MaxIter', maxIter, ...
-    'MaxFunEvals', maxFunEvals, ...
-    'TolX', 1.0e-3, ...
-    'TolFun', 1.0e-3);
+if isMinVolumeMode
+    %% -- Option B: fmincon, minimize VF subject to stress/disp constraints --
 
-fprintf('\nRunning fminsearch over bounded curve parameters...\n');
-if maxIter <= 0 || maxFunEvals <= 1
-    fprintf('Skipping fminsearch because MaxIter=%d and MaxFunEvals=%d.\n', ...
-        maxIter, maxFunEvals);
-    uBest = u0;
-    JBest = objectiveFn(u0);
+    fprintf('\nComputing full-pipe reference metrics...\n');
+    rhoFullPipe = ones(referenceElemCount, 1);
+    [fullPipeMetrics, ~] = evaluateLinkedDensityMetrics(analyses, rhoFullPipe, curveOpts);
+    stressFullPipe = max(fullPipeMetrics.maxHM);
+    dispFullPipe   = max(abs(fullPipeMetrics.tipUz));
+
+    stressLimit = runOpts.stressConstraintRatio * stressFullPipe;
+    dispLimit   = runOpts.dispConstraintRatio   * dispFullPipe;
+    fprintf('Full-pipe: maxHM=%.4e Pa, max|tipUz|=%.4e m\n', stressFullPipe, dispFullPipe);
+    fprintf('Stress limit: %.4e Pa (x%.2f)   Disp limit: %.4e m (x%.2f)\n', ...
+        stressLimit, runOpts.stressConstraintRatio, dispLimit, runOpts.dispConstraintRatio);
+
+    % Cache to avoid double FEM evaluation when fmincon calls obj + nonlcon
+    % at the same point (which it does every iteration).
+    cachedTheta   = [];
+    cachedMetrics = [];
+
+    vfMin = runOpts.vfMin;
+    % Auto-init: start at VF=1.0 (full pipe, feasible) so SQP reduces VF
+    % from a feasible starting point rather than climbing out of infeasibility.
+    if isempty(runOpts.vfInitial)
+        vfInitial = 1.0;
+    else
+        vfInitial = runOpts.vfInitial;
+    end
+    fprintf('Starting VF: %.4f\n', vfInitial);
+    theta0 = [u0(:); vfInitial];
+    lb = [-Inf(numel(u0), 1); vfMin];
+    ub = [ Inf(numel(u0), 1); 1.0 ];
+
+    fminconOpts = optimoptions('fmincon', ...
+        'Algorithm',                  'sqp', ...
+        'Display',                    'iter', ...
+        'MaxIterations',              maxIter, ...
+        'MaxFunctionEvaluations',     maxFunEvals, ...
+        'OptimalityTolerance',        1e-3, ...
+        'ConstraintTolerance',        1e-3, ...
+        'FiniteDifferenceStepSize',   0.05, ...
+        'FiniteDifferenceType',       'central');
+
+    fprintf('\nRunning fmincon (SQP) to minimize volume fraction...\n');
+    if maxIter <= 0 || maxFunEvals <= 1
+        fprintf('Skipping fmincon because MaxIter=%d and MaxFunEvals=%d.\n', maxIter, maxFunEvals);
+        thetaBest = theta0;
+    else
+        [thetaBest, ~] = fmincon(@objectiveMinVol, theta0, [], [], [], [], lb, ub, ...
+            @constraintMinVol, fminconOpts);
+    end
+
+    uBest   = thetaBest(1:end-1);
+    vfBest  = thetaBest(end);
+    pBest   = unconstrainedToCurveParams(uBest, paramBounds);
+    JBest   = vfBest;
+
+    curveOpts.VolFrac = vfBest;
+    [rhoRefBest, rhoFullBest, bestDensityInfo] = buildCurveLinkedDensity(pBest, modelRef, curveOpts);
+    [bestMetrics, bestRaw] = evaluateLinkedDensityMetrics(analyses, rhoFullBest, curveOpts);
+
+    % Use full-pipe metrics as the comparison baseline for summary CSV.
+    baselineMetrics = fullPipeMetrics;
+    baselineRaw     = [];
+    rhoUniformRef   = rhoFullPipe(1:H);
+    rhoUniformFull  = rhoFullPipe;
+
 else
-    [uBest, JBest] = fminsearch(objectiveFn, u0, options);
+    %% -- Existing modes: fminsearch at fixed VolFrac -------------------------
+
+    fprintf('\nEvaluating uniform baseline at VolFrac=%.3f...\n', VolFrac);
+    rhoUniformFull = uniformDensityWithFixedVolume(referenceElemCount, VolFrac, ...
+        arm.mma.xminValue, constFull);
+    rhoUniformRef = rhoUniformFull(1:H);
+    rhoUniformFull(constFull) = 1.0;
+    [baselineMetrics, baselineRaw] = evaluateLinkedDensityMetrics(analyses, rhoUniformFull, curveOpts);
+    printCurveMetrics('Uniform baseline', baselineMetrics, configs);
+    curveOpts.stressRef = baselineMetrics.stressAggregateByConfig;
+    curveOpts.dispRef   = abs(baselineMetrics.tipUz);
+    [baselineMetrics, baselineRaw] = evaluateLinkedDensityMetrics(analyses, rhoUniformFull, curveOpts);
+
+    options = optimset('Display', 'iter', ...
+        'MaxIter',     maxIter, ...
+        'MaxFunEvals', maxFunEvals, ...
+        'TolX',        1.0e-3, ...
+        'TolFun',      1.0e-3);
+
+    fprintf('\nRunning fminsearch over bounded curve parameters...\n');
+    if maxIter <= 0 || maxFunEvals <= 1
+        fprintf('Skipping fminsearch because MaxIter=%d and MaxFunEvals=%d.\n', maxIter, maxFunEvals);
+        uBest = u0;
+        JBest = objectiveFromUnconstrained(u0);
+    else
+        [uBest, JBest] = fminsearch(@objectiveFromUnconstrained, u0, options);
+    end
+    pBest = unconstrainedToCurveParams(uBest, paramBounds);
+    [rhoRefBest, rhoFullBest, bestDensityInfo] = buildCurveLinkedDensity(pBest, modelRef, curveOpts);
+    [bestMetrics, bestRaw] = evaluateLinkedDensityMetrics(analyses, rhoFullBest, curveOpts);
+
+    vfBest = bestDensityInfo.fullVolumeFraction;
 end
-pBest = unconstrainedToCurveParams(uBest, paramBounds);
-[rhoRefBest, rhoFullBest, bestDensityInfo] = buildCurveLinkedDensity(pBest, modelRef, curveOpts);
-[bestMetrics, bestRaw] = evaluateLinkedDensityMetrics(analyses, rhoFullBest, curveOpts);
 
 fprintf('\nBest curve parameters:\n');
-disp(struct2table(pBest));
+disp(struct2table(curveParamsToDisplayStruct(pBest)));
 fprintf('Best density volume: linked=%.5f, full=%.5f\n', ...
     bestDensityInfo.linkedVolumeFraction, bestDensityInfo.fullVolumeFraction);
 printCurveMetrics('Best curve design', bestMetrics, configs);
+if isMinVolumeMode
+    achievedStressRatio = max(bestMetrics.maxHM) / stressFullPipe;
+    achievedDispRatio   = max(abs(bestMetrics.tipUz)) / dispFullPipe;
+    fprintf('Achieved: VF=%.4f, stress ratio=%.3f (limit %.2f), disp ratio=%.3f (limit %.2f)\n', ...
+        vfBest, achievedStressRatio, runOpts.stressConstraintRatio, ...
+        achievedDispRatio, runOpts.dispConstraintRatio);
+end
 
-%% ---- Save results -----------------------------------------------------------
-save(fullfile(resultRoot, 'result.mat'), ...
-    'pBest', 'JBest', 'rhoRefBest', 'rhoFullBest', 'bestMetrics', 'bestRaw', ...
+%% ---- Save results ----------------------------------------------------------
+saveVars = {'pBest', 'JBest', 'p0', 'vfBest', ...
+    'rhoRefBest', 'rhoFullBest', 'bestMetrics', 'bestRaw', ...
     'baselineMetrics', 'baselineRaw', 'rhoUniformRef', 'rhoUniformFull', ...
-    'historyRows', 'configs', 'curveOpts', 'paramBounds', 'arm');
+    'historyRows', 'configs', 'curveOpts', 'paramBounds', 'arm'};
+if isMinVolumeMode
+    stressConstraintRatio = runOpts.stressConstraintRatio; %#ok<NASGU>
+    dispConstraintRatio   = runOpts.dispConstraintRatio;   %#ok<NASGU>
+    saveVars = [saveVars, {'stressConstraintRatio', 'dispConstraintRatio', ...
+        'stressLimit', 'dispLimit', 'stressFullPipe', 'dispFullPipe', 'fullPipeMetrics'}];
+end
+save(fullfile(resultRoot, 'result.mat'), saveVars{:});
 
 if ~isempty(historyRows)
     writetable(struct2table(historyRows), fullfile(resultRoot, 'history.csv'));
@@ -198,7 +317,57 @@ savefig(fig, fullfile(resultRoot, 'rho_full_curve.fig'));
 
 fprintf('\nSaved results to: %s\n', resultRoot);
 
-%% ---- Local objective wrapper -----------------------------------------------
+postprocessCurveParamResult(resultRoot);
+
+%% ---- Nested functions ------------------------------------------------------
+
+function J = objectiveMinVol(theta)
+    J = theta(end);  % minimize VF directly
+end
+
+function [c, ceq] = constraintMinVol(theta)
+    % Return one inequality per configuration so SQP receives individual
+    % gradients for every load case, not just the single worst-case max.
+    m = evalForMinVol(theta);
+    c = m.maxHM(:) / stressLimit - 1;          % [nConfigs x 1]
+    if isfinite(dispLimit)
+        c = [c; abs(m.tipUz(:)) / dispLimit - 1];  % append [nConfigs x 1]
+    end
+    ceq = [];
+end
+
+function m = evalForMinVol(theta)
+    % Cache: rebuild only when theta changes (fmincon calls obj + nonlcon
+    % separately but at the same point each iteration).
+    if ~isequal(theta, cachedTheta)
+        params = unconstrainedToCurveParams(theta(1:end-1), paramBounds);
+        vf     = max(vfMin, min(1.0, theta(end)));
+        localOpts          = curveOpts;
+        localOpts.VolFrac  = vf;
+        [~, rhoFull, densityInfo] = buildCurveLinkedDensity(params, modelRef, localOpts);
+        [metrics, ~]       = evaluateLinkedDensityMetrics(analyses, rhoFull, localOpts);
+        cachedTheta   = theta;
+        cachedMetrics = metrics;
+
+        evalCount = evalCount + 1;
+        sRatio = max(metrics.maxHM)      / stressFullPipe;
+        dRatio = max(abs(metrics.tipUz)) / dispFullPipe;
+        fprintf('eval %4d: VF=%.4f, stress_ratio=%.3f (lim=%.2f), disp_ratio=%.3f (lim=%.2f)\n', ...
+            evalCount, densityInfo.fullVolumeFraction, sRatio, runOpts.stressConstraintRatio, ...
+            dRatio, runOpts.dispConstraintRatio);
+
+        row = params;
+        row.eval         = evalCount;
+        row.VF           = densityInfo.fullVolumeFraction;
+        row.stressRatio  = sRatio;
+        row.dispRatio    = dRatio;
+        row.maxHM        = max(metrics.maxHM);
+        row.maxAbsUz     = max(abs(metrics.tipUz));
+        historyRows = [historyRows; row]; %#ok<AGROW>
+    end
+    m = cachedMetrics;
+end
+
 function J = objectiveFromUnconstrained(u)
     evalCount = evalCount + 1;
     params = unconstrainedToCurveParams(u, paramBounds);
@@ -241,14 +410,18 @@ end
 
 function opts = parseRunOptions(varargin)
     opts = struct();
-    opts.objectiveMode = "stress";
-    opts.maxIter = 80;
-    opts.maxFunEvals = 400;
-    opts.configLimit = Inf;
-    opts.torsionWeight = 1.0;
-    opts.bendingWeight = 1.0;
-    opts.shearWeight = 1.0;
-    opts.resultTag = "";
+    opts.objectiveMode         = "stress";
+    opts.maxIter               = 80;
+    opts.maxFunEvals           = 400;
+    opts.configLimit           = Inf;
+    opts.torsionWeight         = 1.0;
+    opts.bendingWeight         = 1.0;
+    opts.shearWeight           = 1.0;
+    opts.resultTag             = "";
+    opts.stressConstraintRatio = Inf;
+    opts.dispConstraintRatio   = Inf;
+    opts.vfInitial             = [];   % auto: 1.0 for min_volume, unused otherwise
+    opts.vfMin                 = 0.05;
 
     if numel(varargin) == 1 && strcmpi(string(varargin{1}), "quick")
         opts.maxIter = 0;
@@ -279,9 +452,37 @@ function opts = parseRunOptions(varargin)
                 opts.shearWeight = value;
             case "resulttag"
                 opts.resultTag = string(value);
+            case "stressconstraintratio"
+                opts.stressConstraintRatio = value;
+            case "dispconstraintratio"
+                opts.dispConstraintRatio = value;
+            case "vfinitial"
+                opts.vfInitial = value;
+            case "vfmin"
+                opts.vfMin = value;
             otherwise
                 error('Unknown option "%s".', name);
         end
+    end
+
+    % Validate constraints are set for min_volume modes.
+    if startsWith(string(opts.objectiveMode), "min_volume")
+        if isinf(opts.stressConstraintRatio) && isinf(opts.dispConstraintRatio)
+            error(['min_volume modes require at least one constraint. ' ...
+                'Set stressConstraintRatio and/or dispConstraintRatio.']);
+        end
+    end
+end
+
+function mode = selectInnerObjectiveMode(outerMode)
+    % min_volume modes bypass metrics.objective; use "stress" so
+    % evaluateLinkedDensityMetrics stays valid and stressRef/dispRef
+    % fields are populated (even though they won't be used as objective).
+    known = ["stress", "uz", "combined"];
+    if any(outerMode == known)
+        mode = outerMode;
+    else
+        mode = "stress";
     end
 end
 
@@ -301,6 +502,16 @@ function weights = buildConfigWeights(configs, runOpts)
         weights(:) = 1;
     end
     weights = weights / sum(weights);
+end
+
+function s = curveParamsToDisplayStruct(params)
+    % Return a struct containing only the 14 optimisation parameters in
+    % their canonical order, suppressing legacy fields like angleDeg.
+    names = curveParamNames();
+    s = struct();
+    for i = 1:numel(names)
+        s.(names{i}) = params.(names{i});
+    end
 end
 
 end

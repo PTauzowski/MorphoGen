@@ -16,7 +16,7 @@ function [metrics, raw] = evaluateLinkedDensityMetrics(analyses, rhoFull, opts)
     stressValues = cell(nConfigs, 1);
 
     xPenal = rhoFull .^ penal;
-    for k = 1:nConfigs
+    parfor k = 1:nConfigs
         analysis = analyses{k};
         analysis.solveWeighted(xPenal);
         analysis.computeElementResults(xPenal);

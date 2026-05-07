@@ -293,24 +293,32 @@ end
 function savePostprocessResults(postResult, model, allCandidates, sweepResult, ...
         ~, resultRoot, plotModels, plotConfigs, unwrappedMode, fullPipeMetrics)
 
-    % --- Summary CSV ---
+    % --- Summary CSV (binary metrics only; full-pipe reference as first row) ---
+    fpRow.label        = "full_pipe";
+    fpRow.volFracRaw   = 1.0;
+    fpRow.volFracClean = 1.0;
+    fpRow.J_binary     = NaN;
+    fpRow.sHM_max      = fullPipeMetrics.sHM_max;
+    fpRow.u_max        = fullPipeMetrics.u_max;
+    fpRow.uz_max       = fullPipeMetrics.uz_max;
+    fpRow.nSolidRaw    = NaN;
+    fpRow.nSolidElems  = NaN;
+
     nCands = numel(allCandidates);
-    rows   = cell(nCands, 1);
+    rows   = cell(nCands + 1, 1);
+    rows{1} = fpRow;
     for i = 1:nCands
         c = allCandidates{i};
         row.label         = string(c.label);
         row.volFracRaw    = c.volFracRaw;
         row.volFracClean  = c.volFrac;
-        row.J_continuous  = c.J_continuous;
         row.J_binary      = c.J_binary;
-        row.selectedScore = c.selectedScore;
-        row.selectedBy    = string(c.selectedBy);
         row.sHM_max       = c.sHM_max;
         row.u_max         = c.u_max;
         row.uz_max        = c.uz_max;
         row.nSolidRaw     = sum(c.solidRaw);
         row.nSolidElems   = sum(c.solid);
-        rows{i} = row;
+        rows{i + 1} = row;
     end
     T = struct2table(vertcat(rows{:}));
     writetable(T, fullfile(resultRoot, 'postprocess_summary.csv'));

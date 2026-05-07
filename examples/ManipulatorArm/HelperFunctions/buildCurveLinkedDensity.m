@@ -26,13 +26,18 @@ function [rhoRef, rhoFull, info, fields] = buildCurveLinkedDensity(params, model
 
     spacing = max(eps, params.spacingFactor * elemSize);
     width = max(eps, params.widthFactor * elemSize);
-    angleRad = params.angleDeg * pi / 180;
-    slope = tan(pi/2 - angleRad); % du/dz in unwrapped u=R*theta coordinates
+    % Per-family helix angles.  Fall back to legacy angleDeg (if present in
+    % old saved param structs), then to 45 degrees as a last resort.
+    legacyAngle = paramOrDefault(params, 'angleDeg', 45.0);
+    anglePlusRad  = paramOrDefault(params, 'anglePlusDeg',  legacyAngle) * pi / 180;
+    angleMinusRad = paramOrDefault(params, 'angleMinusDeg', legacyAngle) * pi / 180;
+    slopePlus  = tan(pi/2 - anglePlusRad);   % du/dz for + helix
+    slopeMinus = tan(pi/2 - angleMinusRad);  % du/dz for - helix
     phase = params.phaseFrac * spacing;
 
     u = model.R * theta;
-    helixPlus = periodicLineDistance(u - slope * z - phase, spacing) ./ sqrt(1 + slope^2);
-    helixMinus = periodicLineDistance(u + slope * z + phase, spacing) ./ sqrt(1 + slope^2);
+    helixPlus  = periodicLineDistance(u - slopePlus  * z - phase, spacing) ./ sqrt(1 + slopePlus^2);
+    helixMinus = periodicLineDistance(u + slopeMinus * z + phase, spacing) ./ sqrt(1 + slopeMinus^2);
     helixPlusField = paramOrDefault(params, 'helixPlusWeight', 1.0) * ...
         exp(-0.5 * (helixPlus / width).^2);
     helixMinusField = paramOrDefault(params, 'helixMinusWeight', 1.0) * ...
@@ -53,8 +58,9 @@ function [rhoRef, rhoFull, info, fields] = buildCurveLinkedDensity(params, model
     ringField = params.ringWeight * exp(-0.5 * (ringDist / width).^2);
 
     jointRingDist = min(z, zSpan - z);
+    jointRingWidth = max(eps, paramOrDefault(params, 'jointRingWidthFactor', params.widthFactor) * elemSize);
     jointRingField = paramOrDefault(params, 'jointRingWeight', 0.0) * ...
-        exp(-0.5 * (jointRingDist / width).^2);
+        exp(-0.5 * (jointRingDist / jointRingWidth).^2);
 
     ridgeFields = [helixPlusField, helixMinusField, axialField, bendingField, ...
         ringField, jointRingField];
@@ -66,6 +72,7 @@ function [rhoRef, rhoFull, info, fields] = buildCurveLinkedDensity(params, model
     fieldsRef.bending = bendingField;
     fieldsRef.ring = ringField;
     fieldsRef.jointRing = jointRingField;
+    fieldsRef.jointRingWidth = jointRingWidth;
     fieldsRef.envelopeRaw = raw;
 
     raw = raw - min(raw);

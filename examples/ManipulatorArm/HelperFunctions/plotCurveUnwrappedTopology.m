@@ -28,19 +28,27 @@ end
 function overlayCurveFamilies(model, params, uMin, uMax, zMin, zMax)
     elemSize = 0.004;
     spacing = max(eps, params.spacingFactor * elemSize);
-    angleRad = params.angleDeg * pi / 180;
-    slope = tan(pi/2 - angleRad);
+    legacyAngle   = curveFieldOrDefault(params, 'angleDeg', 45.0);
+    anglePlusRad  = curveFieldOrDefault(params, 'anglePlusDeg',  legacyAngle) * pi / 180;
+    angleMinusRad = curveFieldOrDefault(params, 'angleMinusDeg', legacyAngle) * pi / 180;
+    slopePlus  = tan(pi/2 - anglePlusRad);
+    slopeMinus = tan(pi/2 - angleMinusRad);
     phase = params.phaseFrac * spacing;
     zz = linspace(zMin, zMax, 200);
-    kMin = floor((uMin - max(abs(slope * zz)) - phase) / spacing) - 1;
-    kMax = ceil((uMax + max(abs(slope * zz)) - phase) / spacing) + 1;
+    maxDelta = max(abs(slopePlus), abs(slopeMinus)) * (zMax - zMin) + abs(phase);
+    kMin = floor((uMin - uMax - maxDelta) / spacing) - 1;
+    kMax = ceil((uMax - uMin + maxDelta) / spacing) + 1;
 
     for k = kMin:kMax
-        up = slope * zz + phase + k * spacing;
-        um = -slope * zz - phase + k * spacing;
+        up = slopePlus  * zz + phase + k * spacing;   % u - slopePlus*z  - phase = k*spacing
+        um = -slopeMinus * zz - phase + k * spacing;  % u + slopeMinus*z + phase = k*spacing
         plotClipped(up, zz, uMin, uMax, 'r-');
         plotClipped(um, zz, uMin, uMax, 'b-');
     end
+end
+
+function v = curveFieldOrDefault(s, name, default)
+    if isfield(s, name), v = s.(name); else, v = default; end
 end
 
 function plotClipped(u, z, uMin, uMax, style)

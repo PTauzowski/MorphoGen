@@ -191,9 +191,20 @@ end
 function saveESOPostprocessResults(model, candidates, resultRoot, plotModels, plotConfigs, ...
         unwrappedMode, fullPipeMetrics)
 
-    % Summary CSV
+    % Summary CSV (full-pipe reference as first row)
+    fpRow.label       = "full_pipe";
+    fpRow.iter        = NaN;
+    fpRow.volFrac     = 1.0;
+    fpRow.J_direct    = NaN;
+    fpRow.J_binary    = NaN;
+    fpRow.sHM_max     = fullPipeMetrics.sHM_max;
+    fpRow.u_max       = fullPipeMetrics.u_max;
+    fpRow.uz_max      = fullPipeMetrics.uz_max;
+    fpRow.nSolidElems = NaN;
+
     nCands = numel(candidates);
-    rows   = cell(nCands, 1);
+    rows   = cell(nCands + 1, 1);
+    rows{1} = fpRow;
     for i = 1:nCands
         c = candidates{i};
         row.label       = string(c.label);
@@ -205,7 +216,7 @@ function saveESOPostprocessResults(model, candidates, resultRoot, plotModels, pl
         row.u_max       = c.u_max;
         row.uz_max      = c.uz_max;
         row.nSolidElems = sum(c.solid);
-        rows{i} = row;
+        rows{i + 1} = row;
     end
     T = struct2table(vertcat(rows{:}));
     writetable(T, fullfile(resultRoot, 'postprocess_eso_summary.csv'));

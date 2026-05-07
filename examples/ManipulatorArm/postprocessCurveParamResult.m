@@ -1,8 +1,9 @@
 function postprocessCurveParamResult(resultRoot)
 % postprocessCurveParamResult  Reanalyse and plot curve-parametric designs.
 %
-% Creates continuous and thresholded topology plots, an unwrapped reference
-% half-segment topology map, binary reanalysis metrics, and comparison charts.
+% Creates thresholded topology plots, an unwrapped reference half-segment
+% topology map, binary reanalysis metrics (full-pipe reference, optimized
+% threshold_05, threshold_volume), and comparison charts.
 
     close all; clc;
 
@@ -28,6 +29,11 @@ function postprocessCurveParamResult(resultRoot)
     configs = S.configs;
     curveOpts = S.curveOpts;
     arm = S.arm;
+    if isfield(S, 'p0')
+        p0 = S.p0;
+    else
+        p0 = defaultCurveParamInitial(arm);
+    end
 
     ppRoot = fullfile(resultRoot, 'postprocess');
     if ~exist(ppRoot, 'dir'), mkdir(ppRoot); end
@@ -42,7 +48,7 @@ function postprocessCurveParamResult(resultRoot)
     targetVf = localOpt(curveOpts, 'VolFrac', mean(rhoFullBest));
     rhoMin = localOpt(curveOpts, 'rhoMin', arm.mma.xminValue);
 
-    rhoContinuous = rhoFullBest;
+    rhoFullPipe = ones(numel(rhoFullBest), 1);
     rhoThreshold05 = double(rhoFullBest > 0.5);
     rhoThreshold05(constFull) = 1.0;
     rhoThreshold05 = max(rhoMin, rhoThreshold05);
@@ -50,9 +56,9 @@ function postprocessCurveParamResult(resultRoot)
     rhoVolumeBinary = max(rhoMin, rhoVolumeBinary);
 
     variants = {
-        struct('name', "continuous", 'rho', rhoContinuous);
-        struct('name', "threshold_05", 'rho', rhoThreshold05);
-        struct('name', "threshold_volume", 'rho', rhoVolumeBinary);
+        struct('name', "full_pipe",       'rho', rhoFullPipe);
+        struct('name', "threshold_05",    'rho', rhoThreshold05);
+        struct('name', "threshold_volume",'rho', rhoVolumeBinary);
     };
 
     metricsRows = struct([]);
@@ -67,12 +73,9 @@ function postprocessCurveParamResult(resultRoot)
     metricsTable = struct2table(metricsRows);
     writetable(metricsTable, fullfile(ppRoot, 'curve_postprocess_metrics.csv'));
 
-    rhoRefContinuous = rhoContinuous(1:H);
+    rhoRefContinuous = rhoFullBest(1:H);
     rhoRefVolumeBinary = rhoVolumeBinary(1:H);
 
-    saveTopologyFigure(plotCurveTopology(modelRef, rhoContinuous, ...
-        sprintf('Continuous curve density, vf=%.3f', mean(rhoContinuous)), "continuous"), ...
-        ppRoot, 'rho_full_continuous');
     saveTopologyFigure(plotCurveTopology(modelRef, rhoVolumeBinary, ...
         sprintf('Volume-preserving threshold, vf=%.3f', mean(rhoVolumeBinary > rhoMin)), "threshold"), ...
         ppRoot, 'rho_full_threshold_volume');
@@ -88,13 +91,10 @@ function postprocessCurveParamResult(resultRoot)
     exportCurveTopologyPatch(modelRef, rhoThreshold05, ...
         fullfile(ppRoot, 'topology_full_real_threshold_05_patch.mat'), 0.5);
 
-    saveTopologyFigure(plotCurveTopology(modelRef, [rhoRefContinuous; zeros(numel(rhoContinuous)-H, 1)], ...
-        'Reference half-segment continuous density', "continuous"), ...
-        ppRoot, 'rho_reference_continuous');
-    saveTopologyFigure(plotCurveTopology(modelRef, [rhoRefVolumeBinary; zeros(numel(rhoVolumeBinary)-H, 1)], ...
+    saveTopologyFigure(plotCurveTopology(modelRef, [rhoRefVolumeBinary; zeros(numel(rhoFullBest)-H, 1)], ...
         'Reference half-segment thresholded topology', "threshold"), ...
         ppRoot, 'rho_reference_threshold_volume');
-    saveTopologyFigure(plotCurveTopology(modelRef, [rhoRefVolumeBinary; zeros(numel(rhoVolumeBinary)-H, 1)], ...
+    saveTopologyFigure(plotCurveTopology(modelRef, [rhoRefVolumeBinary; zeros(numel(rhoFullBest)-H, 1)], ...
         'Reference half-segment real topology', "real"), ...
         ppRoot, 'topology_reference_real_threshold_volume');
 
@@ -104,6 +104,26 @@ function postprocessCurveParamResult(resultRoot)
     saveTopologyFigure(plotCurveUnwrappedTopology(modelRef, rhoRefVolumeBinary, pBest, ...
         'Unwrapped reference thresholded topology'), ...
         ppRoot, 'topology_unwrapped_reference_threshold');
+
+    fprintf('Generating initial-parameter comparison figures...\n');
+    [rhoRefInit, rhoFullInit] = buildCurveLinkedDensity(p0, modelRef, curveOpts);
+    rhoFullInit = rhoFullInit(:);
+    rhoVolumeBinaryInit = makeVolumePreservingBinaryDensity(rhoFullInit, targetVf, constFull);
+    rhoVolumeBinaryInit = max(rhoMin, rhoVolumeBinaryInit);
+    rhoRefVolumeBinaryInit = rhoVolumeBinaryInit(1:H);
+
+    saveTopologyFigure(plotCurveTopology(modelRef, rhoVolumeBinaryInit, ...
+        sprintf('Initial: real topology, volume threshold, vf=%.3f', mean(rhoVolumeBinaryInit > rhoMin)), "real"), ...
+        ppRoot, 'initial_topology_full_real_threshold_volume');
+    saveTopologyFigure(plotCurveTopology(modelRef, [rhoRefVolumeBinaryInit; zeros(numel(rhoFullInit)-H, 1)], ...
+        'Initial: reference half-segment real topology', "real"), ...
+        ppRoot, 'initial_topology_reference_real_threshold_volume');
+    saveTopologyFigure(plotCurveUnwrappedTopology(modelRef, rhoRefInit(:), p0, ...
+        'Initial: unwrapped reference density with curve-family overlays'), ...
+        ppRoot, 'initial_topology_unwrapped_reference');
+    saveTopologyFigure(plotCurveUnwrappedTopology(modelRef, rhoRefVolumeBinaryInit, p0, ...
+        'Initial: unwrapped reference thresholded topology'), ...
+        ppRoot, 'initial_topology_unwrapped_reference_threshold');
 
     plotMetricSet(metricsTable, ppRoot);
 
@@ -119,6 +139,42 @@ function postprocessCurveParamResult(resultRoot)
         saveTopologyFigure(plotCurveTopologyByOrigin(modelRef, rhoThreshold05, originFull, originNames, ...
             'Real topology colored by dominant curve family: rho > 0.5', 0.5), ...
             ppRoot, 'topology_full_real_origin_threshold_05');
+
+        % Per-configuration topology plots (all arm poses).
+        for k = 1:numel(models)
+            cfgLabel = string(configs{k}.label);
+            cfgName  = string(configs{k}.name);
+            saveTopologyFigure(plotCurveTopologyByOrigin(models{k}, rhoVolumeBinary, originFull, originNames, ...
+                'Real topology: ' + cfgLabel, 0.5), ...
+                ppRoot, 'topology_origin_' + cfgName);
+        end
+
+        % Combined tiled figure — all configurations in one view.
+        nCols = 3;
+        nRows = ceil(numel(models) / nCols);
+        figAll = figure('Color', 'white', 'Name', 'All configurations topology', ...
+            'Units', 'pixels', 'Position', [50 50 1800 nRows * 480]);
+        tl = tiledlayout(figAll, nRows, nCols, 'TileSpacing', 'compact', 'Padding', 'compact');
+        title(tl, 'Real topology by curve family — all configurations (volume threshold)', ...
+            'FontSize', 11, 'Interpreter', 'none');
+        for k = 1:numel(models)
+            cfgFig = plotCurveTopologyByOrigin(models{k}, rhoVolumeBinary, originFull, originNames, ...
+                string(configs{k}.label), 0.5);
+            srcAx = findobj(cfgFig, 'Type', 'Axes');
+            if ~isempty(srcAx)
+                srcAx = srcAx(end);
+                dstAx = nexttile(tl, k);
+                copyobj(srcAx.Children, dstAx);
+                set(dstAx, 'View', srcAx.View, ...
+                    'XLim', srcAx.XLim, 'YLim', srcAx.YLim, 'ZLim', srcAx.ZLim, ...
+                    'DataAspectRatio', srcAx.DataAspectRatio, ...
+                    'Projection', 'perspective', 'Box', 'off');
+                axis(dstAx, 'off');
+                title(dstAx, string(configs{k}.label), 'Interpreter', 'none', 'FontSize', 9);
+            end
+            close(cfgFig);
+        end
+        saveTopologyFigure(figAll, ppRoot, 'topology_all_configs_origin');
         saveTopologyFigure(plotCurveUnwrappedBarsByOrigin(modelRef, rhoVolumeBinary(1:H), ...
             originRef, originNames, pBest, ...
             'Unwrapped bar topology colored by dominant curve family', 0.5), ...

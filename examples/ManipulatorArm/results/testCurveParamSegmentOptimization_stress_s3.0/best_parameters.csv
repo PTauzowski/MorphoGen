@@ -1,0 +1,15 @@
+parameter,value
+phaseFrac,1.00000001072775e-08
+spacingFactor,16.9217154673011
+widthFactor,0.96662550482362
+helixPlusWeight,0.808574720031043
+anglePlusDeg,43.1486063662255
+helixMinusWeight,0.818836311837042
+angleMinusDeg,41.9093621822055
+axialWeight,0.343909300729868
+bendingWeight,0.348899796093696
+ringWeight,4e-09
+ringSpacingFactor,32
+jointRingWeight,0.731958144604327
+jointRingWidthFactor,2.56435751624297
+baseDensity,0.0419397937272252
