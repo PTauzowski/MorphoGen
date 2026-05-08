@@ -171,7 +171,7 @@ evalCount = 0;
 historyRows = struct([]);
 
 if isMinVolumeMode
-    %% -- Option B: fmincon, minimize VF subject to stress/disp constraints --
+    %% -- Option B: fmincon via solveCurveParamMinVolume ----------------------
 
     fprintf('\nComputing full-pipe reference metrics...\n');
     rhoFullPipe = ones(referenceElemCount, 1);
@@ -185,47 +185,19 @@ if isMinVolumeMode
     fprintf('Stress limit: %.4e Pa (x%.2f)   Disp limit: %.4e m (x%.2f)\n', ...
         stressLimit, runOpts.stressConstraintRatio, dispLimit, runOpts.dispConstraintRatio);
 
-    % Cache to avoid double FEM evaluation when fmincon calls obj + nonlcon
-    % at the same point (which it does every iteration).
-    cachedTheta   = [];
-    cachedMetrics = [];
-
-    vfMin = runOpts.vfMin;
-    % Auto-init: start at VF=1.0 (full pipe, feasible) so SQP reduces VF
-    % from a feasible starting point rather than climbing out of infeasibility.
-    if isempty(runOpts.vfInitial)
-        vfInitial = 1.0;
-    else
-        vfInitial = runOpts.vfInitial;
-    end
+    vfInitial = runOpts.vfInitial;
+    if isempty(vfInitial), vfInitial = 1.0; end
     fprintf('Starting VF: %.4f\n', vfInitial);
-    theta0 = [u0(:); vfInitial];
-    lb = [-Inf(numel(u0), 1); vfMin];
-    ub = [ Inf(numel(u0), 1); 1.0 ];
 
-    fminconOpts = optimoptions('fmincon', ...
-        'Algorithm',                  'sqp', ...
-        'Display',                    'iter', ...
-        'MaxIterations',              maxIter, ...
-        'MaxFunctionEvaluations',     maxFunEvals, ...
-        'OptimalityTolerance',        1e-3, ...
-        'ConstraintTolerance',        1e-3, ...
-        'FiniteDifferenceStepSize',   0.05, ...
-        'FiniteDifferenceType',       'central');
+    solverOpts.maxIter     = maxIter;
+    solverOpts.maxFunEvals = maxFunEvals;
+    solverOpts.vfInitial   = vfInitial;
+    solverOpts.vfMin       = runOpts.vfMin;
 
-    fprintf('\nRunning fmincon (SQP) to minimize volume fraction...\n');
-    if maxIter <= 0 || maxFunEvals <= 1
-        fprintf('Skipping fmincon because MaxIter=%d and MaxFunEvals=%d.\n', maxIter, maxFunEvals);
-        thetaBest = theta0;
-    else
-        [thetaBest, ~] = fmincon(@objectiveMinVol, theta0, [], [], [], [], lb, ub, ...
-            @constraintMinVol, fminconOpts);
-    end
-
-    uBest   = thetaBest(1:end-1);
-    vfBest  = thetaBest(end);
-    pBest   = unconstrainedToCurveParams(uBest, paramBounds);
-    JBest   = vfBest;
+    [pBest, vfBest, historyRows] = solveCurveParamMinVolume( ...
+        analyses, modelRef, curveOpts, stressLimit, dispLimit, ...
+        paramBounds, p0, solverOpts);
+    JBest = vfBest;
 
     curveOpts.VolFrac = vfBest;
     [rhoRefBest, rhoFullBest, bestDensityInfo] = buildCurveLinkedDensity(pBest, modelRef, curveOpts);
@@ -278,11 +250,15 @@ fprintf('Best density volume: linked=%.5f, full=%.5f\n', ...
     bestDensityInfo.linkedVolumeFraction, bestDensityInfo.fullVolumeFraction);
 printCurveMetrics('Best curve design', bestMetrics, configs);
 if isMinVolumeMode
-    achievedStressRatio = max(bestMetrics.maxHM) / stressFullPipe;
-    achievedDispRatio   = max(abs(bestMetrics.tipUz)) / dispFullPipe;
-    fprintf('Achieved: VF=%.4f, stress ratio=%.3f (limit %.2f), disp ratio=%.3f (limit %.2f)\n', ...
-        vfBest, achievedStressRatio, runOpts.stressConstraintRatio, ...
-        achievedDispRatio, runOpts.dispConstraintRatio);
+    achievedStressRatio = max(bestMetrics.maxHM) / stressLimit;
+    if isfinite(dispLimit)
+        achievedDispRatio = max(abs(bestMetrics.tipUz)) / dispLimit;
+    else
+        achievedDispRatio = max(abs(bestMetrics.tipUz)) / dispFullPipe;
+    end
+    fprintf('Achieved: VF=%.4f, s_ratio=%.3f (limit 1.00), d_ratio=%.3f (limit 1.00)\n', ...
+        vfBest, achievedStressRatio, achievedDispRatio);
+    fprintf('  [s_ratio = maxHM/stressLimit, d_ratio = |tipUz|/dispLimit; >1 means violated]\n');
 end
 
 %% ---- Save results ----------------------------------------------------------
@@ -321,52 +297,6 @@ postprocessCurveParamResult(resultRoot);
 
 %% ---- Nested functions ------------------------------------------------------
 
-function J = objectiveMinVol(theta)
-    J = theta(end);  % minimize VF directly
-end
-
-function [c, ceq] = constraintMinVol(theta)
-    % Return one inequality per configuration so SQP receives individual
-    % gradients for every load case, not just the single worst-case max.
-    m = evalForMinVol(theta);
-    c = m.maxHM(:) / stressLimit - 1;          % [nConfigs x 1]
-    if isfinite(dispLimit)
-        c = [c; abs(m.tipUz(:)) / dispLimit - 1];  % append [nConfigs x 1]
-    end
-    ceq = [];
-end
-
-function m = evalForMinVol(theta)
-    % Cache: rebuild only when theta changes (fmincon calls obj + nonlcon
-    % separately but at the same point each iteration).
-    if ~isequal(theta, cachedTheta)
-        params = unconstrainedToCurveParams(theta(1:end-1), paramBounds);
-        vf     = max(vfMin, min(1.0, theta(end)));
-        localOpts          = curveOpts;
-        localOpts.VolFrac  = vf;
-        [~, rhoFull, densityInfo] = buildCurveLinkedDensity(params, modelRef, localOpts);
-        [metrics, ~]       = evaluateLinkedDensityMetrics(analyses, rhoFull, localOpts);
-        cachedTheta   = theta;
-        cachedMetrics = metrics;
-
-        evalCount = evalCount + 1;
-        sRatio = max(metrics.maxHM)      / stressFullPipe;
-        dRatio = max(abs(metrics.tipUz)) / dispFullPipe;
-        fprintf('eval %4d: VF=%.4f, stress_ratio=%.3f (lim=%.2f), disp_ratio=%.3f (lim=%.2f)\n', ...
-            evalCount, densityInfo.fullVolumeFraction, sRatio, runOpts.stressConstraintRatio, ...
-            dRatio, runOpts.dispConstraintRatio);
-
-        row = params;
-        row.eval         = evalCount;
-        row.VF           = densityInfo.fullVolumeFraction;
-        row.stressRatio  = sRatio;
-        row.dispRatio    = dRatio;
-        row.maxHM        = max(metrics.maxHM);
-        row.maxAbsUz     = max(abs(metrics.tipUz));
-        historyRows = [historyRows; row]; %#ok<AGROW>
-    end
-    m = cachedMetrics;
-end
 
 function J = objectiveFromUnconstrained(u)
     evalCount = evalCount + 1;

@@ -61,7 +61,21 @@ mmaDamping = 0.5;
 configs = armLoadConfigs("six");
 nConfigs = numel(configs);
 
-resultRoot = fullfile(scriptDir, 'results', 'testH_fullArmStressLinkedSIMP');
+%% ---- Robust beta options (set robustEnabled=true to activate CG robust loop) --
+robustEnabled     = false;
+robustDeltaDeg    = 90;
+robustStressRatio = 3.0;    % stressLimit = ratio × full-pipe max-HM stress
+robustDispRatio   = Inf;    % Inf = displacement constraint inactive
+robustMaxCGIter   = 5;
+robustTopK        = 3;
+robustPropLevel   = 1;
+
+if robustEnabled
+    resultRoot = fullfile(scriptDir, 'results', ...
+        sprintf('testH_fullArmStressLinkedSIMP_robust_d%g', robustDeltaDeg));
+else
+    resultRoot = fullfile(scriptDir, 'results', 'testH_fullArmStressLinkedSIMP');
+end
 if ~exist(resultRoot, 'dir')
     mkdir(resultRoot);
 end
@@ -197,7 +211,32 @@ opts.fixedDesignVariables = const_elems;
 opts.configNames = string(cellfun(@(s) s.name, configs, 'UniformOutput', false));
 opts.configLabels = string(cellfun(@(s) s.label, configs, 'UniformOutput', false));
 
-optResult = solveSIMPVolumeStressMMA(analyses, rho, xmin, xmax, opts);
+if robustEnabled
+    fprintf('\nComputing full-pipe reference for robust stress/disp limits...\n');
+    evalOpts.penal = 1;
+    xFullPipeArm = ones(nElems, 1);
+    [fpMetrics, ~] = evaluateLinkedDensityMetrics(analyses, xFullPipeArm, evalOpts);
+    stressLimitRobust = robustStressRatio * max(fpMetrics.maxHM);
+    dispLimitRobust   = robustDispRatio   * max(abs(fpMetrics.tipUz));
+    fprintf('  Full-pipe: maxHM=%.4e Pa, |tipUz|=%.4e m\n', ...
+        max(fpMetrics.maxHM), max(abs(fpMetrics.tipUz)));
+    fprintf('  Stress limit: %.4e Pa (x%.2f)  Disp limit: %.4e m (x%.2f)\n', ...
+        stressLimitRobust, robustStressRatio, dispLimitRobust, robustDispRatio);
+
+    cgOpts.maxCGIter  = robustMaxCGIter;
+    cgOpts.topK       = robustTopK;
+    cgOpts.propLevel  = robustPropLevel;
+    cgOpts.penal      = penal;
+    cgOpts.verbose    = true;
+
+    [optResult, adversarialConfigs, cgHistory] = constraintGenerationRobustSIMP( ...
+        analyses, models{1}, arm, opts, stressLimitRobust, dispLimitRobust, ...
+        rho, xmin, xmax, robustDeltaDeg, cgOpts);
+else
+    optResult          = solveSIMPVolumeStressMMA(analyses, rho, xmin, xmax, opts);
+    adversarialConfigs = struct([]);
+    cgHistory          = struct([]);
+end
 
 %% ---- Final/exported state and checks ---------------------------------------
 rawRhoFinal = optResult.zFinal;
@@ -329,6 +368,25 @@ ylim([0 1.05]);
 exportgraphics(fig, fullfile(resultRoot, 'rho_final.png'), 'Resolution', 200);
 savefig(fig, fullfile(resultRoot, 'rho_final.fig'));
 close(fig);
+
+if robustEnabled && ~isempty(adversarialConfigs)
+    save(fullfile(resultRoot, 'robust_result.mat'), ...
+        'adversarialConfigs', 'cgHistory', 'stressLimitRobust', 'dispLimitRobust', ...
+        'robustDeltaDeg', 'robustStressRatio', 'robustDispRatio');
+    rows = struct([]);
+    for ci = 1:numel(adversarialConfigs)
+        c = adversarialConfigs(ci);
+        row.ci = ci;  row.stressRatio = c.stressRatio;  row.dispRatio = c.dispRatio;
+        row.violated = double(c.violated);
+        row.maxHM_MPa = c.maxHM / 1e6;  row.tipUz_m = c.tipUz;
+        bv = c.beta;
+        for ji = 1:numel(bv), row.(sprintf('beta%d', ji)) = bv(ji); end
+        rows = [rows; row]; %#ok<AGROW>
+    end
+    if ~isempty(rows)
+        writetable(struct2table(rows), fullfile(resultRoot, 'adversarial_config_summary.csv'));
+    end
+end
 
 fprintf('\nSaved Test H outputs to %s\n', resultRoot);
 

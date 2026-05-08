@@ -19,16 +19,33 @@ function postprocessCurveParamResult(resultRoot)
     assert(exist(resultFile, 'file') == 2, 'Missing result file: %s', resultFile);
 
     S = load(resultFile);
-    required = {'pBest', 'rhoFullBest', 'configs', 'curveOpts', 'arm'};
+    isRobustResult = isfield(S, 'adversarialConfigs') && ~isempty(S.adversarialConfigs);
+    if isRobustResult
+        required = {'pBest', 'rhoFullBest', 'curveOpts', 'arm'};
+    else
+        required = {'pBest', 'rhoFullBest', 'configs', 'curveOpts', 'arm'};
+    end
     for i = 1:numel(required)
         assert(isfield(S, required{i}), 'result.mat lacks "%s".', required{i});
     end
 
     pBest = S.pBest;
     rhoFullBest = S.rhoFullBest(:);
-    configs = S.configs;
     curveOpts = S.curveOpts;
     arm = S.arm;
+    if isRobustResult
+        % Use a single nominal (straight) config as reference for plots.
+        configs = {struct('name', 'nominal', 'label', 'Nominal (straight)', ...
+                          'betas', zeros(1, 7))};
+    else
+        configs = S.configs;
+    end
+    adversarialConfigs = [];
+    if isfield(S, 'adversarialConfigs')
+        adversarialConfigs = S.adversarialConfigs;
+    end
+    stressLimit = localOpt(S, 'stressLimit', Inf);
+    dispLimit   = localOpt(S, 'dispLimit',   Inf);
     if isfield(S, 'p0')
         p0 = S.p0;
     else
@@ -62,12 +79,16 @@ function postprocessCurveParamResult(resultRoot)
     };
 
     metricsRows = struct([]);
+    metricsVol = [];
     for v = 1:numel(variants)
         name = variants{v}.name;
         rho = variants{v}.rho;
         [metrics, ~] = evaluateLinkedDensityMetrics(analyses, rho, curveOpts);
         printCurveMetrics("Postprocess " + name, metrics, configs);
         metricsRows = [metricsRows; metricRowsForVariant(name, metrics, configs)]; %#ok<AGROW>
+        if name == "threshold_volume"
+            metricsVol = metrics;
+        end
     end
 
     metricsTable = struct2table(metricsRows);
@@ -149,37 +170,47 @@ function postprocessCurveParamResult(resultRoot)
                 ppRoot, 'topology_origin_' + cfgName);
         end
 
-        % Combined tiled figure — all configurations in one view.
-        nCols = 3;
-        nRows = ceil(numel(models) / nCols);
-        figAll = figure('Color', 'white', 'Name', 'All configurations topology', ...
-            'Units', 'pixels', 'Position', [50 50 1800 nRows * 480]);
-        tl = tiledlayout(figAll, nRows, nCols, 'TileSpacing', 'compact', 'Padding', 'compact');
-        title(tl, 'Real topology by curve family — all configurations (volume threshold)', ...
-            'FontSize', 11, 'Interpreter', 'none');
+        % Per-configuration origin topology — one image per pose.
         for k = 1:numel(models)
-            cfgFig = plotCurveTopologyByOrigin(models{k}, rhoVolumeBinary, originFull, originNames, ...
-                string(configs{k}.label), 0.5);
-            srcAx = findobj(cfgFig, 'Type', 'Axes');
-            if ~isempty(srcAx)
-                srcAx = srcAx(end);
-                dstAx = nexttile(tl, k);
-                copyobj(srcAx.Children, dstAx);
-                set(dstAx, 'View', srcAx.View, ...
-                    'XLim', srcAx.XLim, 'YLim', srcAx.YLim, 'ZLim', srcAx.ZLim, ...
-                    'DataAspectRatio', srcAx.DataAspectRatio, ...
-                    'Projection', 'perspective', 'Box', 'off');
-                axis(dstAx, 'off');
-                title(dstAx, string(configs{k}.label), 'Interpreter', 'none', 'FontSize', 9);
+            cfgLabel = string(configs{k}.label);
+            cfgName  = string(configs{k}.name);
+            titleLines = {char(cfgLabel)};
+            if ~isempty(metricsVol)
+                constraintStr = '';
+                if isfinite(stressLimit)
+                    sVal = metricsVol.maxHM(k);
+                    if sVal <= stressLimit, sTag = 'OK'; else, sTag = 'FAIL'; end
+                    constraintStr = sprintf('sigma: %.2f / %.2f MPa [%s]', sVal/1e6, stressLimit/1e6, sTag);
+                end
+                if isfinite(dispLimit)
+                    uVal = abs(metricsVol.tipUz(k));
+                    if uVal <= dispLimit, uTag = 'OK'; else, uTag = 'FAIL'; end
+                    uStr = sprintf('u: %.1f / %.1f mm [%s]', uVal*1e3, dispLimit*1e3, uTag);
+                    if isempty(constraintStr)
+                        constraintStr = uStr;
+                    else
+                        constraintStr = [constraintStr, '   ', uStr];
+                    end
+                end
+                if ~isempty(constraintStr)
+                    titleLines{2} = constraintStr;
+                end
             end
-            close(cfgFig);
+            saveTopologyFigure(plotCurveTopologyByOrigin(models{k}, rhoVolumeBinary, originFull, originNames, ...
+                titleLines, 0.5), ...
+                ppRoot, 'topology_all_configs_origin_' + cfgName);
         end
-        saveTopologyFigure(figAll, ppRoot, 'topology_all_configs_origin');
         saveTopologyFigure(plotCurveUnwrappedBarsByOrigin(modelRef, rhoVolumeBinary(1:H), ...
             originRef, originNames, pBest, ...
             'Unwrapped bar topology colored by dominant curve family', 0.5), ...
             ppRoot, 'topology_unwrapped_bars_origin_threshold_volume');
         saveOriginSummary(ppRoot, rhoFullBest, rhoVolumeBinary, originFull, originNames, originConfidence);
+
+        % ---- Adversarial config topology plots (robust results only). ----
+        if ~isempty(adversarialConfigs)
+            plotAdversarialConfigTopologies(arm, adversarialConfigs, rhoVolumeBinary, ...
+                originFull, originNames, stressLimit, dispLimit, ppRoot);
+        end
     end
 
     writeTextSummary(ppRoot, pBest, metricsTable, targetVf);
@@ -309,4 +340,74 @@ end
 
 function n = nargoutForBuildCurveLinkedDensity()
     n = nargout('buildCurveLinkedDensity');
+end
+
+function plotAdversarialConfigTopologies(arm, adversarialConfigs, rhoVolumeBinary, ...
+    originFull, originNames, stressLimit, dispLimit, ppRoot)
+% Plot one topology image per adversarial candidate (visually distinct titles).
+% Violated candidates are labelled [VIOLATED]; non-violated are [OK].
+
+    advRoot = fullfile(ppRoot, 'adversarial_configs');
+    if ~exist(advRoot, 'dir'), mkdir(advRoot); end
+
+    fprintf('Plotting %d adversarial config topologies...\n', numel(adversarialConfigs));
+    for ci = 1:numel(adversarialConfigs)
+        c = adversarialConfigs(ci);
+        betaVec = c.beta;
+
+        % Build model for this pose.
+        model = ManipulatorModel3D(arm.E, arm.nu, arm.h_seg, arm.R, arm.r, ...
+            arm.res, arm.res_th, arm.alpha, betaVec, arm.ShapeFn, ...
+            false, arm.Pz, arm.constEndRing, arm.constMiddleRing, arm.nCircDiv);
+
+        % Build two-line title.
+        if c.violated, statusTag = 'VIOLATED'; else, statusTag = 'ok'; end
+        line1 = sprintf('Adversarial config %d [%s]', ci, statusTag);
+
+        constraintStr = '';
+        if isfinite(stressLimit)
+            if c.stressRatio > 1, sTag = 'FAIL'; else, sTag = 'OK'; end
+            constraintStr = sprintf('sigma: %.2f MPa (ratio %.2f) [%s]', ...
+                c.maxHM/1e6, c.stressRatio, sTag);
+        end
+        if isfinite(dispLimit)
+            if c.dispRatio > 1, uTag = 'FAIL'; else, uTag = 'OK'; end
+            uStr = sprintf('u: %.2f mm (ratio %.2f) [%s]', ...
+                abs(c.tipUz)*1e3, c.dispRatio, uTag);
+            if isempty(constraintStr)
+                constraintStr = uStr;
+            else
+                constraintStr = [constraintStr, '   ', uStr];
+            end
+        end
+        betaStr = sprintf('beta=[%s]', num2str(betaVec, '%g '));
+
+        titleLines = {line1, constraintStr, betaStr};
+        titleLines = titleLines(~cellfun('isempty', titleLines));
+
+        stem = sprintf('adversarial_%02d_%s', ci, statusTag);
+        saveTopologyFigure(plotCurveTopologyByOrigin(model, rhoVolumeBinary, ...
+            originFull, originNames, titleLines, 0.5), advRoot, stem);
+    end
+
+    % Write summary CSV for adversarial configs.
+    rows = struct([]);
+    for ci = 1:numel(adversarialConfigs)
+        c = adversarialConfigs(ci);
+        row.ci          = ci;
+        row.stressRatio = c.stressRatio;
+        row.dispRatio   = c.dispRatio;
+        row.violated    = double(c.violated);
+        row.maxHM_MPa   = c.maxHM / 1e6;
+        row.tipUz_m     = c.tipUz;
+        betaVec = c.beta;
+        for ji = 1:numel(betaVec)
+            row.(sprintf('beta%d', ji)) = betaVec(ji);
+        end
+        rows = [rows; row]; %#ok<AGROW>
+    end
+    if ~isempty(rows)
+        writetable(struct2table(rows), fullfile(advRoot, 'adversarial_config_summary.csv'));
+    end
+    fprintf('Adversarial config plots saved to: %s\n', advRoot);
 end
