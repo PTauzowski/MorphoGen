@@ -27,7 +27,7 @@ function arm = armModelDefaults(preset)
             arm.h_seg = 0.25;
             arm.res_th = 4;
         case "thin"
-            arm.r = 0.13;
+            arm.r = 0.136;
             arm.h_seg = 0.25;
             arm.res_th = 1;
     end

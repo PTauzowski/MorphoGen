@@ -1,0 +1,41 @@
+Curve-parametric postprocess summary
+Target volume fraction: 0.665517
+
+Best parameters:
+  phaseFrac            9.9999993e-09
+  spacingFactor        18.686448
+  widthFactor          0.86972693
+  helixPlusWeight      0.79617521
+  anglePlusDeg         46.864754
+  helixMinusWeight     0.80960423
+  angleMinusDeg        47.906816
+  axialWeight          0.34558419
+  bendingWeight        0.34981803
+  ringWeight           4e-09
+  ringSpacingFactor    32
+  jointRingWeight      0.7515075
+  jointRingWidthFactor 2.9592872
+  baseDensity          0.041504139
+
+Metrics by variant/config:
+  full_pipe          min_bending  maxHM= 6.867157e+06 stressAgg= 3.194903e+06 tipUz=-5.897644e-02 maxDisp= 5.939812e-02 vf=1.00000
+  full_pipe          min_torsion  maxHM= 3.846940e+06 stressAgg= 1.767514e+06 tipUz=-3.204793e-02 maxDisp= 3.556910e-02 vf=1.00000
+  full_pipe          min_shear    maxHM= 5.970657e+06 stressAgg= 2.697767e+06 tipUz=-4.124539e-02 maxDisp= 4.823260e-02 vf=1.00000
+  full_pipe          max_bending  maxHM= 6.867157e+06 stressAgg= 3.194903e+06 tipUz=-5.897644e-02 maxDisp= 5.939812e-02 vf=1.00000
+  full_pipe          max_torsion  maxHM= 3.846940e+06 stressAgg= 1.767514e+06 tipUz=-3.213063e-02 maxDisp= 3.556910e-02 vf=1.00000
+  full_pipe          max_shear    maxHM= 5.970657e+06 stressAgg= 2.697767e+06 tipUz=-4.130411e-02 maxDisp= 4.823260e-02 vf=1.00000
+  full_pipe          max_tension  maxHM= 5.706052e+06 stressAgg= 2.535753e+06 tipUz=-3.630320e-02 maxDisp= 4.550859e-02 vf=1.00000
+  threshold_05       min_bending  maxHM= 2.909220e+07 stressAgg= 1.156891e+07 tipUz=-1.928852e-01 maxDisp= 1.942572e-01 vf=0.62412
+  threshold_05       min_torsion  maxHM= 2.007601e+07 stressAgg= 7.584426e+06 tipUz=-1.104929e-01 maxDisp= 1.231847e-01 vf=0.62412
+  threshold_05       min_shear    maxHM= 2.586473e+07 stressAgg= 9.898058e+06 tipUz=-1.355163e-01 maxDisp= 1.588289e-01 vf=0.62412
+  threshold_05       max_bending  maxHM= 2.909220e+07 stressAgg= 1.156891e+07 tipUz=-1.928852e-01 maxDisp= 1.942572e-01 vf=0.62412
+  threshold_05       max_torsion  maxHM= 1.985519e+07 stressAgg= 7.349208e+06 tipUz=-1.104988e-01 maxDisp= 1.228593e-01 vf=0.62412
+  threshold_05       max_shear    maxHM= 2.484911e+07 stressAgg= 9.904541e+06 tipUz=-1.356212e-01 maxDisp= 1.587156e-01 vf=0.62412
+  threshold_05       max_tension  maxHM= 3.339193e+07 stressAgg= 1.135768e+07 tipUz=-1.315605e-01 maxDisp= 1.648905e-01 vf=0.62412
+  threshold_volume   min_bending  maxHM= 2.476996e+07 stressAgg= 1.027343e+07 tipUz=-1.632561e-01 maxDisp= 1.643792e-01 vf=0.66886
+  threshold_volume   min_torsion  maxHM= 1.799768e+07 stressAgg= 6.635512e+06 tipUz=-9.395034e-02 maxDisp= 1.045607e-01 vf=0.66886
+  threshold_volume   min_shear    maxHM= 2.247150e+07 stressAgg= 8.765867e+06 tipUz=-1.149156e-01 maxDisp= 1.346777e-01 vf=0.66886
+  threshold_volume   max_bending  maxHM= 2.476996e+07 stressAgg= 1.027343e+07 tipUz=-1.632561e-01 maxDisp= 1.643792e-01 vf=0.66886
+  threshold_volume   max_torsion  maxHM= 1.757292e+07 stressAgg= 6.528594e+06 tipUz=-9.405221e-02 maxDisp= 1.043858e-01 vf=0.66886
+  threshold_volume   max_shear    maxHM= 2.178543e+07 stressAgg= 8.816008e+06 tipUz=-1.148848e-01 maxDisp= 1.344200e-01 vf=0.66886
+  threshold_volume   max_tension  maxHM= 2.846947e+07 stressAgg= 1.016007e+07 tipUz=-1.110509e-01 maxDisp= 1.392055e-01 vf=0.66886
