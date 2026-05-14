@@ -46,12 +46,19 @@ function props = estimateFrameSectionPropsFromDensity(rhoRef, model, penal, leve
     R  = model.R;
     r  = model.r;
 
+    % Cowper (1966) shear correction factor for hollow circular cross-section.
+    m_r = r / R;
+    kappa = 6*(1+nu)*(1+m_r^2)^2 / ...
+            ((7+6*nu)*(1+m_r^2)^2 + (20+12*nu)*m_r^2);
+
     % Full-pipe (solid annular) reference section properties.
+    % GAy0 / GAz0 include kappa so they represent the Timoshenko effective
+    % shear stiffness used directly in Frame3DSectionProps.
     props.EA0  = E * pi * (R^2 - r^2);
     props.EIy0 = E * pi * (R^4 - r^4) / 4;
     props.EIz0 = props.EIy0;
     props.GJ0  = G * pi * (R^4 - r^4) / 2;
-    props.GAy0 = G * pi * (R^2 - r^2);
+    props.GAy0 = kappa * G * pi * (R^2 - r^2);
     props.GAz0 = props.GAy0;
     props.level = level;
 
@@ -59,13 +66,13 @@ function props = estimateFrameSectionPropsFromDensity(rhoRef, model, penal, leve
         case 0
             props = scalarScaling(props, rhoRef, penal);
         case 1
-            props = sectionMomentProjection(props, rhoRef, model, penal, E, G);
+            props = sectionMomentProjection(props, rhoRef, model, penal, E, G, kappa);
         case 2
             % Level-2 (numerical beam-equivalent BVP) is not yet implemented.
             % Falls back to Level-1 section-moment projection.
             warning('estimateFrameSectionPropsFromDensity:level2NotImplemented', ...
                 'Level 2 not yet implemented; falling back to Level 1.');
-            props = sectionMomentProjection(props, rhoRef, model, penal, E, G);
+            props = sectionMomentProjection(props, rhoRef, model, penal, E, G, kappa);
         otherwise
             error('estimateFrameSectionPropsFromDensity: level must be 0, 1, or 2.');
     end
@@ -83,7 +90,7 @@ function props = scalarScaling(props, rhoRef, penal)
 end
 
 % =========================================================================
-function props = sectionMomentProjection(props, rhoRef, model, penal, E, G)
+function props = sectionMomentProjection(props, rhoRef, model, penal, E, G, kappa)
 % Section-moment projection in the local beam frame of the reference segment.
 % The local beam axis x is along the first segment (from node 1 to node 2
 % of the frame model). y and z are the cross-section axes.
@@ -125,11 +132,11 @@ function props = sectionMomentProjection(props, rhoRef, model, penal, E, G)
 
     w = rhoRef(:) .^ penal;  % penalized density weights [H x 1]
 
-    props.EA  = E * sum(w .* Ai);
-    props.EIy = E * sum(w .* z_local.^2 .* Ai);
-    props.EIz = E * sum(w .* y_local.^2 .* Ai);
-    props.GJ  = G * sum(w .* (y_local.^2 + z_local.^2) .* Ai);
-    props.GAy = G * sum(w .* Ai);
+    props.EA  = E     * sum(w .* Ai);
+    props.EIy = E     * sum(w .* z_local.^2 .* Ai);
+    props.EIz = E     * sum(w .* y_local.^2 .* Ai);
+    props.GJ  = G     * sum(w .* (y_local.^2 + z_local.^2) .* Ai);
+    props.GAy = kappa * G * sum(w .* Ai);
     props.GAz = props.GAy;
     props.L   = L;
 end

@@ -35,36 +35,8 @@ function rankSets = enumerateBetaOnFrame(arm, props, B, Pz)
     nu      = arm.nu;
     h_seg   = arm.h_seg;
     alpha   = arm.alpha;
-
-    % Build an effective Frame3D element with scaled section properties.
-    % Frame3D(elems, E, nu, R, r) uses hollow-circle cross section internally.
-    % We bypass this by supplying a pre-scaled E such that the resulting
-    % section props match the effective values. Since Frame3D derives:
-    %   EA = E*pi*(R^2-r^2), EI = E*pi*(R^4-r^4)/4, GJ = G*pi*(R^4-r^4)/2
-    % we scale E per criterion as follows. To keep a single E consistent we
-    % use a scalar E_eff = props.EA / (pi*(R^2-r^2)) which correctly scales
-    % EA and approximately scales EI proportionally (Level-0 / Level-1 are
-    % self-consistent because all properties share the same k factor).
-    % For Level-2, where EA/EI/GJ ratios differ, we store the frame scores
-    % as raw section-force resultants from the full-pipe frame solution,
-    % weighted by the props ratio — accurate enough for ranking.
-
-    R  = arm.R;
-    r  = arm.r;
-    A0 = pi * (R^2 - r^2);
-    I0 = pi * (R^4 - r^4) / 4;
-    J0 = pi * (R^4 - r^4) / 2;
-
-    E_eff_A  = props.EA  / A0;
-    E_eff_Iy = props.EIy / I0;
-    E_eff_Iz = props.EIz / I0;
-    G_eff_J  = props.GJ  / J0;
-
-    % Full-pipe reference for normalisation (composite score).
-    props0.EA  = E * A0;
-    props0.EIy = E * I0;
-    props0.EIz = E * I0;
-    props0.GJ  = (E / (2*(1+nu))) * J0;
+    R       = arm.R;
+    r       = arm.r;
 
     % Frame topology: 7 nodes, 6 elements (one per segment joint pair).
     frameElems = [(1:6)', (2:7)'];
@@ -79,9 +51,9 @@ function rankSets = enumerateBetaOnFrame(arm, props, B, Pz)
         % Build frame node positions for this beta.
         FN = computeFrameNodesBatchStatic(h_seg, alpha, betaVec);
 
-        % Build Frame3D with effective E (uses mean of axial and bending).
-        E_use = 0.5 * (E_eff_A + 0.5*(E_eff_Iy + E_eff_Iz));
-        fElem = Frame3D(frameElems, E_use, nu, R, r);
+        % Build frame element with topology-derived effective section stiffnesses.
+        fElem = Frame3DSectionProps(frameElems, ...
+            props.EA, props.EIy, props.EIz, props.GJ, props.GAy, props.GAz);
 
         frameMesh       = Mesh();
         frameMesh.nodes = FN;
@@ -175,7 +147,15 @@ function ref = runFullPipeFrame(arm, Pz, frameElems, R, r, E, nu)
     betas0 = zeros(1, size(frameElems, 1) + 1);
     FN = computeFrameNodesBatchStatic(arm.h_seg, arm.alpha, betas0);
 
-    fElem = Frame3D(frameElems, E, nu, R, r);
+    A0 = pi*(R^2 - r^2);
+    I0 = pi*(R^4 - r^4)/4;
+    J0 = pi*(R^4 - r^4)/2;
+    G0 = E / (2*(1+nu));
+    m_r   = r / R;
+    kappa = 6*(1+nu)*(1+m_r^2)^2 / ...
+            ((7+6*nu)*(1+m_r^2)^2 + (20+12*nu)*m_r^2);
+    fElem = Frame3DSectionProps(frameElems, ...
+        E*A0, E*I0, E*I0, G0*J0, kappa*G0*A0, kappa*G0*A0);
     frameMesh       = Mesh();
     frameMesh.nodes = FN;
     frameMesh.elems = frameElems;
