@@ -68,7 +68,7 @@ robustStressRatio = 3.0;    % stressLimit = ratio × full-pipe max-HM stress
 robustDispRatio   = Inf;    % Inf = displacement constraint inactive
 robustMaxCGIter   = 5;
 robustTopK        = 3;
-robustPropLevel   = 1;
+robustPropLevel   = 2;
 
 if robustEnabled
     resultRoot = fullfile(scriptDir, 'results', ...
@@ -192,6 +192,8 @@ if robustEnabled
         max(fpMetrics.maxHM), max(abs(fpMetrics.tipUz)));
     fprintf('  Stress limit: %.4e Pa (x%.2f)  Disp limit: %.4e m (x%.2f)\n', ...
         stressLimitRobust, robustStressRatio, dispLimitRobust, robustDispRatio);
+
+    opts.absoluteStressLimit = stressLimitRobust;
 
     cgOpts.maxCGIter  = robustMaxCGIter;
     cgOpts.topK       = robustTopK;

@@ -30,7 +30,8 @@ function result = solveSIMPVolumeStressMMA(analyses, z0, xmin, xmax, opts)
         [], opts.useParallel, nStressClusters);
     m = numel(S0);
     opts.constraintNames = stressConstraintNames(opts.configNames, nStressClusters);
-    Starget = stressTargets(S0, opts.stressCoeff, nConfigs, nStressClusters);
+    Starget = stressTargets(S0, opts.stressCoeff, nConfigs, nStressClusters, ...
+        opts.absoluteStressLimit);
     grad0 = chainDesignGradient(dS0dx, opts, dzPhysicalDz);
 
     zHistory = zeros(n, opts.maxIter + 1);
@@ -194,6 +195,7 @@ function result = solveSIMPVolumeStressMMA(analyses, z0, xmin, xmax, opts)
     result.history = history;
     result.S0 = S0;
     result.Starget = Starget;
+    result.absoluteStressLimit = opts.absoluteStressLimit;
     result.maxStress0 = maxStress0;
     result.grad0 = grad0;
     result.bestFeasible = bestFeasible;
@@ -219,6 +221,7 @@ function opts = setDefaultOptions(opts, n)
     if ~isfield(opts, 'stressPNorm'), opts.stressPNorm = 12; end
     if ~isfield(opts, 'stressRelaxationQ'), opts.stressRelaxationQ = 0.5; end
     if ~isfield(opts, 'stressCoeff'), opts.stressCoeff = 2.0; end
+    if ~isfield(opts, 'absoluteStressLimit'), opts.absoluteStressLimit = []; end
     if ~isfield(opts, 'mmaConstraintScale'), opts.mmaConstraintScale = 1000; end
     if ~isfield(opts, 'configNames'), opts.configNames = strings(0, 1); end
     if ~isfield(opts, 'configLabels'), opts.configLabels = opts.configNames; end
@@ -295,9 +298,37 @@ function names = stressConstraintNames(configNames, nStressClusters)
     end
 end
 
-function Starget = stressTargets(S0, stressCoeff, nConfigs, nStressClusters)
+function Starget = stressTargets(S0, stressCoeff, nConfigs, nStressClusters, absoluteStressLimit)
     S0 = S0(:);
     Starget = zeros(size(S0));
+
+    if nargin >= 5 && ~isempty(absoluteStressLimit)
+        limit = absoluteStressLimit(:);
+        if isscalar(limit)
+            Starget(:) = max(limit, eps);
+            return;
+        end
+        if numel(limit) == numel(S0)
+            Starget(:) = max(limit, eps);
+            return;
+        end
+        if numel(limit) == nConfigs
+            for k = 1:nConfigs
+                idx = (k - 1) * nStressClusters + (1:nStressClusters);
+                Starget(idx) = max(limit(k), eps);
+            end
+            return;
+        end
+        if numel(limit) == nStressClusters
+            for k = 1:nConfigs
+                idx = (k - 1) * nStressClusters + (1:nStressClusters);
+                Starget(idx) = max(limit(:), eps);
+            end
+            return;
+        end
+        error('absoluteStressLimit must be scalar, per-config, per-cluster, or per-constraint.');
+    end
+
     for k = 1:nConfigs
         idx = (k - 1) * nStressClusters + (1:nStressClusters);
         target = stressCoeff * max(S0(idx));

@@ -68,12 +68,12 @@ function rankSets = enumerateBetaOnFrame(arm, props, B, Pz)
         [~, ff] = fElem.computeResults(FN, fa.qnodal);
         % ff: [12 x nElems], columns: [N Ty Tz Ms My Mz] at each end
         % Layout per element: [N1 Ty1 Tz1 Ms1 My1 Mz1 N2 Ty2 Tz2 Ms2 My2 Mz2]
-        maxN  = max(abs(ff(1,:)));
-        maxTy = max(abs(ff(2,:)));
-        maxTz = max(abs(ff(3,:)));
-        maxMs = max(abs(ff(4,:)));
-        maxMy = max(abs(ff(5,:)));
-        maxMz = max(abs(ff(6,:)));
+        maxN  = max(max(abs(ff([1, 7],  :))));
+        maxTy = max(max(abs(ff([2, 8],  :))));
+        maxTz = max(max(abs(ff([3, 9],  :))));
+        maxMs = max(max(abs(ff([4,10],  :))));
+        maxMy = max(max(abs(ff([5,11],  :))));
+        maxMz = max(max(abs(ff([6,12],  :))));
 
         scores(i,:) = [maxN, maxTy, maxTz, maxMs, maxMy, maxMz];
 
@@ -165,8 +165,8 @@ function ref = runFullPipeFrame(arm, Pz, frameElems, R, r, E, nu)
     fa.solveWeighted(ones(size(frameElems,1), 1));
 
     [~, ff] = fElem.computeResults(FN, fa.qnodal);
-    ref.scores  = [max(abs(ff(1,:))), max(abs(ff(2,:))), max(abs(ff(3,:))), ...
-                   max(abs(ff(4,:))), max(abs(ff(5,:))), max(abs(ff(6,:)))];
+    ref.scores  = [max(max(abs(ff([1, 7],  :)))), max(max(abs(ff([2, 8],  :)))), max(max(abs(ff([3, 9],  :)))), ...
+                   max(max(abs(ff([4,10],  :)))), max(max(abs(ff([5,11],  :)))), max(max(abs(ff([6,12],  :))))];
     iuz = fa.findDOFsIndices("uz");
     tipNode = frameMesh.findClosestNode(FN(end,:));
     ref.tipDisp = abs(fa.qnodal(tipNode, iuz));

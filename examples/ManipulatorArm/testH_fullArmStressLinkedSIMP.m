@@ -62,13 +62,18 @@ configs = armLoadConfigs("six");
 nConfigs = numel(configs);
 
 %% ---- Robust beta options (set robustEnabled=true to activate CG robust loop) --
-robustEnabled     = false;
-robustDeltaDeg    = 90;
-robustStressRatio = 3.0;    % stressLimit = ratio × full-pipe max-HM stress
-robustDispRatio   = Inf;    % Inf = displacement constraint inactive
-robustMaxCGIter   = 5;
-robustTopK        = 3;
-robustPropLevel   = 1;
+robustEnabled     = readEnvLogical('TESTH_ROBUST', false);
+robustDeltaDeg    = readEnvDouble('TESTH_ROBUST_DELTA_DEG', 90);
+robustStressRatio = readEnvDouble('TESTH_ROBUST_STRESS_RATIO', 3.0); % stressLimit = ratio × full-pipe max-HM stress
+robustDispRatio   = readEnvDouble('TESTH_ROBUST_DISP_RATIO', Inf);   % Inf = displacement constraint inactive
+robustMaxCGIter   = round(readEnvDouble('TESTH_ROBUST_MAX_CG_ITER', 5));
+robustTopK        = round(readEnvDouble('TESTH_ROBUST_TOPK', 3));
+robustFinalTopK   = round(readEnvDouble('TESTH_ROBUST_FINAL_TOPK', max(robustTopK, 6)));
+robustPropLevel   = round(readEnvDouble('TESTH_ROBUST_PROP_LEVEL', 2));
+robustMaxCGIter   = max(0, robustMaxCGIter);
+robustTopK        = max(1, robustTopK);
+robustFinalTopK   = max(robustTopK, robustFinalTopK);
+robustPropLevel   = min(max(robustPropLevel, 0), 2);
 
 if robustEnabled
     resultRoot = fullfile(scriptDir, 'results', ...
@@ -86,6 +91,11 @@ fprintf(['  Objective=min volume, stressCoeff=%.3f, pStress=%.1f, qRelax=%.2f, '
     'projection=%d(beta=%.1f, eta=%.2f), clusters=%d, maxIter=%d, parallel=%d, workers=%d\n'], ...
     stressCoeff, stressPNorm, stressRelaxationQ, useProjection, projectionBeta, projectionEta, ...
     nStressClusters, maxIter, useParallel, parallelWorkers);
+if robustEnabled
+    fprintf('  Robust CG: delta=%g deg, stressRatio=%.2f, dispRatio=%.2f, maxCG=%d, topK=%d, finalTopK=%d, propLevel=%d\n', ...
+        robustDeltaDeg, robustStressRatio, robustDispRatio, robustMaxCGIter, ...
+        robustTopK, robustFinalTopK, robustPropLevel);
+end
 
 %% ---- Build full-arm configurations -----------------------------------------
 models = cell(nConfigs, 1);
@@ -223,6 +233,8 @@ if robustEnabled
     fprintf('  Stress limit: %.4e Pa (x%.2f)  Disp limit: %.4e m (x%.2f)\n', ...
         stressLimitRobust, robustStressRatio, dispLimitRobust, robustDispRatio);
 
+    opts.absoluteStressLimit = stressLimitRobust;
+
     cgOpts.maxCGIter  = robustMaxCGIter;
     cgOpts.topK       = robustTopK;
     cgOpts.propLevel  = robustPropLevel;
@@ -293,6 +305,31 @@ fprintf('  Final volume fraction        : %.6f\n', finalVolumeFraction);
 fprintf('  Stress constraints ok        : %d (max g=%.3e)\n', constraintsSatisfied, max(finalConstraint));
 fprintf('  Rho nonuniform               : %d (std=%.4f, range=%.4f)\n', ...
     rhoNonuniform, std(rhoPhysicalFinal), max(rhoPhysicalFinal) - min(rhoPhysicalFinal));
+
+%% ---- Final robust verification of exported design --------------------------
+finalAdversarialConfigs = struct([]);
+finalRobustWorstStressRatio = NaN;
+finalRobustWorstDispRatio = NaN;
+if robustEnabled
+    fprintf('\nFinal robust verification of exported design...\n');
+    verifyOpts.topK      = robustFinalTopK;
+    verifyOpts.penal     = penal;
+    verifyOpts.propLevel = robustPropLevel;
+    verifyOpts.nJoints   = 7;
+    verifyOpts.verbose   = true;
+
+    finalAdversarialConfigs = findAdversarialBetaSIMP(x_arm_final, arm, models{1}, ...
+        stressLimitRobust, dispLimitRobust, robustDeltaDeg, verifyOpts);
+
+    if ~isempty(finalAdversarialConfigs)
+        finalRobustWorstStressRatio = max([finalAdversarialConfigs.stressRatio]);
+        finalRobustWorstDispRatio = max([finalAdversarialConfigs.dispRatio]);
+        fprintf('  Worst verified stress ratio : %.4f\n', finalRobustWorstStressRatio);
+        fprintf('  Worst verified disp ratio   : %.4f\n', finalRobustWorstDispRatio);
+        writeRobustCandidateCsv(finalAdversarialConfigs, ...
+            fullfile(resultRoot, 'final_adversarial_verification.csv'));
+    end
+end
 
 %% ---- Save histories and plots ----------------------------------------------
 save(fullfile(resultRoot, 'result.mat'), ...
@@ -369,23 +406,13 @@ exportgraphics(fig, fullfile(resultRoot, 'rho_final.png'), 'Resolution', 200);
 savefig(fig, fullfile(resultRoot, 'rho_final.fig'));
 close(fig);
 
-if robustEnabled && ~isempty(adversarialConfigs)
+if robustEnabled
     save(fullfile(resultRoot, 'robust_result.mat'), ...
         'adversarialConfigs', 'cgHistory', 'stressLimitRobust', 'dispLimitRobust', ...
-        'robustDeltaDeg', 'robustStressRatio', 'robustDispRatio');
-    rows = struct([]);
-    for ci = 1:numel(adversarialConfigs)
-        c = adversarialConfigs(ci);
-        row.ci = ci;  row.stressRatio = c.stressRatio;  row.dispRatio = c.dispRatio;
-        row.violated = double(c.violated);
-        row.maxHM_MPa = c.maxHM / 1e6;  row.tipUz_m = c.tipUz;
-        bv = c.beta;
-        for ji = 1:numel(bv), row.(sprintf('beta%d', ji)) = bv(ji); end
-        rows = [rows; row]; %#ok<AGROW>
-    end
-    if ~isempty(rows)
-        writetable(struct2table(rows), fullfile(resultRoot, 'adversarial_config_summary.csv'));
-    end
+        'robustDeltaDeg', 'robustStressRatio', 'robustDispRatio', ...
+        'finalAdversarialConfigs', 'finalRobustWorstStressRatio', 'finalRobustWorstDispRatio');
+    writeRobustCandidateCsv(adversarialConfigs, ...
+        fullfile(resultRoot, 'adversarial_config_summary.csv'));
 end
 
 fprintf('\nSaved Test H outputs to %s\n', resultRoot);
@@ -401,5 +428,49 @@ function dSdrho = pullbackStressSet(dSdx, H, nElems)
     dSdrho = zeros(H, nConfigs);
     for k = 1:nConfigs
         dSdrho(:, k) = pullbackFullArmSensitivity(dSdx(:, k), H, nElems);
+    end
+end
+
+function value = readEnvLogical(name, defaultValue)
+    raw = lower(strtrim(getenv(name)));
+    if isempty(raw)
+        value = defaultValue;
+        return;
+    end
+    value = any(strcmp(raw, {'1', 'true', 'yes', 'on'}));
+end
+
+function value = readEnvDouble(name, defaultValue)
+    raw = strtrim(getenv(name));
+    if isempty(raw)
+        value = defaultValue;
+        return;
+    end
+    parsed = str2double(raw);
+    if isnan(parsed)
+        value = defaultValue;
+    else
+        value = parsed;
+    end
+end
+
+function writeRobustCandidateCsv(candidates, path)
+    rows = struct([]);
+    for ci = 1:numel(candidates)
+        c = candidates(ci);
+        row.ci = ci;
+        row.stressRatio = c.stressRatio;
+        row.dispRatio = c.dispRatio;
+        row.violated = double(c.violated);
+        row.maxHM_MPa = c.maxHM / 1e6;
+        row.tipUz_m = c.tipUz;
+        bv = c.beta;
+        for ji = 1:numel(bv)
+            row.(sprintf('beta%d', ji)) = bv(ji);
+        end
+        rows = [rows; row]; %#ok<AGROW>
+    end
+    if ~isempty(rows)
+        writetable(struct2table(rows), path);
     end
 end
