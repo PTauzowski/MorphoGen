@@ -58,6 +58,7 @@ function colors = originColorMap()
         0.95 0.55 0.05;  % bending
         0.55 0.20 0.75;  % ring
         0.95 0.85 0.05;  % jointRing
+        0.00 0.70 0.85;  % middleRing
     ];
 end
 

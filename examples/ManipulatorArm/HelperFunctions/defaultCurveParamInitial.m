@@ -17,9 +17,10 @@ function params = defaultCurveParamInitial(arm)
     params.axialWeight = 0.35;
     params.bendingWeight = 0.35;
     params.ringWeight = 0.0;
-    params.ringSpacingFactor = 32.0;
+    params.ringSpacingFactor = 12.0;
     params.jointRingWeight = 0.75;
     params.jointRingWidthFactor = 3.0;   % wider than helix curves by default
+    params.middleRingWeight = 0.0;
     params.baseDensity = max(arm.mma.xminValue, 0.04);
 
     % Legacy field — not in the optimisation vector but recognised as

@@ -21,6 +21,7 @@ function bounds = defaultCurveParamBounds(arm)
     bounds.ringSpacingFactor = [12.0, 80.0];     % ring spacing / nominal element size
     bounds.jointRingWeight = [0.0, 1.5];         % extra reinforcement near segment ends
     bounds.jointRingWidthFactor = [0.5, 12.0];   % joint-ring Gaussian width / nominal element size
+    bounds.middleRingWeight = [0.0, 1.5];        % reinforcement ring at segment midpoint
     bounds.baseDensity = [arm.mma.xminValue, min(0.35, 0.9 * arm.mma.xminValue + 0.30)];
     bounds.elemSize = [elemSize, elemSize];
 

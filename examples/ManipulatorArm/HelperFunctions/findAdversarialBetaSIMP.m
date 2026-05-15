@@ -18,7 +18,7 @@ function betaCandidates = findAdversarialBetaSIMP(rhoFull, arm, modelRef, ...
 %     opts        - optional struct:
 %                     topK       candidates per criterion (default 3)
 %                     penal      SIMP penalty for section-prop estimation (default 3)
-%                     propLevel  0|1|2 for estimateFrameSectionPropsFromDensity (default 1)
+%                     propLevel  0|1|2 for estimateFrameSectionPropsFromDensity (default 2)
 %                     nJoints    number of beta joints (default 7)
 %                     verbose    print progress (default true)
 %
@@ -32,7 +32,7 @@ function betaCandidates = findAdversarialBetaSIMP(rhoFull, arm, modelRef, ...
     topK      = localOpt(opts, 'topK',      3);
     penal     = localOpt(opts, 'penal',     3);
     Pz        = localOpt(opts, 'Pz',        arm.Pz);
-    propLevel = localOpt(opts, 'propLevel', 1);
+    propLevel = localOpt(opts, 'propLevel', 2);
     nJoints   = localOpt(opts, 'nJoints',   7);
     verbose   = localOpt(opts, 'verbose',   true);
 

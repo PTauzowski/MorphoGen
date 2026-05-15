@@ -68,11 +68,7 @@ function props = estimateFrameSectionPropsFromDensity(rhoRef, model, penal, leve
         case 1
             props = sectionMomentProjection(props, rhoRef, model, penal, E, G, kappa);
         case 2
-            % Level-2 (numerical beam-equivalent BVP) is not yet implemented.
-            % Falls back to Level-1 section-moment projection.
-            warning('estimateFrameSectionPropsFromDensity:level2NotImplemented', ...
-                'Level 2 not yet implemented; falling back to Level 1.');
-            props = sectionMomentProjection(props, rhoRef, model, penal, E, G, kappa);
+            props = numericalBeamEquivalent(props, rhoRef, model, penal);
         otherwise
             error('estimateFrameSectionPropsFromDensity: level must be 0, 1, or 2.');
     end
@@ -144,179 +140,236 @@ end
 % =========================================================================
 function props = numericalBeamEquivalent(props, rhoRef, model, penal)
 % Numerical beam-equivalent stiffness via 6 unit BVPs on the penalized 3D
-% reference module with Saint-Venant style boundary conditions.
+% reference half-segment with Saint-Venant boundary conditions.
 %
-% BCs: one cross-section face coupled to a 6-DOF master node (MPC).
-%   Root master: fixed (removes rigid body motion).
-%   Tip master:  unit displacement/rotation applied per BVP.
-%   Cross-section nodes are FREE to warp — only the resultant is prescribed.
+% Only the reference half-segment (elements 1:H) is penalized.  All other
+% arm elements are assigned zero density so they contribute no stiffness
+% and do not contaminate the section property estimate through shared nodes.
 %
-% All loads and stiffnesses expressed in the local beam axis frame.
-% Local axes: x = beam axis (axial), y and z = cross-section.
+% BVP setup per load case:
+%   Root face: all DOFs fixed (identified from model.analysis.supports).
+%   Tip face:  distributed unit resultant; nodes free to warp.
+%   Non-half-segment DOFs excluded implicitly (freeDofs ⊂ halfSegDofs).
+% Six BVPs solved simultaneously (one factorisation, 6 RHS).
+%
+% Moment loads (BVPs 4-6) are normalised after assembly so the resultant
+% moment about the respective local axis equals exactly 1 N·m.
+%
+% Stiffness inversion:
+%   raw EA, GJ, EIy, EIz are recovered from generalized tip translation or
+%   least-squares fitted tip-section rotation.  raw GAy and GAz subtract the
+%   Euler-Bernoulli bending contribution from transverse-force BVPs.
+%   The raw values are calibrated by the same BVP applied to rho=1, then
+%   scaled by the analytical annular full-pipe properties used by Frame3D.
 
     H     = model.halfSegmentNelems;
-    nodes = model.mesh.nodes;
     elems = model.mesh.elems(1:H, :);
 
-    % Local beam axis from first frame segment.
+    % Local beam axis direction from first frame segment.
     xA = model.frameNodes(1, :);
     xB = model.frameNodes(2, :);
-    L  = norm(xB - xA);
-    ex = (xB - xA) / L;
+    ex = (xB - xA) / norm(xB - xA);
 
     globalZ = [0 0 1];
     if abs(dot(ex, globalZ)) > 0.99, globalZ = [0 1 0]; end
     ez_loc = cross(ex, globalZ); ez_loc = ez_loc / norm(ez_loc);
     ey_loc = cross(ez_loc, ex);  ey_loc = ey_loc / norm(ey_loc);
+    R_loc  = [ex; ey_loc; ez_loc];   % [3×3] global→local
 
-    % Rotation matrix: global -> local  (rows = local axes)
-    R_loc = [ex; ey_loc; ez_loc];   % [3 x 3]
+    % ------------------------------------------------------------------
+    % Half-segment nodes and exact end cross-sections.
+    % ------------------------------------------------------------------
+    halfSegNodeIds = unique(elems(:));
+    L              = norm(xB - xA);
+    [rootNodeIds, tipNodeIds] = referenceHalfSegmentSections(model);
+    rootNodeIds = intersect(int32(rootNodeIds(:)), int32(halfSegNodeIds(:)));
+    tipNodeIds  = intersect(int32(tipNodeIds(:)),  int32(halfSegNodeIds(:)));
+    assert(~isempty(rootNodeIds) && ~isempty(tipNodeIds), ...
+        'estimateFrameSectionPropsFromDensity: could not identify reference half-segment end sections.');
 
-    % Identify root and tip cross-section nodes.
-    % Root: nodes at minimum x_local coordinate.
-    % Tip:  nodes at maximum x_local coordinate.
-    allNodes = nodes;
-    x_proj = allNodes * ex';   % projection onto beam axis [nNodes x 1]
-    tol = L * 0.05;
-    rootMask = x_proj <= min(x_proj) + tol;
-    tipMask  = x_proj >= max(x_proj) - tol;
+    raw = solveBeamEquivalentRaw(model, rhoRef, penal, halfSegNodeIds, ...
+        rootNodeIds, tipNodeIds, ex, ey_loc, ez_loc, R_loc, L);
+    fullRaw = solveBeamEquivalentRaw(model, ones(H, 1), 1.0, halfSegNodeIds, ...
+        rootNodeIds, tipNodeIds, ex, ey_loc, ez_loc, R_loc, L);
 
-    rootNodeIds = find(rootMask);
-    tipNodeIds  = find(tipMask);
-
-    % Penalized stiffness: reference half-segment, rest of arm at rho=1.
-    xPenal     = rhoRef(:) .^ penal;
-    nElemsFull = model.analysis.getTotalElemsNumber();
-    xPenalFull = ones(nElemsFull, 1);
-    xPenalFull(1:H) = xPenal;
-
-    K = buildPenalizedStiffness(model, xPenalFull);
-
-    % Master DOF sets: root (6) and tip (6) as resultant-coupled masters.
-    % In global coordinates; transform to local for BVP loading/extraction.
-    nDof = size(K, 1);
-    nNodes = size(nodes, 1);
-    % DOF ordering assumed: [ux1 uy1 uz1 ... uxN uyN uzN] (3 DOF/node).
-    dofOf = @(ids, d) (ids - 1) * 3 + d;  % d=1:ux, 2:uy, 3:uz
-
-    rootDofs = [dofOf(rootNodeIds,1); dofOf(rootNodeIds,2); dofOf(rootNodeIds,3)];
-    tipDofs  = [dofOf(tipNodeIds, 1); dofOf(tipNodeIds, 2); dofOf(tipNodeIds, 3)];
-
-    % MPC constraint matrices: resultant coupling.
-    % u_master = mean(u_slaves)  →  Croot * u = 0 (root fixed resultant)
-    % Tip: apply unit displacement/rotation to master, free cross-section warp.
-    % Implemented via static condensation: fix root resultant DOFs, apply
-    % tip resultant loads, measure tip resultant displacement.
-
-    % Assemble MPC-reduced system.
-    % We use a simpler surrogate approach that is exact for the resultant:
-    % apply a distributed unit load on the tip face whose resultant equals
-    % the desired unit force/moment, solve, extract tip face mean displacement.
-
-    nRootNodes = numel(rootNodeIds);
-    nTipNodes  = numel(tipNodeIds);
-
-    % Build 6 load vectors (in global frame, then rotated to local).
-    % Force/moment resultants: Fx, Fy, Fz, Mx, My, Mz on tip face.
-    tipCentroid = mean(nodes(tipNodeIds, :), 1);
-
-    loadVecs = zeros(nDof, 6);
-    for iLoad = 1:6
-        f = zeros(nTipNodes * 3, 1);
-        for iN = 1:nTipNodes
-            nid = tipNodeIds(iN);
-            r_vec = nodes(nid, :) - tipCentroid;   % lever arm
-            switch iLoad
-                case 1  % unit Fx (local x = axial)
-                    fGlob = ex / nTipNodes;
-                case 2  % unit Fy (local y)
-                    fGlob = ey_loc / nTipNodes;
-                case 3  % unit Fz (local z)
-                    fGlob = ez_loc / nTipNodes;
-                case 4  % unit Mx (torsion about local x) — free warping
-                    % Distributed couple: f = (1/(2*I_polar)) * (r x ex) / nNodes
-                    % where r is the lever arm from cross-section centroid.
-                    fGlob = cross(ex, r_vec);
-                    % Normalize so that resultant torque = 1.
-                    % Will be scaled after assembly.
-                case 5  % unit My (bending about local y)
-                    fGlob = cross(ey_loc, r_vec) / nTipNodes;
-                case 6  % unit Mz (bending about local z)
-                    fGlob = cross(ez_loc, r_vec) / nTipNodes;
-            end
-            f(3*(iN-1)+1 : 3*(iN-1)+3) = fGlob;
-        end
-        % Map to global DOF vector.
-        dofs = [dofOf(tipNodeIds,1); dofOf(tipNodeIds,2); dofOf(tipNodeIds,3)];
-        F = zeros(nDof, 1);
-        for iN = 1:nTipNodes
-            F(dofOf(tipNodeIds(iN),1)) = f(3*(iN-1)+1);
-            F(dofOf(tipNodeIds(iN),2)) = f(3*(iN-1)+2);
-            F(dofOf(tipNodeIds(iN),3)) = f(3*(iN-1)+3);
-        end
-        % Normalize torsion load so resultant torque = 1.
-        if iLoad == 4
-            torque = computeResultantTorque(F, nodes, tipNodeIds, tipCentroid, ex);
-            if abs(torque) > eps
-                F = F / torque;
-            end
-        end
-        loadVecs(:, iLoad) = F;
-    end
-
-    % Fix root cross-section (resultant — constrain all root DOFs).
-    freeDofs = setdiff(1:nDof, rootDofs(:)');
-    Kff = K(freeDofs, freeDofs);
-
-    % Solve 6 BVPs simultaneously.
-    Fff = loadVecs(freeDofs, :);
-    Uff = Kff \ Fff;   % [nFreeDof x 6]
-
-    % Reconstruct full displacement field (root = 0).
-    U = zeros(nDof, 6);
-    U(freeDofs, :) = Uff;
-
-    % Extract tip resultant displacements/rotations in local frame.
-    % Mean translational DOFs of tip face.
-    tipUx = mean(U(dofOf(tipNodeIds,1), :), 1);  % [1 x 6]
-    tipUy = mean(U(dofOf(tipNodeIds,2), :), 1);
-    tipUz = mean(U(dofOf(tipNodeIds,3), :), 1);
-    tipU_glob = [tipUx; tipUy; tipUz];            % [3 x 6]
-    tipU_loc  = R_loc * tipU_glob;                % [3 x 6] in local frame
-
-    % Effective stiffnesses: unit load / resulting mean displacement.
-    % BVP 1: unit Fx_loc → axial disp u_axial = tipU_loc(1,1)
-    EA_eff  = L / max(abs(tipU_loc(1,1)), eps);
-    % BVP 2: unit Fy_loc → shear disp u_y = tipU_loc(2,2)
-    GAy_eff = L / max(abs(tipU_loc(2,2)), eps);
-    % BVP 3: unit Fz_loc → shear disp u_z = tipU_loc(3,3)
-    GAz_eff = L / max(abs(tipU_loc(3,3)), eps);
-    % BVP 4: unit Mx_loc → mean twist; compute from tip node displacements
-    twist4 = computeMeanTwist(U(:,4), nodes, tipNodeIds, tipCentroid, ex, ey_loc, ez_loc);
-    GJ_eff  = L / max(abs(twist4), eps);
-    % BVP 5: unit My_loc → mean rotation theta_y from tip z-displacements
-    theta_y5 = mean(U(dofOf(tipNodeIds,3), 5), 1) / L;
-    EIy_eff  = L / max(abs(theta_y5), eps);
-    % BVP 6: unit Mz_loc → mean rotation theta_z from tip y-displacements
-    theta_z6 = mean(U(dofOf(tipNodeIds,2), 6), 1) / L;
-    EIz_eff  = L / max(abs(theta_z6), eps);
-
-    props.EA  = EA_eff;
-    props.EIy = EIy_eff;
-    props.EIz = EIz_eff;
-    props.GJ  = GJ_eff;
-    props.GAy = GAy_eff;
-    props.GAz = GAz_eff;
+    % Calibrate the BVP against its own full-pipe response.  The first
+    % half-segment has angled Arm-Z end sections, so the raw BVP is used for
+    % relative density sensitivity while the full-pipe scale is anchored to
+    % the analytical annular properties consumed by the frame element.
+    props.EA  = props.EA0  * raw.EA  / max(fullRaw.EA,  eps);
+    props.EIy = props.EIy0 * raw.EIy / max(fullRaw.EIy, eps);
+    props.EIz = props.EIz0 * raw.EIz / max(fullRaw.EIz, eps);
+    props.GJ  = props.GJ0  * raw.GJ  / max(fullRaw.GJ,  eps);
+    props.GAy = props.GAy0 * raw.GAy / max(fullRaw.GAy, eps);
+    props.GAz = props.GAz0 * raw.GAz / max(fullRaw.GAz, eps);
     props.L   = L;
 end
 
 % =========================================================================
-function K = buildPenalizedStiffness(model, xPenal)
-% Assemble penalized global stiffness from the solid analysis object.
-    model.analysis.solveWeighted(xPenal);
-    % Extract K from the assembled system (via stored matrices if available,
-    % otherwise reassemble). Use the analysis internal assembler.
-    K = model.analysis.assembleStiffness(xPenal);
+function raw = solveBeamEquivalentRaw(model, rhoRef, penal, halfSegNodeIds, ...
+    rootNodeIds, tipNodeIds, ex, ey_loc, ez_loc, R_loc, L)
+
+    nodes = model.mesh.nodes;
+
+    % DOF layout: 3 DOFs per node, interleaved [ux_1,uy_1,uz_1, ux_2,...].
+    nDPNode = 3;
+    nDof    = size(nodes, 1) * nDPNode;
+    dofOf   = @(ids, d) (ids(:) - 1) * nDPNode + d;   % d=1:ux, 2:uy, 3:uz
+
+    halfSegDofs = unique([dofOf(halfSegNodeIds,1); dofOf(halfSegNodeIds,2); dofOf(halfSegNodeIds,3)]);
+    rootDofs    = unique([dofOf(rootNodeIds,1);    dofOf(rootNodeIds,2);    dofOf(rootNodeIds,3)]);
+    freeDofs    = setdiff(halfSegDofs, rootDofs);
+
+    xPenal     = rhoRef(:) .^ penal;
+    nElemsFull = model.analysis.getTotalElemsNumber();
+    xPenalFull = zeros(nElemsFull, 1);
+    xPenalFull(1:numel(rhoRef)) = xPenal;
+
+    [I, J, ~] = model.analysis.globalMatrixIndices();
+    stiffFn   = model.analysis.weightedStiffnessFunction();
+    Kvals     = model.analysis.globalMatrixAggregationWeighted(stiffFn, xPenalFull);
+    K         = sparse(I, J, Kvals, nDof, nDof);
+    Kff       = K(freeDofs, freeDofs);
+
+    tipCentroid = mean(nodes(tipNodeIds, :), 1);
+    nTipNodes   = numel(tipNodeIds);
+    F_full      = zeros(nDof, 6);
+
+    for iLoad = 1:6
+        for iN = 1:nTipNodes
+            nid   = tipNodeIds(iN);
+            r_vec = nodes(nid, :) - tipCentroid;
+            switch iLoad
+                case 1,  fGlob = ex      / nTipNodes;
+                case 2,  fGlob = ey_loc  / nTipNodes;
+                case 3,  fGlob = ez_loc  / nTipNodes;
+                case 4,  fGlob = cross(ex,     r_vec);
+                case 5,  fGlob = cross(ey_loc, r_vec);
+                case 6,  fGlob = cross(ez_loc, r_vec);
+            end
+            F_full(dofOf(nid,1), iLoad) = F_full(dofOf(nid,1), iLoad) + fGlob(1);
+            F_full(dofOf(nid,2), iLoad) = F_full(dofOf(nid,2), iLoad) + fGlob(2);
+            F_full(dofOf(nid,3), iLoad) = F_full(dofOf(nid,3), iLoad) + fGlob(3);
+        end
+        switch iLoad
+            case 4
+                F_full(:,4) = normalizeMomentLoad(F_full(:,4), nodes, tipNodeIds, tipCentroid, ex);
+            case 5
+                F_full(:,5) = normalizeMomentLoad(F_full(:,5), nodes, tipNodeIds, tipCentroid, ey_loc);
+            case 6
+                F_full(:,6) = normalizeMomentLoad(F_full(:,6), nodes, tipNodeIds, tipCentroid, ez_loc);
+        end
+    end
+
+    U_free = Kff \ F_full(freeDofs, :);
+    U = zeros(nDof, 6);
+    U(freeDofs, :) = U_free;
+
+    [tipU_loc, tipTheta_loc] = fitTipSectionRigidMotion( ...
+        U, nodes, tipNodeIds, tipCentroid, R_loc);
+
+    raw.EA = L / max(abs(tipU_loc(1,1)), eps);
+    raw.GJ = L / max(abs(tipTheta_loc(1,4)), eps);
+    raw.EIy = L / max(abs(tipTheta_loc(2,5)), eps);
+    raw.EIz = L / max(abs(tipTheta_loc(3,6)), eps);
+
+    u_y_bend = L^3 / (3 * max(raw.EIz, eps));
+    raw.GAy  = L / max(abs(tipU_loc(2,2)) - u_y_bend, eps);
+
+    u_z_bend = L^3 / (3 * max(raw.EIy, eps));
+    raw.GAz  = L / max(abs(tipU_loc(3,3)) - u_z_bend, eps);
+end
+
+% =========================================================================
+function [uLoc, thetaLoc] = fitTipSectionRigidMotion(U, nodes, tipNodeIds, tipCentroid, R_loc)
+% Least-squares section motion u_i = u0 + theta × (x_i - c).
+    tipNodeIds = tipNodeIds(:);
+    nTip = numel(tipNodeIds);
+    A = zeros(3*nTip, 6);
+    for i = 1:nTip
+        nid = tipNodeIds(i);
+        r = nodes(nid, :) - tipCentroid;
+        rows = 3*(i-1) + (1:3);
+        A(rows, 1:3) = eye(3);
+        A(rows, 4:6) = -skewMatrix(r);
+    end
+
+    uLoc = zeros(3, size(U, 2));
+    thetaLoc = zeros(3, size(U, 2));
+    for loadCase = 1:size(U, 2)
+        b = zeros(3*nTip, 1);
+        for i = 1:nTip
+            nid = tipNodeIds(i);
+            dofs = [3*(nid-1)+1, 3*(nid-1)+2, 3*(nid-1)+3];
+            b(3*(i-1) + (1:3)) = U(dofs, loadCase);
+        end
+        q = A \ b;
+        uLoc(:, loadCase) = R_loc * q(1:3);
+        thetaLoc(:, loadCase) = R_loc * q(4:6);
+    end
+end
+
+% =========================================================================
+function S = skewMatrix(r)
+    S = [  0,   -r(3),  r(2); ...
+          r(3),  0,    -r(1); ...
+         -r(2), r(1),   0   ];
+end
+
+% =========================================================================
+function [rootNodeIds, tipNodeIds] = referenceHalfSegmentSections(model)
+% Exact section node sets captured during ManipulatorModel3D construction.
+    rootNodeIds = [];
+    tipNodeIds = [];
+    if isprop(model, 'couplingSections') && ~isempty(model.couplingSections)
+        secs = model.couplingSections;
+        for si = 1:numel(secs)
+            if secs(si).frameNode == 1
+                rootNodeIds = secs(si).nodes;
+            elseif secs(si).frameNode == 2 && secs(si).adjacentFrameNode == 1
+                tipNodeIds = secs(si).nodes;
+            end
+        end
+    end
+    if isempty(rootNodeIds)
+        rootNodeIds = find(any(model.analysis.supports, 2));
+    end
+    if isempty(tipNodeIds)
+        H = model.halfSegmentNelems;
+        elems = model.mesh.elems(1:H, :);
+        nodes = model.mesh.nodes;
+        xA = model.frameNodes(1, :);
+        xB = model.frameNodes(2, :);
+        ex = (xB - xA) / norm(xB - xA);
+        halfSegNodeIds = unique(elems(:));
+        xProj = nodes(halfSegNodeIds, :) * ex';
+        % Tolerance must cover the full angled cut face: 2·R·sin(alpha).
+        tol = 2 * model.R * sin(model.alpha) * 1.1 + norm(xB - xA) * 0.01;
+        tipNodeIds = halfSegNodeIds(xProj >= max(xProj) - tol);
+    end
+end
+
+% =========================================================================
+function F = normalizeMomentLoad(F, nodes, tipNodeIds, tipCentroid, axis)
+% Remove any numerical net force, then scale resultant moment to one.
+    tipNodeIds = tipNodeIds(:);
+    nTip = numel(tipNodeIds);
+    fMean = [0 0 0];
+    for i = 1:nTip
+        nid = tipNodeIds(i);
+        dofs = [3*(nid-1)+1, 3*(nid-1)+2, 3*(nid-1)+3];
+        fMean = fMean + F(dofs)';
+    end
+    fMean = fMean / max(nTip, 1);
+    for i = 1:nTip
+        nid = tipNodeIds(i);
+        dofs = [3*(nid-1)+1, 3*(nid-1)+2, 3*(nid-1)+3];
+        F(dofs) = F(dofs) - fMean';
+    end
+    moment = computeResultantTorque(F, nodes, tipNodeIds, tipCentroid, axis);
+    assert(abs(moment) > eps, ...
+        'estimateFrameSectionPropsFromDensity: zero resultant moment in section-property BVP.');
+    F = F / moment;
 end
 
 % =========================================================================
@@ -328,24 +381,4 @@ function T = computeResultantTorque(F, nodes, tipNodeIds, tipCentroid, ex)
         f_vec = F([3*(nid-1)+1, 3*(nid-1)+2, 3*(nid-1)+3])';
         T = T + dot(cross(r_vec, f_vec), ex);
     end
-end
-
-% =========================================================================
-function phi = computeMeanTwist(u, nodes, tipNodeIds, tipCentroid, ex, ey, ez)
-% Mean twist angle from cross-section tangential displacements.
-    phi = 0;
-    nTip = numel(tipNodeIds);
-    for i = 1:nTip
-        nid = tipNodeIds(i);
-        r_vec = nodes(nid, :) - tipCentroid;
-        r_perp = r_vec - dot(r_vec, ex)*ex;
-        rLen = norm(r_perp);
-        if rLen < 1e-12, continue; end
-        u_vec = u([3*(nid-1)+1, 3*(nid-1)+2, 3*(nid-1)+3])';
-        % Tangential displacement component.
-        t_vec = cross(ex, r_perp) / rLen;
-        u_tan = dot(u_vec, t_vec);
-        phi = phi + u_tan / rLen;
-    end
-    phi = phi / nTip;
 end

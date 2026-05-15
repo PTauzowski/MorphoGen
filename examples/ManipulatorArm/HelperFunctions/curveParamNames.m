@@ -1,5 +1,5 @@
 function names = curveParamNames()
-% curveParamNames  Ordered curve design parameter names (13 total).
+% curveParamNames  Ordered curve design parameter names (15 total).
 %
 %   anglePlusDeg / angleMinusDeg replace the old shared angleDeg, giving the
 %   optimizer independent inclination for each helix family.  The shared
@@ -11,5 +11,6 @@ function names = curveParamNames()
         'axialWeight', 'bendingWeight', ...
         'ringWeight', 'ringSpacingFactor', ...
         'jointRingWeight', 'jointRingWidthFactor', ...
+        'middleRingWeight', ...
         'baseDensity'};
 end

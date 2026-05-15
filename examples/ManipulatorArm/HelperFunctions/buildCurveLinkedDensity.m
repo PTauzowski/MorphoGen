@@ -57,13 +57,26 @@ function [rhoRef, rhoFull, info, fields] = buildCurveLinkedDensity(params, model
     ringDist = periodicLineDistance(z - phase, ringSpacing);
     ringField = params.ringWeight * exp(-0.5 * (ringDist / width).^2);
 
-    jointRingDist = min(z, zSpan - z);
+    % Cut face plane: z = ls - x*sin(alpha), i.e. x*sin(alpha) + z = ls.
+    % Normal to this plane is [sin(alpha), 0, 1] (from generateSegment2a
+    % node formula), not a pure rotation of the beam axis.
+    c_cut    = model.frameNodes(2, :);
+    sa       = sin(model.alpha);
+    n_cut    = [sa, 0, 1] / sqrt(1 + sa^2);
+    d_cut    = max(0, (c_cut - centroids) * n_cut');
+    jointRingDist = min(z, d_cut);
     jointRingWidth = max(eps, paramOrDefault(params, 'jointRingWidthFactor', params.widthFactor) * elemSize);
     jointRingField = paramOrDefault(params, 'jointRingWeight', 0.0) * ...
         exp(-0.5 * (jointRingDist / jointRingWidth).^2);
 
+    % Middle ring: Gaussian at the locus where z == d_cut (equidistant from
+    % both faces), sharing jointRingWidthFactor for its sigma.
+    middleRingDist = abs(z - d_cut);
+    middleRingField = paramOrDefault(params, 'middleRingWeight', 0.0) * ...
+        exp(-0.5 * (middleRingDist / jointRingWidth).^2);
+
     ridgeFields = [helixPlusField, helixMinusField, axialField, bendingField, ...
-        ringField, jointRingField];
+        ringField, jointRingField, middleRingField];
     raw = ridgeEnvelope(ridgeFields, 8);
     fieldsRef = struct();
     fieldsRef.helixPlus = helixPlusField;
@@ -73,6 +86,7 @@ function [rhoRef, rhoFull, info, fields] = buildCurveLinkedDensity(params, model
     fieldsRef.ring = ringField;
     fieldsRef.jointRing = jointRingField;
     fieldsRef.jointRingWidth = jointRingWidth;
+    fieldsRef.middleRing = middleRingField;
     fieldsRef.envelopeRaw = raw;
 
     raw = raw - min(raw);

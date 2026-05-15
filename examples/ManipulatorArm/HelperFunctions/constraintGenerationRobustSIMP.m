@@ -20,7 +20,7 @@ function [optResult, adversarialConfigs, cgHistory] = constraintGenerationRobust
 %     cgOpts       - struct with fields:
 %                      maxCGIter  outer CG iterations (default 5)
 %                      topK       candidates per criterion in adversarial search (default 3)
-%                      propLevel  frame section-prop level (default 1)
+%                      propLevel  frame section-prop level (default 2)
 %                      penal      SIMP penalty forwarded to findAdversarialBetaSIMP (default simpOpts.penal)
 %                      verbose    print progress (default true)
 %
@@ -34,7 +34,7 @@ function [optResult, adversarialConfigs, cgHistory] = constraintGenerationRobust
     end
     maxCGIter = localOpt(cgOpts, 'maxCGIter', 5);
     topK      = localOpt(cgOpts, 'topK',      3);
-    propLevel = localOpt(cgOpts, 'propLevel', 1);
+    propLevel = localOpt(cgOpts, 'propLevel', 2);
     penal     = localOpt(cgOpts, 'penal',     simpOpts.penal);
     verbose   = localOpt(cgOpts, 'verbose',   true);
 
@@ -65,6 +65,9 @@ function [optResult, adversarialConfigs, cgHistory] = constraintGenerationRobust
         currentSimpOpts              = simpOpts;
         currentSimpOpts.configNames  = buildActiveConfigNames(simpOpts, activeBetas);
         currentSimpOpts.configLabels = currentSimpOpts.configNames;
+        if ~isfield(currentSimpOpts, 'absoluteStressLimit') || isempty(currentSimpOpts.absoluteStressLimit)
+            currentSimpOpts.absoluteStressLimit = stressLimit;
+        end
 
         % Inner SIMP solve (warm-started from previous CG iteration).
         optResult = solveSIMPVolumeStressMMA(activeAnalyses, zWarm, xmin, xmax, currentSimpOpts);

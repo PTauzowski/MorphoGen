@@ -8,7 +8,8 @@ function [originRef, originNames, confidence] = classifyCurveFamilyOrigin(fields
         mixedRatio = 0.85;
     end
 
-    originNames = ["helixPlus"; "helixMinus"; "axial"; "bending"; "ring"; "jointRing"];
+    originNames = ["helixPlus"; "helixMinus"; "axial"; "bending"; ...
+        "ring"; "jointRing"; "middleRing"];
     n = numel(fieldsRef.envelope);
     values = zeros(n, numel(originNames));
     for i = 1:numel(originNames)

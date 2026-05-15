@@ -83,6 +83,9 @@ curveOpts.resultRoot     = resultRoot;
 
 paramBounds = defaultCurveParamBounds(arm);
 p0          = defaultCurveParamInitial(arm);
+if ~isempty(runOpts.spacingFactor)
+    p0.spacingFactor = runOpts.spacingFactor;
+end
 
 %% ---- Full-pipe reference for constraint limits --------------------------------
 if isempty(gcp('nocreate'))
@@ -151,6 +154,32 @@ if ~isempty(adversarialConfigs)
 end
 
 fprintf('\nSaved results to: %s\n', resultRoot);
+
+%% ---- Export STL topologies ----------------------------------------------------
+fprintf('Exporting STL files...\n');
+
+stlArm = fullfile(resultRoot, 'topology_arm.stl');
+exportDensitySTL(modelRef, rhoFullBest, stlArm);
+fprintf('  Full arm : %s\n', stlArm);
+
+stlMod = fullfile(resultRoot, 'topology_module.stl');
+exportDensitySTL(modelRef, rhoFullBest, stlMod, 0.5, 1);
+fprintf('  Module   : %s\n', stlMod);
+
+%% ---- Export initial-curve STL at VF = 0.5 ------------------------------------
+fprintf('Exporting initial-curve topology at Vf=0.50...\n');
+initOpts          = curveOpts;
+initOpts.VolFrac  = 0.5;
+[~, rhoInitial, initInfo] = buildCurveLinkedDensity(p0, modelRef, initOpts);
+fprintf('  Initial design: Vf=%.4f (target 0.5000)\n', initInfo.fullVolumeFraction);
+
+stlInitArm = fullfile(resultRoot, 'initial_curves_arm.stl');
+exportDensitySTL(modelRef, rhoInitial, stlInitArm);
+fprintf('  Initial full arm : %s\n', stlInitArm);
+
+stlInitMod = fullfile(resultRoot, 'initial_curves_module.stl');
+exportDensitySTL(modelRef, rhoInitial, stlInitMod, 0.5, 1);
+fprintf('  Initial module   : %s\n', stlInitMod);
 end
 
 % =========================================================================
@@ -159,14 +188,15 @@ end
 
 function opts = parseRobustRunOptions(varargin)
     opts.deltaDeg             = 90;
-    opts.stressConstraintRatio = 4.0;
+    opts.stressConstraintRatio = 5.0;
     opts.dispConstraintRatio   = Inf;
     opts.maxCGIter            = 10;
     opts.topK                 = 3;
-    opts.propLevel            = 1;
+    opts.propLevel            = 2;
     opts.maxInnerIter         = 80;
     opts.maxInnerFunEvals     = 400;
     opts.resultTag            = "";
+    opts.spacingFactor        = [];
 
     for k = 1:2:numel(varargin)
         key = char(varargin{k});
@@ -181,6 +211,7 @@ function opts = parseRobustRunOptions(varargin)
             case 'maxInnerIter',          opts.maxInnerIter         = val;
             case 'maxInnerFunEvals',      opts.maxInnerFunEvals     = val;
             case 'resultTag',             opts.resultTag            = string(val);
+            case 'spacingFactor',         opts.spacingFactor        = val;
             otherwise
                 warning('testCurveParamRobustBetaOptimization: unknown option "%s"', key);
         end
