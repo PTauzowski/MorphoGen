@@ -72,6 +72,8 @@ function [metrics, raw] = evaluateLinkedDensityMetrics(analyses, rhoFull, opts)
             stressWeight = localOpt(opts, 'stressWeight', 0.5);
             dispWeight = localOpt(opts, 'dispWeight', 0.5);
             objective = stressWeight * stressObjective + dispWeight * dispObjective;
+        case 'volume'
+            objective = mean(rhoFull);
         otherwise
             error('Unknown objectiveMode "%s".', objectiveMode);
     end
