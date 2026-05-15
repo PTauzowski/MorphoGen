@@ -16,6 +16,7 @@ addpath(genpath(fullfile(repoDir, 'materials')));
 addpath(genpath(fullfile(repoDir, 'math')));
 addpath(genpath(fullfile(repoDir, 'mesh')));
 addpath(genpath(fullfile(repoDir, 'examples', 'ManipulatorArm', 'HelperFunctions')));
+addpath(genpath(fullfile(repoDir, 'postprocessing')));
 
 docsDir = fullfile(repoDir, 'docs');
 if ~exist(docsDir, 'dir')

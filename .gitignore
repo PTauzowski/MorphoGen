@@ -51,5 +51,10 @@ paper/
 *.pdf
 *.zip
 
+# 3D geometry files
+*.stl
+*.obj
+*.mtl
+
 # OS-generated files
 .DS_Store
