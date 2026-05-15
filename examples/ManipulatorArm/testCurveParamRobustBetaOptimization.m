@@ -86,7 +86,7 @@ p0          = defaultCurveParamInitial(arm);
 
 %% ---- Full-pipe reference for constraint limits --------------------------------
 if isempty(gcp('nocreate'))
-    parpool('local', feature('numcores'));
+    parpool('local', min(6, feature('numcores')));
 end
 
 fprintf('Computing full-pipe reference metrics...\n');
@@ -121,7 +121,7 @@ cgOpts.innerSolverOpts.vfMin       = 0.05;
 %% ---- Evaluate final design on full active config set --------------------------
 fprintf('Evaluating final design...\n');
 curveOpts.VolFrac = vfBest;
-[rhoRefBest, rhoFullBest, bestDensityInfo] = buildCurveLinkedDensity(pBest, modelRef, curveOpts);
+[~, rhoFullBest, bestDensityInfo] = buildCurveLinkedDensity(pBest, modelRef, curveOpts);
 
 % Build nominal analysis for final metric report.
 [bestMetrics, bestRaw] = evaluateLinkedDensityMetrics({analysisRef}, rhoFullBest, curveOpts);
@@ -135,7 +135,7 @@ fprintf('Nominal: s_ratio=%.3f  d_ratio=%.3f  (limit 1.00; >1 means violated)\n'
 
 %% ---- Save results -------------------------------------------------------------
 saveVars = {'pBest', 'vfBest', 'p0', ...
-    'rhoRefBest', 'rhoFullBest', 'bestMetrics', 'bestRaw', ...
+    'rhoFullBest', 'bestMetrics', 'bestRaw', ...
     'adversarialConfigs', 'historyRows', 'curveOpts', 'paramBounds', 'arm', ...
     'stressLimit', 'dispLimit', 'stressFullPipe', 'dispFullPipe', ...
     'stressConstraintRatio', 'dispConstraintRatio'};
@@ -149,19 +149,6 @@ end
 if ~isempty(adversarialConfigs)
     saveAdversarialConfigSummary(resultRoot, adversarialConfigs, stressLimit, dispLimit);
 end
-
-%% ---- Plots --------------------------------------------------------------------
-fig = figure('Color', 'white', 'Name', 'curve density reference half-segment');
-plotElementDensityField(modelRef, [rhoRefBest; zeros(numel(rhoFullBest)-H, 1)]);
-title('Robust curve-parametrized density (reference segment)', 'Interpreter', 'none');
-exportgraphics(fig, fullfile(resultRoot, 'rho_reference_curve.png'), 'Resolution', 200);
-savefig(fig, fullfile(resultRoot, 'rho_reference_curve.fig'));
-
-fig = figure('Color', 'white', 'Name', 'curve density full arm');
-plotElementDensityField(modelRef, rhoFullBest);
-title('Robust curve-parametrized linked density (full arm)', 'Interpreter', 'none');
-exportgraphics(fig, fullfile(resultRoot, 'rho_full_curve.png'), 'Resolution', 200);
-savefig(fig, fullfile(resultRoot, 'rho_full_curve.fig'));
 
 fprintf('\nSaved results to: %s\n', resultRoot);
 end
