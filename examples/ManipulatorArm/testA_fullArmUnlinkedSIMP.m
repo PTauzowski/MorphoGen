@@ -275,7 +275,8 @@ ppOpts.runSweep     = false;
 
 postResult = postprocessSIMPResult(optResult, models{1}, analyses, Wfilter, ppOpts);
 
-plotFinalTopology(models{1}, finalX, resultRoot, postResult, analyses);
+plotTopology(models{1}, finalX, resultRoot, struct('smoothed', true, 'saveFig', true));
+exportTopology(models{1}, finalX, resultRoot);
 plotHistory(history, configs, resultRoot);
 plotLocationDensity(locationStats, resultRoot);
 

@@ -5,14 +5,22 @@ function [V, F, faceLabels] = extrudeProfile2D(polygons, polyLabels, thickness)
 %
 %   polygons    {K x 1} cell array of [Ni x 2] closed polygon vertex coords
 %   polyLabels  [K x 1] integer label per polygon (0 = unlabelled)
-%   thickness   extrusion depth in Z (default 1.0)
+%   thickness   extrusion depth in Z (default 0.05 * bounding-box diagonal)
 %
 %   Returns a triangulated closed 3D surface:
 %     top cap (z = thickness) + bottom cap (z = 0) + side walls.
 %   faceLabels carries the source polygon label onto every triangle.
 
     if nargin < 2 || isempty(polyLabels), polyLabels = zeros(numel(polygons), 1); end
-    if nargin < 3 || isempty(thickness),  thickness  = 1.0; end
+    if nargin < 3 || isempty(thickness)
+        allPts = vertcat(polygons{:});
+        if isempty(allPts)
+            thickness = 1.0;
+        else
+            span      = max(allPts) - min(allPts);
+            thickness = 0.05 * norm(span);
+        end
+    end
 
     polyLabels = polyLabels(:);
     V          = zeros(0, 3);

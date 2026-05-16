@@ -199,7 +199,8 @@ saveInverseSummaryCsv(resultRoot, history, finalX, finalC, finalConstraint, C_co
     constraintsSatisfied, topologyNonuniform, topologyDiffersByArmLocation, ...
     locationDensityRange, locationDensityStd);
 
-plotFinalTopology(models{1}, finalX, resultRoot, [], analyses);
+plotTopology(models{1}, finalX, resultRoot, struct('smoothed', true, 'saveFig', true));
+exportTopology(models{1}, finalX, resultRoot);
 plotInverseHistory(history, configs, resultRoot, 'Test E');
 plotLocationDensity(locationStats, resultRoot);
 

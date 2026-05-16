@@ -472,27 +472,12 @@ function saveFigures(caseDir, mdl, rho, const_elems, caseName, threshold)
     savefig(fig, fullfile(caseDir, 'density_histogram.fig'));
     close(fig);
 
-    % Thresholded topology at rho > threshold
-    fig = figure('Visible','off','Name',sprintf('%s rho>%.1f', caseName, threshold));
-    hold on; axis on; daspect([1 1 1]); view(45, 35);
-    mdl.fe.plotSolidSelected(mdl.mesh.nodes, rho > threshold, [0.15 0.15 0.15]);
-    mdl.fe.plotSolidSelected(mdl.mesh.nodes, const_elems,     [0.70 0.70 0.70]);
-    xlabel('x'); ylabel('y'); zlabel('z');
-    title(sprintf('%s, \\rho > %.1f', titleStr, threshold));
-    saveas(fig, fullfile(caseDir, sprintf('topology_rho_gt_%02d.png', round(10*threshold))));
-    savefig(fig, fullfile(caseDir, sprintf('topology_rho_gt_%02d.fig', round(10*threshold))));
-    close(fig);
+    stem_t = sprintf('topology_rho_gt_%02d', round(10*threshold));
+    plotTopology(mdl, rho, caseDir, struct('smoothed', true, 'saveFig', true, 'threshold', threshold, 'filenameStem', stem_t));
+    exportTopology(mdl, rho, caseDir, struct('threshold', threshold, 'filenameStem', stem_t));
 
-    % Thresholded at 0.8
-    fig = figure('Visible','off','Name',[caseName ' rho>0.8']);
-    hold on; axis on; daspect([1 1 1]); view(45, 35);
-    mdl.fe.plotSolidSelected(mdl.mesh.nodes, rho > 0.8, [0.10 0.10 0.10]);
-    mdl.fe.plotSolidSelected(mdl.mesh.nodes, const_elems, [0.70 0.70 0.70]);
-    xlabel('x'); ylabel('y'); zlabel('z');
-    title(sprintf('%s, \\rho > 0.8', titleStr));
-    saveas(fig, fullfile(caseDir, 'topology_rho_gt_08.png'));
-    savefig(fig, fullfile(caseDir, 'topology_rho_gt_08.fig'));
-    close(fig);
+    plotTopology(mdl, rho, caseDir, struct('smoothed', true, 'saveFig', true, 'threshold', 0.8, 'filenameStem', 'topology_rho_gt_08'));
+    exportTopology(mdl, rho, caseDir, struct('threshold', 0.8, 'filenameStem', 'topology_rho_gt_08'));
 end
 
 function saveHistoryCsv(caseDir, history)

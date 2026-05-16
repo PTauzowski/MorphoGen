@@ -41,6 +41,7 @@ constFull = armConstRingElementIds(modelRef, arm, "full");
 p0 = defaultCurveParamInitial(arm);
 p0.axialWeight = 0.0;
 p0.anglePlusDeg = 45.0;
+p0.spacingFactor = 32;
 
 if ~isempty(spacingFactor)
     p0.spacingFactor = spacingFactor;

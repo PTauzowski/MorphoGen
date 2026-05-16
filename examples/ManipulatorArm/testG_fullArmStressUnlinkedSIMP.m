@@ -284,7 +284,8 @@ saveStressSIMPSummaryCsv(resultRoot, history, finalXPhysical, finalStressAggrega
     constraintsSatisfied, topologyNonuniform, topologyDiffersByArmLocation, ...
     locationDensityRange, locationDensityStd);
 
-plotFinalTopology(models{1}, finalXPhysical, resultRoot, [], analyses);
+plotTopology(models{1}, finalXPhysical, resultRoot, struct('smoothed', true, 'saveFig', true));
+exportTopology(models{1}, finalXPhysical, resultRoot);
 plotStressSIMPHistory(history, configs, resultRoot, 'Test G');
 plotLocationDensity(locationStats, resultRoot);
 

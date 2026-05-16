@@ -308,7 +308,8 @@ ppOpts.runReanalysis = false;
 
 postResult = postprocessStressIntensityResult(history, models{1}, analyses, ppOpts);
 
-plotFinalTopology(models{1}, xFinal, resultRoot, postResult, analyses);
+plotTopology(models{1}, xFinal, resultRoot, struct('smoothed', true, 'saveFig', true));
+exportTopology(models{1}, xFinal, resultRoot);
 plotLocationDensity(locationStats, resultRoot);
 
 %% ---- Structural performance metrics ----------------------------------------

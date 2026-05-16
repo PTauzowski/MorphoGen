@@ -352,7 +352,8 @@ ppOpts.runSweep = false;
 postResult = postprocessSIMPResult(optResult, models{1}, analyses, Wfilter, ppOpts);
 
 % Plot full-arm expanded topology with comparison panel
-plotFinalTopology(models{1}, x_arm_final, resultRoot, postResult, analyses);
+plotTopology(models{1}, x_arm_final, resultRoot, struct('smoothed', true, 'saveFig', true));
+exportTopology(models{1}, x_arm_final, resultRoot);
 plotTopologyConfigurations(models, x_arm_final > 0.5, resultRoot, ...
     "final_threshold_rho_gt_05_by_config", "Final rho > 0.5 by configuration", configs);
 plotHistory(history, configs, resultRoot);

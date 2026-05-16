@@ -478,13 +478,9 @@ function x = enforceVolumeFraction(x, free_elems, const_elems, volFracTarget, xm
     x(const_elems) = 1.0;
 end
 
-function saveCaseOutputs(caseDir, mdl, rho, const_elems, thresholdValues, caseName)
-    fig = figure('Visible', 'off', 'Name', [caseName ' density']);
-    plotElementDensityField(mdl, rho, const_elems);
-    title(sprintf('%s density', strrep(caseName, '_', '\_')));
-    saveas(fig, fullfile(caseDir, 'final_topology.png'));
-    savefig(fig, fullfile(caseDir, 'final_topology.fig'));
-    close(fig);
+function saveCaseOutputs(caseDir, mdl, rho, ~, thresholdValues, caseName)
+    plotTopology(mdl, rho, caseDir, struct('smoothed', true, 'saveFig', true, 'filenameStem', 'final_topology'));
+    exportTopology(mdl, rho, caseDir, struct('filenameStem', 'final_topology'));
 
     fig = figure('Visible', 'off', 'Name', [caseName ' histogram']);
     histogram(rho, 20, 'BinLimits', [0 1]);
@@ -495,17 +491,10 @@ function saveCaseOutputs(caseDir, mdl, rho, const_elems, thresholdValues, caseNa
     close(fig);
 
     for i = 1:numel(thresholdValues)
-        t = thresholdValues(i);
-        fig = figure('Visible', 'off', 'Name', sprintf('%s rho > %.1f', caseName, t));
-        hold on; axis on; daspect([1 1 1]); view(45, 35);
-        selected = rho > t;
-        mdl.fe.plotSolidSelected(mdl.mesh.nodes, selected, [0.15 0.15 0.15]);
-        mdl.fe.plotSolidSelected(mdl.mesh.nodes, const_elems, [0.70 0.70 0.70]);
-        xlabel('x'); ylabel('y'); zlabel('z');
-        title(sprintf('%s, \\rho > %.1f', strrep(caseName, '_', '\_'), t));
-        saveas(fig, fullfile(caseDir, sprintf('threshold_rho_gt_%02d.png', round(10 * t))));
-        savefig(fig, fullfile(caseDir, sprintf('threshold_rho_gt_%02d.fig', round(10 * t))));
-        close(fig);
+        t    = thresholdValues(i);
+        stem = sprintf('threshold_rho_gt_%02d', round(10 * t));
+        plotTopology(mdl, rho, caseDir, struct('smoothed', true, 'saveFig', true, 'threshold', t, 'filenameStem', stem));
+        exportTopology(mdl, rho, caseDir, struct('threshold', t, 'filenameStem', stem));
     end
 end
 
