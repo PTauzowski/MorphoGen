@@ -1,0 +1,58 @@
+Joint stress concentration is the dominant failure mode — 100% in both cases.
+
+
+Case 1  full material, worst-case β:   joint-zone = 100.0%  mid-body = 55.1%
+Case 3  full material, nominal β:      joint-zone = 100.0%  mid-body = 75.7%
+Both global peaks land in the joint zone (outer 15% of a half-segment, at the bevel interface). Neither case has its peak in the mid-body at all. The peak element is segment 4 in both configurations — the half-segment immediately adjacent to the root-side bevel of the second joint, which carries the largest cumulative bending moment.
+
+Quantitative amplification:
+
+Nominal β	Worst-case β
+Joint-zone peak	2.50 MPa	7.81 MPa
+Mid-body peak	1.89 MPa	4.31 MPa
+Kt (joint / mid-body)	1.32×	1.81×
+The worst-case beta amplifies the joint concentration disproportionately (1.81×) compared to nominal (1.32×) — meaning the bevel geometry interacts badly with the specific loading direction of that adversarial configuration.
+
+Verdict on fillets:
+
+A well-designed fillet with radius ρ ≈ 0.5–1.0 × (R−r) = 2–4 mm would reduce Kt at the joint from ~1.8 down toward ~1.1–1.2. For the robust optimization this matters a lot: the binding stress constraint at convergence (s_ratio=1.0) is currently set by the joint peak. If fillets bring the joint peak below the mid-body peak, the new binding stress drops by roughly (1 − 1/1.81) ≈ 45% for the worst-case configuration — potentially cutting the required robust VF substantially.
+
+Recommendation: implement fillets before launching the next long run. The payoff is larger than it would appear from the geometry alone, precisely because the worst-case beta exacerbates the joint concentration.
+
+Great! No what should be the best way to implement the filets? Will be another design variable related to the filets?
+Let me look at the geometry generation closely to give a precise implementation answer.
+
+Read ManipulatorModel3D.m (lines 255-299)
+The geometry makes the answer precise. Let me reason through both the implementation mechanics and the design-variable question.
+
+What the fillet needs to blend:
+
+In generateSegment2a, the bevel-end axial coordinate is:
+
+
+z(r_node, θ) = t · (−r_node · cos θ · sin α + ls)
+At t=1 this is a planar elliptical cut. Segment 2b mirrors it. On the outer wall (r_node=R) the two outer cylinders meet at an included angle of 180° − 2α = 135° — a convex ridge. That is exactly where the diagnostic put the peak. A toroidal fillet of radius ρ must replace that ridge.
+
+Two implementation options:
+
+Option A — Node morphing (post-process, no topology change)
+After each mesh1.merge(...) call in geterateManipulator, identify outer-wall nodes within distance ρ of the ridge line and project them onto the toroidal surface. No new elements, no topology change, minimal code. Works cleanly as long as ρ < ~0.5·wall thickness (otherwise elements invert near the inner radius). For wall = R − r = 4 mm, safe range is ρ ≤ 2 mm.
+
+Option B — Fillet ring elements (exact geometry)
+Insert a thin toroidal mesh patch between each pair of half-segments at the joint. The patch is resCirc × resTh × nFillet hexahedral elements on a torus of radius ρ. Exact geometry, no element distortion, but requires matching node counts at both interfaces and increases element count by ~resCirc × resTh per joint.
+
+Recommendation: Option A first, Option B if ρ needs to be larger than ~2 mm. For the thin-wall arm (wall = 4 mm), Option A with ρ = 1–2 mm is both safe and sufficient to significantly reduce Kt.
+
+Should ρ be a design variable?
+
+Yes, but in a second step. The argument:
+
+The current optimizer (fmincon, FD gradients) going from N to N+1 variables costs exactly one extra FE evaluation per SQP iteration — negligible relative to 32 configs × 9 s already in play.
+The diagnostic shows joint-zone controls 100% of the peak. ρ is the direct lever on Kt. Not optimizing it means leaving a systematic improvement on the table.
+Manufacturing will impose ρ_min (minimum bead width or tool radius). Set the bound as ρ ∈ [ρ_min, R−r].
+Practical two-phase plan:
+
+Phase	ρ	Purpose
+1	Fixed at (R−r)/2 = 2 mm	Verify fillet reduces stress peak; measure VF improvement
+2	Add ρ to fmincon vector with ρ ∈ [1 mm, 4 mm]	Let optimizer find the economical Kt/VF trade-off
+One subtlety: in the current design the constEndRing and constMiddleRing elements are pinned at rho=1. Those rings are exactly at the joint bevel faces — i.e., right where the fillet nodes are. The morphing must not move those ring nodes axially (only the outer-wall rim nodes move), otherwise the fixed-ring constraint region and the fillet region overlap and the constant-ring stiffening assumption breaks. Worth being careful about the interaction.
