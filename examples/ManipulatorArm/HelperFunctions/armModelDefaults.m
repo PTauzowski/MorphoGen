@@ -27,7 +27,7 @@ function arm = armModelDefaults(preset)
             arm.h_seg = 0.25;
             arm.res_th = 4;
         case "thin"
-            arm.r = 0.136;
+            arm.r = 0.13;
             arm.h_seg = 0.25;
             arm.res_th = 1;
     end
@@ -38,6 +38,7 @@ function arm = armModelDefaults(preset)
     arm.nominalElementSize = arm.wallThickness / arm.res_th;
     arm.Rfilter = 3 * arm.nominalElementSize;
     arm.Rmin = arm.Rfilter;
+    arm.filletR = 0;   % joint fillet radius [m]; 0 = sharp (no fillet)
 
     % Constant-density ring controls. Each enabled ring is one FE element
     % wide along the local half-segment axis.

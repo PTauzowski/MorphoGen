@@ -8,10 +8,12 @@ classdef ManipulatorModel3D < handle
         couplingSections, debugCoupling;
         % Mesh resolution stored for linkage diagnostics and rotation-aware mode.
         resCirc, resLen, resTh, nCircDiv;
+        % Fillet radius applied at each interior bevel joint (0 = no fillet).
+        filletR;
     end
-    
-    methods                       
-        function obj = ManipulatorModel3D(E,nu,ls,R,r, res, res_th, alpha, betas, ShapeFn, use_offset, Pz, constEndRing, constMiddleRing, nCircDiv)
+
+    methods
+        function obj = ManipulatorModel3D(E,nu,ls,R,r, res, res_th, alpha, betas, ShapeFn, use_offset, Pz, constEndRing, constMiddleRing, nCircDiv, filletR)
             if nargin < 13 || isempty(constEndRing)
                 constEndRing = true;
             end
@@ -21,7 +23,11 @@ classdef ManipulatorModel3D < handle
             if nargin < 15 || isempty(nCircDiv)
                 nCircDiv = 1;
             end
+            if nargin < 16 || isempty(filletR)
+                filletR = 0;
+            end
             obj.nCircDiv = nCircDiv;
+            obj.filletR  = filletR;
             alpha=alpha*pi/180;
             obj.alpha = alpha;
             obj.R = R;
@@ -38,7 +44,7 @@ classdef ManipulatorModel3D < handle
             end
 
             obj.mesh=Mesh();
-            obj.geterateManipulator( ls, R, r, res, res_th, alpha, betas, ShapeFn, nCircDiv );
+            obj.geterateManipulator( ls, R, r, res, res_th, alpha, betas, ShapeFn, nCircDiv, filletR );
             obj.fe = SolidElasticElem( ShapeFn, obj.elems );
 
             obj.fe.props.h=1;
@@ -96,9 +102,12 @@ classdef ManipulatorModel3D < handle
             ns = ceil((nhs - 1) / 2) + 1;
         end
 
-        function geterateManipulator(obj, ls, R, r, res, res_th, alpha, betas, sf, nCircDiv)
+        function geterateManipulator(obj, ls, R, r, res, res_th, alpha, betas, sf, nCircDiv, filletR)
             if nargin < 10 || isempty(nCircDiv)
                 nCircDiv = 1;
+            end
+            if nargin < 11 || isempty(filletR)
+                filletR = 0;
             end
             Th = R - r;
             obj.couplingSections = struct('frameNode', {}, 'adjacentFrameNode', {}, ...
@@ -214,6 +223,8 @@ classdef ManipulatorModel3D < handle
             obj.frameNodes = xEnds;
             nCopies = size(obj.elems, 1) / obj.halfSegmentNelems;
             obj.const_elems = obj.fullArmPhysicalRingIds(round(nCopies), sliceElems);
+
+            obj.applyJointFillets(filletR, xEnds, R);
         end
 
         function ids = localConstRingIds(obj, firstElem, lastElem, sliceElems)
@@ -788,6 +799,77 @@ classdef ManipulatorModel3D < handle
 
             isolatedNodes = setdiff(nodeIds(:), sectionNodeIds(:));
             nComp = nComp + numel(isolatedNodes);
+        end
+
+        function applyJointFillets(obj, filletR, xEnds, R_outer)
+            % applyJointFillets  Round the outer-wall ridge at each interior bevel joint.
+            %
+            % For each interior joint (not root, not tip), nodes within the
+            % fillet zone — within filletR of both the bevel plane and the
+            % outer surface — are displaced inward radially to follow a
+            % circular arc of radius filletR.  Nodes at the bevel plane
+            % (d_plane=0) are not moved; the arc dips inward symmetrically
+            % on both sides, replacing the sharp ridge with a smooth convex
+            % fillet.  Only nodes that currently sit outside the arc
+            % (r_node > r_target) are touched, so inner-wall nodes and
+            % mid-body nodes are unaffected.
+            if filletR <= 0
+                return;
+            end
+            Th = R_outer - obj.r;
+            if filletR > 0.5 * Th
+                warning('ManipulatorModel3D:filletR', ...
+                    'filletR (%.3g m) > 0.5*wallThickness (%.3g m); clamping to avoid element inversion.', ...
+                    filletR, 0.5 * Th);
+                filletR = 0.5 * Th;
+            end
+
+            nFrameNodes = size(xEnds, 1);
+            nodes = obj.mesh.nodes;
+
+            for k = 2:nFrameNodes - 1
+                p_joint = xEnds(k, :);
+
+                d_in  = p_joint - xEnds(k-1, :);
+                d_out = xEnds(k+1, :) - p_joint;
+                if norm(d_in) < 1e-12 || norm(d_out) < 1e-12, continue; end
+                d_in  = d_in  / norm(d_in);
+                d_out = d_out / norm(d_out);
+
+                % Bevel plane normal: bisector of the two adjacent tube axes.
+                n_bev = d_in + d_out;
+                if norm(n_bev) < 1e-10, continue; end
+                n_bev = n_bev / norm(n_bev);
+
+                % Signed distance of every node from the bevel plane.
+                dp      = nodes - p_joint;                       % [N x 3]
+                d_plane = dp * n_bev';                           % [N x 1]
+
+                % Radial distance from the line through p_joint along n_bev.
+                axial_comp = d_plane .* n_bev;                   % [N x 3]
+                radial_vec = dp - axial_comp;                    % [N x 3]
+                r_node     = sqrt(sum(radial_vec .^ 2, 2));      % [N x 1]
+
+                % Fillet zone: near bevel plane AND near outer surface.
+                in_zone = abs(d_plane) < filletR & r_node > R_outer - filletR;
+                if ~any(in_zone), continue; end
+
+                % Arc: r_target = R_outer - filletR + sqrt(filletR^2 - d_plane^2).
+                % Move only nodes that currently protrude outside the arc.
+                idx   = find(in_zone);
+                d_sq  = d_plane(idx) .^ 2;
+                r_tgt = R_outer - filletR + sqrt(max(0, filletR^2 - d_sq));
+
+                move  = r_node(idx) > r_tgt + 1e-14;
+                if ~any(move), continue; end
+
+                imove = idx(move);
+                scale = r_tgt(move) ./ r_node(imove);
+                nodes(imove, :) = p_joint + axial_comp(imove, :) + ...
+                    radial_vec(imove, :) .* scale;
+            end
+
+            obj.mesh.nodes = nodes;
         end
 
     end

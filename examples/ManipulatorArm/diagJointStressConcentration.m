@@ -1,13 +1,13 @@
 % diagJointStressConcentration
 % Diagnostic: are peak HM stresses at segment joints or mid-body?
 %
-% Three designs are compared, all with the adversarially worst-case beta
-% (cand 19 from the CG iter-1 sweep: beta=[0,270,0,90,180,180,180],
-% s_ratio=2.581) and the nominal straight arm (all betas=0):
+% Four designs are compared, all with the adversarially worst-case beta
+% (beta=[0,270,0,90,180,180,180]) and the nominal straight arm (all betas=0):
 %
-%   1. Full material (x=1)    - isolates geometric stress concentration
-%   2. Helix initial params   - approximate current-generation design level
-%   3. Nominal beta, x=1      - reference loading without large bends
+%   1. Full material (x=1), no fillet   - isolates geometric stress concentration
+%   2. Helix initial params, no fillet  - approximate current-generation design level
+%   3. Nominal beta, x=1, no fillet     - reference loading without large bends
+%   4. Full material (x=1), with fillet - quantifies Kt reduction from joint rounding
 %
 % No optimisation is run; each case is a single FE solve (~10 s).
 % Figures are saved to results/diagJointStressConcentration/.
@@ -37,6 +37,12 @@ betaWorst   = [0, 270, 0, 90, 180, 180, 180];
 % Nominal (straight) arm for reference
 betaNominal = [0, 0,   0,  0,   0,   0,   0];
 
+% Fillet radius for Case 4: 30% of wall thickness
+wallThickness = R - r;
+filletR = 0.3 * wallThickness;
+fprintf('  Wall thickness  : %.4f m\n', wallThickness);
+fprintf('  Fillet radius   : %.4f m  (%.0f%% of wall)\n\n', filletR, 100*filletR/wallThickness);
+
 resultRoot = fullfile(scriptDir, 'results', 'diagJointStressConcentration');
 if ~exist(resultRoot, 'dir'), mkdir(resultRoot); end
 
@@ -52,6 +58,9 @@ modelWorst = ManipulatorModel3D(E, nu, h_seg, R, r, res, res_th, alpha, ...
 
 modelNominal = ManipulatorModel3D(E, nu, h_seg, R, r, res, res_th, alpha, ...
     betaNominal, ShapeFn, false, Pz, arm.constEndRing, arm.constMiddleRing, arm.nCircDiv);
+
+modelFilletWorst = ManipulatorModel3D(E, nu, h_seg, R, r, res, res_th, alpha, ...
+    betaWorst, ShapeFn, false, Pz, arm.constEndRing, arm.constMiddleRing, arm.nCircDiv, filletR);
 
 nElems = modelWorst.analysis.getTotalElemsNumber();
 fprintf('  Total elements: %d\n\n', nElems);
@@ -161,6 +170,36 @@ title('Full material, nominal \beta  (front view)');
 exportgraphics(fig3b, fullfile(resultRoot, 'case3_full_nominal_front.png'), 'Resolution', 200);
 savefig(fig3b, fullfile(resultRoot, 'case3_full_nominal_front.fig'));
 
+%% ---- Case 4: full material, worst-case beta, with fillet --------------
+fprintf('\nCase 4: full material, worst-case beta, filletR=%.4f m...\n', filletR);
+modelFilletWorst.analysis.solveWeighted(xFull);
+modelFilletWorst.analysis.computeElementResults(xFull);
+
+hmAll_fillet_full = squeeze(modelFilletWorst.analysis.felems{1}.results.gp.all(13, :, :));
+hmElem_fillet_full = max(hmAll_fillet_full, [], 2);
+maxHM_fillet_full  = max(hmElem_fillet_full);
+fprintf('  maxHM = %.4e Pa  (%.1f%% of no-fillet)\n', maxHM_fillet_full, ...
+    100 * maxHM_fillet_full / maxHM_worst_full);
+
+fig4a = figure('Name', 'Case 4: fillet, worst-case beta', 'Position', [100 100 900 600]);
+hold on; axis on; daspect([1 1 1]);
+light('Position', [-1 -2 5], 'Style', 'local');
+light('Position', [1 1 5], 'Style', 'infinite');
+modelFilletWorst.analysis.plotMaps("sHM", 0.0);
+colorbar; view(3); axis equal off;
+title(sprintf('Fillet r=%.3fm, worst-case \\beta   maxHM=%.3e Pa', filletR, maxHM_fillet_full));
+exportgraphics(fig4a, fullfile(resultRoot, 'case4_fillet_worst_3d.png'), 'Resolution', 200);
+savefig(fig4a, fullfile(resultRoot, 'case4_fillet_worst_3d.fig'));
+
+fig4b = figure('Name', 'Case 4 front', 'Position', [100 100 900 600]);
+hold on; axis on; daspect([1 1 1]);
+light('Position', [-1 -2 5], 'Style', 'local');
+modelFilletWorst.analysis.plotMaps("sHM", 0.0);
+colorbar; view(0, 0); axis equal off;
+title(sprintf('Fillet r=%.3fm, worst-case \\beta  (front view)', filletR));
+exportgraphics(fig4b, fullfile(resultRoot, 'case4_fillet_worst_front.png'), 'Resolution', 200);
+savefig(fig4b, fullfile(resultRoot, 'case4_fillet_worst_front.fig'));
+
 %% ---- Per-element stress: identify joint vs mid-body peaks -------------
 fprintf('\nLocating peak-stress elements...\n');
 
@@ -196,24 +235,44 @@ fprintf('    Joint-zone max  = %.4e Pa  (%.1f%% of global max)\n', ...
 fprintf('    Mid-body max    = %.4e Pa  (%.1f%% of global max)\n', ...
     midBodyMax3, 100 * midBodyMax3 / maxHM_nominal);
 
+% Case 4 summary (fillet, worst-case beta)
+[~, iPeak4] = max(hmElem_fillet_full);
+fprintf('  Case 4 peak element: %d  segment: %d  in-joint-zone: %d\n', ...
+    iPeak4, segmentIdx(iPeak4), inJointZone(iPeak4));
+
+jointMax4   = max(hmElem_fillet_full(inJointZone));
+midBodyMax4 = max(hmElem_fillet_full(~inJointZone));
+fprintf('    Joint-zone max  = %.4e Pa  (%.1f%% of global max)\n', ...
+    jointMax4,   100 * jointMax4   / maxHM_fillet_full);
+fprintf('    Mid-body max    = %.4e Pa  (%.1f%% of global max)\n', ...
+    midBodyMax4, 100 * midBodyMax4 / maxHM_fillet_full);
+fprintf('  Fillet Kt reduction: %.3f -> %.3f  (%.1f%% drop in peak)\n', ...
+    maxHM_worst_full / midBodyMax1, maxHM_fillet_full / midBodyMax4, ...
+    100 * (1 - maxHM_fillet_full / maxHM_worst_full));
+
 %% ---- Summary bar chart ------------------------------------------------
-fig4 = figure('Name', 'Stress summary', 'Position', [100 100 700 450]);
-cases   = {'Full, worst \beta', 'Helix VF=0.51, worst \beta', 'Full, nominal \beta'};
-maxVals = [maxHM_worst_full, maxHM_worst_helix, maxHM_nominal] / 1e6;
-bar(maxVals, 'FaceColor', [0.28 0.45 0.72]);
-set(gca, 'XTickLabel', cases, 'XTick', 1:3);
+figSum = figure('Name', 'Stress summary', 'Position', [100 100 800 480]);
+cases   = {'Full, worst \beta', 'Helix VF=0.51, worst \beta', ...
+           'Full, nominal \beta', sprintf('Fillet r=%.3fm, worst \\beta', filletR)};
+maxVals = [maxHM_worst_full, maxHM_worst_helix, maxHM_nominal, maxHM_fillet_full] / 1e6;
+colors  = [0.28 0.45 0.72; 0.28 0.45 0.72; 0.55 0.72 0.42; 0.85 0.55 0.25];
+b = bar(maxVals, 'FaceColor', 'flat');
+b.CData = colors;
+set(gca, 'XTickLabel', cases, 'XTick', 1:4);
+xtickangle(15);
 ylabel('Peak HM stress [MPa]');
 title('Peak HM stress comparison');
+yline(maxHM_worst_full / 1e6, '--k', 'No-fillet ref', 'LabelHorizontalAlignment', 'left');
 grid on;
-exportgraphics(fig4, fullfile(resultRoot, 'summary_peak_stress.png'), 'Resolution', 200);
-savefig(fig4, fullfile(resultRoot, 'summary_peak_stress.fig'));
+exportgraphics(figSum, fullfile(resultRoot, 'summary_peak_stress.png'), 'Resolution', 200);
+savefig(figSum, fullfile(resultRoot, 'summary_peak_stress.fig'));
 
 %% ---- Save CSV summary -------------------------------------------------
 T = table( ...
-    {'full_worst'; 'helix_worst'; 'full_nominal'}, ...
-    [maxHM_worst_full; maxHM_worst_helix; maxHM_nominal], ...
-    [jointMax1; NaN; jointMax3], ...
-    [midBodyMax1; NaN; midBodyMax3], ...
+    {'full_worst'; 'helix_worst'; 'full_nominal'; 'fillet_worst'}, ...
+    [maxHM_worst_full; maxHM_worst_helix; maxHM_nominal; maxHM_fillet_full], ...
+    [jointMax1; NaN; jointMax3; jointMax4], ...
+    [midBodyMax1; NaN; midBodyMax3; midBodyMax4], ...
     'VariableNames', {'case', 'maxHM_Pa', 'jointZoneMax_Pa', 'midBodyMax_Pa'});
 writetable(T, fullfile(resultRoot, 'stress_summary.csv'));
 
@@ -221,3 +280,4 @@ fprintf('\nDiagnostic complete. Figures saved to:\n  %s\n', resultRoot);
 fprintf('\nInterpretation guide:\n');
 fprintf('  jointZoneMax / maxHM > 0.90  ->  joint geometry drives the peak\n');
 fprintf('  jointZoneMax / maxHM < 0.70  ->  mid-body bending dominates\n');
+fprintf('  Case4/Case1 ratio < 0.78     ->  fillet breaks stress floor (Kt<1.1)\n');
