@@ -42,7 +42,7 @@ function arm = armModelDefaults(preset)
 
     % Constant-density ring controls. Each enabled ring is one FE element
     % wide along the local half-segment axis.
-    arm.constEndRing = false;
+    arm.constEndRing = true;
     arm.constMiddleRing = false;
 
     % Circumferential divisor for rotation-aware linking (Option 1).

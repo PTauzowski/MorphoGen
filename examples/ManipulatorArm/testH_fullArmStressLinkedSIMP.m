@@ -62,7 +62,7 @@ configs = armLoadConfigs("six");
 nConfigs = numel(configs);
 
 %% ---- Robust beta options (set robustEnabled=true to activate CG robust loop) --
-robustEnabled     = readEnvLogical('TESTH_ROBUST', false);
+robustEnabled     = readEnvLogical('TESTH_ROBUST', true);
 robustDeltaDeg    = readEnvDouble('TESTH_ROBUST_DELTA_DEG', 90);
 robustStressRatio = readEnvDouble('TESTH_ROBUST_STRESS_RATIO', 5.0); % stressLimit = ratio × full-pipe max-HM stress
 robustDispRatio   = readEnvDouble('TESTH_ROBUST_DISP_RATIO', Inf);   % Inf = displacement constraint inactive
