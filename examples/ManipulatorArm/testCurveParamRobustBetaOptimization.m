@@ -87,6 +87,29 @@ if ~isempty(runOpts.spacingFactor)
     p0.spacingFactor = runOpts.spacingFactor;
 end
 
+%% Initial density at Vf = 0.5
+p0.anglePlusDeg = 30.0;
+p0.angleMinusDeg = 30.0;
+
+% p0.helixPlusWeight = 0.8;
+% p0.helixMinusWeight = 0.8;
+% p0.axialWeight = 0.35;
+% p0.bendingWeight = 0.35;
+% p0.ringWeight = 0.5;
+% p0.jointRingWeight = 0.75;
+% p0.middleRingWeight = 0.5;
+
+p0.helixPlusWeight  = 0.5;
+p0.helixMinusWeight = 0.5;
+p0.axialWeight      = 0.5;
+p0.bendingWeight    = 0.5;
+p0.ringWeight       = 0.0;
+p0.bevelRingWeight  = 0.5;
+p0.flatRingWeight   = 0.5;
+p0.middleRingWeight = 0.0;
+
+p0.spacingFactor = helicesToSpacingFactor(4, arm);
+
 %% ---- Full-pipe reference for constraint limits --------------------------------
 if isempty(gcp('nocreate'))
     parpool('local', min(6, feature('numcores')));
@@ -114,7 +137,7 @@ cgOpts.penal           = penal;
 cgOpts.verbose         = true;
 cgOpts.innerSolverOpts.maxIter     = runOpts.maxInnerIter;
 cgOpts.innerSolverOpts.maxFunEvals = runOpts.maxInnerFunEvals;
-cgOpts.innerSolverOpts.vfInitial   = 1.0;
+cgOpts.innerSolverOpts.vfInitial   = 0.5;
 cgOpts.innerSolverOpts.vfMin       = 0.05;
 
 [pBest, vfBest, adversarialConfigs, historyRows] = constraintGenerationRobust( ...
@@ -180,6 +203,10 @@ fprintf('  Initial full arm : %s\n', stlInitArm);
 stlInitMod = fullfile(resultRoot, 'initial_curves_module.stl');
 exportDensitySTL(modelRef, rhoInitial, stlInitMod, 0.5, 1);
 fprintf('  Initial module   : %s\n', stlInitMod);
+
+%% ---- Postprocess --------------------------------------------------------------
+fprintf('Running postprocess...\n');
+postprocessCurveParamResult(resultRoot);
 end
 
 % =========================================================================
@@ -190,8 +217,8 @@ function opts = parseRobustRunOptions(varargin)
     opts.deltaDeg             = 90;
     opts.stressConstraintRatio = 5.0;
     opts.dispConstraintRatio   = Inf;
-    opts.maxCGIter            = 10;
-    opts.topK                 = 3;
+    opts.maxCGIter            = 25;
+    opts.topK                 = 5;
     opts.propLevel            = 2;
     opts.maxInnerIter         = 80;
     opts.maxInnerFunEvals     = 400;

@@ -16,14 +16,18 @@ function params = defaultCurveParamInitial(arm)
     params.angleMinusDeg = 45.0;
     params.axialWeight = 0.35;
     params.bendingWeight = 0.35;
-    params.ringWeight = 0.0;
+    params.ringWeight = 0.2;
     params.ringSpacingFactor = 12.0;
-    params.jointRingWeight = 0.75;
-    params.jointRingWidthFactor = 3.0;   % wider than helix curves by default
+    params.bevelRingWeight = 0.75;        % inclined joint face (stress concentration end)
+    params.bevelRingWidthFactor = 3.0;   % wider than helix curves by default
+    params.flatRingWeight = 0.5;          % perpendicular z=0 face
+    params.flatRingWidthFactor = 3.0;
     params.middleRingWeight = 0.0;
     params.baseDensity = max(arm.mma.xminValue, 0.04);
 
-    % Legacy field — not in the optimisation vector but recognised as
-    % fallback by buildCurveLinkedDensity when loading old result files.
+    % Legacy fields — not in the optimisation vector but recognised as
+    % fallbacks by buildCurveLinkedDensity when loading old result files.
     params.angleDeg = 45.0;
+    params.jointRingWeight = 0.0;
+    params.jointRingWidthFactor = params.widthFactor;
 end

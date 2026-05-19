@@ -60,32 +60,41 @@ function [rhoRef, rhoFull, info, fields] = buildCurveLinkedDensity(params, model
     % Cut face plane: z = ls - x*sin(alpha), i.e. x*sin(alpha) + z = ls.
     % Normal to this plane is [sin(alpha), 0, 1] (from generateSegment2a
     % node formula), not a pure rotation of the beam axis.
-    c_cut    = model.frameNodes(2, :);
-    sa       = sin(model.alpha);
-    n_cut    = [sa, 0, 1] / sqrt(1 + sa^2);
-    d_cut    = max(0, (c_cut - centroids) * n_cut');
-    jointRingDist = min(z, d_cut);
-    jointRingWidth = max(eps, paramOrDefault(params, 'jointRingWidthFactor', params.widthFactor) * elemSize);
-    jointRingField = paramOrDefault(params, 'jointRingWeight', 0.0) * ...
-        exp(-0.5 * (jointRingDist / jointRingWidth).^2);
+    c_cut = model.frameNodes(2, :);
+    sa    = sin(model.alpha);
+    n_cut = [sa, 0, 1] / sqrt(1 + sa^2);
+    d_cut = max(0, (c_cut - centroids) * n_cut');
 
-    % Middle ring: Gaussian at the locus where z == d_cut (equidistant from
-    % both faces), sharing jointRingWidthFactor for its sigma.
-    middleRingDist = abs(z - d_cut);
+    % Bevel (inclined) face ring — at the alpha-angled joint where stress
+    % concentrations occur.  Legacy alias: jointRingWeight / jointRingWidthFactor.
+    legacyBevelWeight = paramOrDefault(params, 'jointRingWeight',      0.0);
+    legacyBevelWidth  = paramOrDefault(params, 'jointRingWidthFactor', params.widthFactor);
+    bevelRingWidth = max(eps, paramOrDefault(params, 'bevelRingWidthFactor', legacyBevelWidth) * elemSize);
+    bevelRingField = paramOrDefault(params, 'bevelRingWeight', legacyBevelWeight) * ...
+        exp(-0.5 * (d_cut / bevelRingWidth).^2);
+
+    % Flat (perpendicular) face ring — at the straight z=0 face where
+    % adjacent half-segments meet without inclination.
+    flatRingWidth = max(eps, paramOrDefault(params, 'flatRingWidthFactor', params.widthFactor) * elemSize);
+    flatRingField = paramOrDefault(params, 'flatRingWeight', 0.0) * ...
+        exp(-0.5 * (z / flatRingWidth).^2);
+
+    % Middle ring: equidistant from both faces.
+    middleRingDist  = abs(z - d_cut);
     middleRingField = paramOrDefault(params, 'middleRingWeight', 0.0) * ...
-        exp(-0.5 * (middleRingDist / jointRingWidth).^2);
+        exp(-0.5 * (middleRingDist / bevelRingWidth).^2);
 
     ridgeFields = [helixPlusField, helixMinusField, axialField, bendingField, ...
-        ringField, jointRingField, middleRingField];
+        ringField, bevelRingField, flatRingField, middleRingField];
     raw = ridgeEnvelope(ridgeFields, 8);
     fieldsRef = struct();
-    fieldsRef.helixPlus = helixPlusField;
+    fieldsRef.helixPlus  = helixPlusField;
     fieldsRef.helixMinus = helixMinusField;
-    fieldsRef.axial = axialField;
-    fieldsRef.bending = bendingField;
-    fieldsRef.ring = ringField;
-    fieldsRef.jointRing = jointRingField;
-    fieldsRef.jointRingWidth = jointRingWidth;
+    fieldsRef.axial      = axialField;
+    fieldsRef.bending    = bendingField;
+    fieldsRef.ring       = ringField;
+    fieldsRef.bevelRing  = bevelRingField;
+    fieldsRef.flatRing   = flatRingField;
     fieldsRef.middleRing = middleRingField;
     fieldsRef.envelopeRaw = raw;
 

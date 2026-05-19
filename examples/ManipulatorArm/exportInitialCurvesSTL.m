@@ -39,9 +39,29 @@ constFull = armConstRingElementIds(modelRef, arm, "full");
 
 %% Initial density at Vf = 0.5
 p0 = defaultCurveParamInitial(arm);
-p0.axialWeight = 0.0;
-p0.anglePlusDeg = 45.0;
-p0.spacingFactor = 32;
+p0.axialWeight = 0.2;
+p0.anglePlusDeg = 30.0;
+p0.angleMinusDeg = 30.0;
+
+% p0.helixPlusWeight = 0.8;
+% p0.helixMinusWeight = 0.8;
+% p0.axialWeight = 0.35;
+% p0.bendingWeight = 0.35;
+% p0.ringWeight = 0.5;
+% p0.bevelRingWeight = 0.75;
+% p0.flatRingWeight = 0.5;
+% p0.middleRingWeight = 0.5;
+
+p0.helixPlusWeight  = 0.5;
+p0.helixMinusWeight = 0.5;
+p0.axialWeight      = 0.5;
+p0.bendingWeight    = 0.5;
+p0.ringWeight       = 0.0;
+p0.bevelRingWeight  = 0.5;
+p0.flatRingWeight   = 0.5;
+p0.middleRingWeight = 0.0;
+   
+p0.spacingFactor = helicesToSpacingFactor(4, arm);
 
 if ~isempty(spacingFactor)
     p0.spacingFactor = spacingFactor;
