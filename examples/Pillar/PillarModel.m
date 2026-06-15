@@ -189,9 +189,14 @@ classdef PillarModel < ModelLinear
                 t_peak_req = max(0.01, min(0.99, t_peak_req));
             end
 
+            % Vertical band over which the bowl is blended = height of the
+            % topmost ground element row (= sfStep * top nodal dz). The bowl is
+            % full at the surface and decays to zero at the interface below it,
+            % so the top-row mid-height nodes follow and the elements do not kink.
+            depr_bandH = sfStep * dzTopNode;
             obj.mesh.nodes = PillarModel.applyRingDepressionZ( ...
                 obj.mesh.nodes, [0 0], Rin, Rout, z0_ground, z_top, ...
-                depth, depthMax, pillar_slope, t_peak_req );
+                depth, depthMax, pillar_slope, t_peak_req, depr_bandH );
 
             
 
@@ -311,7 +316,29 @@ classdef PillarModel < ModelLinear
                 false, obj.int_th, nThetaSeg, bank_hres2, obj.sf );
            % 
            % obj.smoothRectEdges(Rtile, Rtr, 12, 0.35);
-         
+
+           % ---- Outer square-tile boundary correction --------------------
+           % The circle->square transition (addTransitionThetaSectors) places
+           % the outer element CORNERS exactly on the square (x or y = Rtile),
+           % but the outer-face mid-edge/centre nodes are interpolated in
+           % (R,theta) and bulge OUTWARD by ~0.5% (e.g. ~9.25 for Pillar20).
+           % A one-sided clamp pulls only those outward-bulged boundary nodes
+           % back onto the square plane; inboard H27 radial mid-nodes (always
+           % x,y < Rtile) are left untouched. A symmetric distance band cannot
+           % separate the two populations robustly and used to swallow the last
+           % radial mid-plane, collapsing the outer element row.
+           %
+           % Correctness relies on 45 deg being a mesh line, so every transition
+           % sector belongs to a single outer face and the bulge is purely in
+           % that face's coordinate (guaranteed while nThetaSeg is even). Done
+           % BEFORE welding so the coincident square-corner nodes from adjacent
+           % x/y sectors weld into one, and so the Jacobian/integrity checks
+           % below see the final geometry.
+           assert(mod(nThetaSeg,2) == 0, ...
+               'PillarModel: nThetaSeg must be even so 45 deg is a mesh line (got %d).', nThetaSeg);
+           obj.mesh.nodes(:,1) = min(obj.mesh.nodes(:,1), Rtile);
+           obj.mesh.nodes(:,2) = min(obj.mesh.nodes(:,2), Rtile);
+
            obj.mesh.nodes = obj.snapCriticalZCoordinates(obj.mesh.nodes);
            obj.snapAllCoordinates();
            weldStats = obj.mesh.weldNodes(mergeTol, true);
@@ -330,14 +357,29 @@ classdef PillarModel < ModelLinear
                    end
                end
            end
-           
-           xTile = abs(obj.mesh.nodes(:,1) - Rtile) < Rtile * 0.025;
-           yTile = abs(obj.mesh.nodes(:,2) - Rtile) < Rtile * 0.025;
-
-           obj.mesh.nodes(xTile,1) = Rtile;
-           obj.mesh.nodes(yTile,2) = Rtile; 
 
            obj.tile_size = Rtile;
+
+           % ---- Diagnostic: collapsed H27 elements -----------------------
+           % A well-formed 27-node hex must have 27 geometrically distinct
+           % nodes. Flag any volume element whose distinct node ids resolve to
+           % fewer than 27 distinct coordinates (within mergeTol) - the exact
+           % failure mode the old symmetric boundary snap produced.
+           if size(obj.mesh.elems,2) == 27
+               E = obj.mesh.elems;
+               nCollapsed = 0;
+               for ie = 1:size(E,1)
+                   P = round(obj.mesh.nodes(E(ie,:),:) ./ mergeTol);
+                   if size(unique(P,'rows'),1) < 27
+                       nCollapsed = nCollapsed + 1;
+                   end
+               end
+               if nCollapsed > 0
+                   warning('PillarModel: %d H27 element(s) collapsed (<27 distinct node coordinates).', nCollapsed);
+               else
+                   fprintf('H27 integrity: all %d elements have 27 distinct nodes.\n', size(E,1));
+               end
+           end
 
         end
 
@@ -1643,13 +1685,21 @@ end
             end
         end
 
-        function nodes = applyRingDepressionZ(nodes, x0_xy, Rin, Rout, z_bot, z_top, depth, depthMax, slope_inner, t_peak_req)
+        function nodes = applyRingDepressionZ(nodes, x0_xy, Rin, Rout, z_bot, z_top, depth, depthMax, slope_inner, t_peak_req, bandH)
             % Apply smooth "bowl" depression on the TOP surface of a ring.
             %
-            % IMPORTANT:
-            %   We only move nodes on z == z_top. This preserves flat,
-            %   horizontal internal interfaces/layers below, which is
-            %   required by the layered-process constraint.
+            % IMPORTANT (layered-process constraint):
+            %   Every layer INTERFACE plane must stay flat and horizontal.
+            %   The interior (mid-height) nodes of an element are NOT an
+            %   interface, so they are free to move. We therefore spread the
+            %   surface bowl over a vertical band of thickness bandH (= the
+            %   height of the topmost element row): full displacement at the
+            %   surface z_top, decaying linearly to zero at the first interface
+            %   plane below (z_top - bandH). This moves the top-row mid-height
+            %   H27 nodes by their height fraction (~0.5) so the elements shear
+            %   smoothly instead of kinking, while the lower interface stays
+            %   exactly flat. With bandH omitted/<=0 the legacy surface-only
+            %   behaviour is used.
             %
             % When slope_inner (dz/dr of the inner boundary surface, negative for
             % an inward-tapering pillar) and depthMax are supplied, a two-piece
@@ -1670,17 +1720,29 @@ end
                 epsZ = max(1e-10*max(1,abs(z_top-z_bot)), 1e-8);  % z tol
 
                 inR = (r >= Rin - epsR) & (r <= Rout + epsR);
-                onTop = abs(z - z_top) <= epsZ;
 
-                if ~any(inR & onTop)
+                % Vertical influence band and per-node weight (1 at surface,
+                % 0 at the interface plane below -> mid-height nodes get ~0.5).
+                if nargin >= 11 && isfinite(bandH) && bandH > 0
+                    z_band_bot = z_top - bandH;
+                    inBand = (z <= z_top + epsZ) & (z >= z_band_bot - epsZ);
+                    wz = (z - z_band_bot) ./ bandH;
+                    wz = max(0, min(1, wz));
+                else
+                    inBand = abs(z - z_top) <= epsZ;
+                    wz = ones(size(z));
+                end
+
+                if ~any(inR & inBand)
                     return;
                 end
 
                 onInner = abs(r - Rin)  <= epsR;
                 onOuter = abs(r - Rout) <= epsR;
 
-                % Only top-surface interior of the ring
-                mask = inR & onTop & ~(onInner | onOuter);
+                % Ring interior within the vertical band (edges stay put; the
+                % bowl is zero there anyway).
+                mask = inR & inBand & ~(onInner | onOuter);
 
                 if ~any(mask)
                     return;
@@ -1734,8 +1796,8 @@ end
 
                 dz = -depth .* bowl;
 
-                % apply
-                nodes(mask,3) = nodes(mask,3) + dz;
+                % apply, scaled by the vertical band weight
+                nodes(mask,3) = nodes(mask,3) + dz .* wz(mask);
             end
 
 
