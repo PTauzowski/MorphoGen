@@ -20,7 +20,8 @@ fe = SolidElasticElem(sf, mesh.elems);
 figure;
 fe.plotWithSettings(mesh.nodes, ...
     "elem color", [0.65 0.82 0.95], ...
-    "edge color", "k");
+    "edge color", "k",...
+    "nodes",true);
 axis off;
 view(3);
 title(filename, 'Interpreter', 'none');

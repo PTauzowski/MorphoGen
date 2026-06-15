@@ -631,7 +631,7 @@ classdef SolidElasticElem < FiniteElement
                 patch('Vertices', nodesplot, 'Faces', allfaces(ifaces,:),'FaceColor',elem_color,'EdgeColor',edge_color,'LineWidth',0.1, "FaceAlpha", 1.0);
             end
             if plotNodes
-                scatter(nodesplot(:,1),nodesplot(:,2),nodesplot(:,3),".")
+                scatter3(nodesplot(:,1),nodesplot(:,2),nodesplot(:,3),".")
             end
         end
 
