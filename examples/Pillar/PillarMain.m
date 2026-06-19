@@ -169,5 +169,5 @@ model_width.plotLayerColors(fe2);
 %  EXPORT
 % ======================================================================
 
-model.FEAP_Export("Pillar21.i");
-model_width.FEAP_Export("Pillar21w.i");
+model.FEAP_Export("Pillar22.i");
+model_width.FEAP_Export("Pillar22w.i");

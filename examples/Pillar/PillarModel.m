@@ -935,7 +935,7 @@ classdef PillarModel < ModelLinear
             for k = 1:nWink
                 fprintf(myfile, "%d 0 2", nVol + k);
                 fprintf(myfile, " %d", winkElems(k,:));          % 9 face nodes
-                fprintf(myfile, " 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"); % pad to 27
+                %fprintf(myfile, " 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"); % pad to 27
                 fprintf(myfile, "\n");
             end
             fprintf(myfile, "\n");
@@ -950,8 +950,6 @@ classdef PillarModel < ModelLinear
             fprintf(myfile, "2 0.0   0 1 0  1 1 ! plane y = 0  -> fix u_y\n");
             fprintf(myfile, "1 %.3f   1 0 0  1 1 ! plane x = 0  -> fix u_x\n",obj.tile_size);
             fprintf(myfile, "2 %.3f   0 1 0  1 1 ! plane y = 0  -> fix u_y\n",obj.tile_size);
-            fprintf(myfile, "3 %7.5E   1 1 0  1 1  ! plane z = min  -> fix u_x,u_y; Winkler in u_z\n", ...
-                min(obj.mesh.nodes(:,3)));
 
             [chem_pillar, chem_ground, lays_between_layers] = obj.feapChemChannelsFromZ(obj.z_coords);
             fprintf(myfile, "\n EDIS\n");
