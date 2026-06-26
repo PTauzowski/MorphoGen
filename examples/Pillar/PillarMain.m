@@ -98,7 +98,7 @@ p.depression_r_min = NaN;
 %  Rout ≈ top_R_wide + pillar_height × tan(inclination).
 pillar_height_total  = sum( p.pillar_layers );
 Rout_wide            = 1000 + pillar_height_total * tand( p.pillar_inclination_deg );
-p.tile_size          = 1.2 * 1.5 * Rout_wide;
+p.tile_size          = 2000; %1.2 * 1.5 * Rout_wide;
 %  Half-width of the outer square tile (distance from the symmetry axis
 %  to the outer boundary along x or y).
 %  Must be strictly larger than Rbank; otherwise the constructor errors.
@@ -169,5 +169,5 @@ model_width.plotLayerColors(fe2);
 %  EXPORT
 % ======================================================================
 
-model.FEAP_Export("Pillar22.i");
-model_width.FEAP_Export("Pillar22w.i");
+model.FEAP_Export("Pillar23.i");
+model_width.FEAP_Export("Pillar23w.i");

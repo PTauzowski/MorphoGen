@@ -944,7 +944,7 @@ classdef PillarModel < ModelLinear
             fprintf(myfile, "\n1 1 0 0 0  -1 -1");
             fprintf(myfile, "\n %d 1 0 0 0  1  1\n", size(obj.mesh.nodes,1));
 
-            fprintf(myfile, "\ngap 0.001");
+            fprintf(myfile, "\ngap 0.01");
             fprintf(myfile, "\nEBOUndary ADD\n");
             fprintf(myfile, "1 0.0   1 0 0  1 1 ! plane x = 0  -> fix u_x\n");
             fprintf(myfile, "2 0.0   0 1 0  1 1 ! plane y = 0  -> fix u_y\n");
