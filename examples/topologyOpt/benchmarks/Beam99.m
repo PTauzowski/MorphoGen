@@ -38,7 +38,7 @@ analysis.fixNodes( fixedEdgeSelector, [ "ux" ] );
 analysis.fixClosestNode([aspect*l 0], ["uy"], 0) ;
 
 analysis.printProblemInfo();
-fe.plotSolid(mesh.nodes);
+fe.plot(mesh.nodes);
 analysis.plotCurrentLoad();
 analysis.plotSupport();
 

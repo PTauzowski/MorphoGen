@@ -121,7 +121,7 @@ analysis.loadClosestNode([l1 0, h],["ux" "uy" "uz"],[N4,Ty4,Tz4+Tr]);
 mesh.transformNodesXY( @(x)( [ x(:,1)+(0.2*(l1-x(:,1))-0.2*x(:,1)).*x(:,2)/l2 x(:,2) x(:,3)+0.3*x(:,1)/l1 ] )  );
 
 %plotting of design space
-fe.plotSolid(mesh.nodes);
+fe.plot(mesh.nodes);
 analysis.plotCurrentLoad();
 analysis.plotSupport();
 analysis.printProblemInfo();

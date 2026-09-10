@@ -40,7 +40,7 @@ const_elems = analysis.selectElems( constElemsSelector );
 
 mesh.transformNodesXY( @(x)( [ x(:,1) x(:,2) x(:,3)-0.3*x(:,1).*x(:,3)/Length ] )  );
 
-fe.plotSolid(mesh.nodes);
+fe.plot(mesh.nodes);
 %problem.plotNodes();
 analysis.plotCurrentLoad();
 analysis.plotSupport();

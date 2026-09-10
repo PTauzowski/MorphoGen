@@ -28,7 +28,7 @@ analysis.loadClosestNode([ 2*l, 0.4*l, 0.4*l ], ["ux" "uy" "uz"], [0 0 -1.0] );
 analysis.fixNodes( fixedEdgeSelector, ["ux" "uy" "uz"] );
 
 analysis.printProblemInfo();
-fe.plotSolid(mesh.nodes);
+fe.plot(mesh.nodes);
 analysis.plotCurrentLoad();
 analysis.plotSupport();
  view(45, 45);

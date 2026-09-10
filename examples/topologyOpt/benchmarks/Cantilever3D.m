@@ -30,7 +30,7 @@ analysis.fixNodes( symmetrySelector, ["uy"] );
 %problem.fixClosestNode([0 0 0],["ux" "uy" "uz"],[0 0 0])
 
 analysis.printProblemInfo();
-fe.plotSolid(mesh.nodes);
+fe.plot(mesh.nodes);
 analysis.plotCurrentLoad();
 analysis.plotSupport();
 

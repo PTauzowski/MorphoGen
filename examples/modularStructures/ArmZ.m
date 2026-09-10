@@ -55,7 +55,7 @@ problem.elementLoadSurfaceIntegral( "global", sideFaceSelector1, ["ux" "uy" "uz"
 problem.elementLoadSurfaceIntegral( "global", sideFaceSelector2, ["ux" "uy" "uz"], @(x)( x.*0 + [-Ps*sin(alpha)  -Ps*cos(alpha) 0] ));
 
 
-fe.plotSolid(mesh.nodes);
+fe.plot(mesh.nodes);
 problem.printProblemInfo();
 problem.plotCurrentLoad();
 problem.plotSupport();
