@@ -87,7 +87,81 @@ explicitly marked as not a reference. Parity rests on `Beam99` and `Cantilever`.
 ## Reference values
 
 <!-- ORACLE_TABLE_START -->
-_(filled in as runs complete — see the tables below)_
+### `main` @ `69dee29`
+
+| Benchmark | Optimiser | `objF` | Volume fraction | Elements | Iterations |
+|---|---|---:|---:|---:|---:|
+| `Beam99` (res 40) | `StressIntensityTopologyOptimizationVol` | 1918.96595194 | 0.399784573321 | 4800 | 96 |
+| `Beam99` (res 40) | `SIMP_MMA_…ElasticCompliance` | 230.191384232 | 0.399999999988 | 4800 | 1017 |
+| `Cantilever` (res 40) | `StressIntensityTopologyOptimizationVol` | 1275.94055647 | 0.398731423896 | 3200 | 70 |
+| `Cantilever` (res 40) | `SIMP_MMA_…ElasticCompliance` | 76.7366325352 | 0.399999999808 | 3200 | 113 |
+| `Lshape` (res 20) | both | *did not converge* | — | — | aborted at 2234 |
+
+`Cantilever` at `res = 40` is the resolution-matched variant; `main`'s script ships `res = 100`.
+
+**`Lshape` does not converge on `main`.** Its SIMP run was still reporting `Vrel=100.0` — no
+material removed at all — after 2234 iterations, and was aborted. That is the degeneracy
+described above showing up at runtime: with 99.4% of the nodes clamped there is nothing for the
+optimiser to remove.
+
+### The comparison against `develop` @ `2969edc`
+
+| Benchmark | Optimiser | `main` | `develop` | |
+|---|---|---:|---:|:--|
+| `Cantilever` (res 40) | `SIMP_MMA_…ElasticCompliance` | 76.7366325352 | 76.7366325352 | **identical** |
+| | volume fraction | 0.399999999808 | 0.399999999808 | **identical** |
+| | iterations | 113 | 113 | **identical** |
+| `Cantilever` (res 40) | `StressIntensityTopologyOptimizationVol` | 1275.94055647 | 1270.06320313 | differs |
+| | volume fraction | 0.398731423896 | 0.396894750978 | differs |
+| | iterations | 70 | 311 | differs |
+
+**The SIMP compliance path reproduces `main` exactly — all twelve significant figures, and the
+same iteration count.** That is the result worth having. It exercises assembly, the linear
+solver, the sensitivity computation and the DOF bookkeeping, so it says that develop's DOF
+refactor, the Phase 1 repairs and the two `FEAnalysis` fixes have not moved the physics by one
+ulp.
+
+### The ESO difference is the optimiser, not the physics
+
+`StressIntensityTopologyOptimizationVol.m` is byte-identical between the branches, so the
+divergence is in its base class. `StressIntensityTopologyOptimization.updateDesign` computes the
+element-removal threshold differently:
+
+```matlab
+% main — a quadratic in the volume ratio
+obj.maxais = -0.139*v^2 + 0.2694*v - 0.081;
+
+% develop — a sigmoid schedule, plus a per-iteration removal cap
+max_elem_removal_factor = 0.025;
+```
+
+A cap of 2.5% of elements per iteration is what turns 70 iterations into 311: develop removes
+material in many more, much smaller steps, and lands on a slightly different final design.
+`TopologyOptimization` also changed base class (`ConstrainedOptimization` → `handle`) on
+develop's line.
+
+So `main`'s ESO numbers are **not** a parity target either. The ESO algorithm itself differs
+between the branches, deliberately and on develop's side.
+
+> **A hypothesis that was tested and rejected.** The obvious explanation was commit `2dae36f`,
+> which fixed the per-element density reshape into `results` slot 18 — a field ESO reads and
+> SIMP does not. Applying *only* that fix to a `main` worktree and re-running gives
+> `objF = 1275.94055647`, volume fraction `0.398731423896`, 70 iterations — **bit-identical to
+> `main` as-is**. The reshape is not the cause. Recorded because it is the answer most likely to
+> be assumed by the next reader.
+
+### What actually gates Phase 5
+
+Of the six optimiser runs the plan nominated, exactly **one** is a valid numerical parity target:
+
+| Target | Status |
+|---|---|
+| `Cantilever` res 40, SIMP | **The gate.** Already reproduces exactly. |
+| `Beam99`, SIMP | Valid — comparable, `main` value recorded above |
+| `Cantilever`/`Beam99`, ESO | Not comparable — the removal schedule differs by design |
+| `Lshape`, either | Not comparable — `main`'s problem is degenerate and does not converge |
+
+R7 should be read against that table rather than against "the three benchmarks".
 <!-- ORACLE_TABLE_END -->
 
 ---

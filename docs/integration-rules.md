@@ -65,6 +65,7 @@ than during it. Four such errors are known:
 | `FEAnalysis.plotSupport`: `1:size(irots)` is not a scalar colon operand | `1:max(size(irots))` | Before capturing main's baseline; already fixed on develop |
 | `FEAnalysis:17`: `for k=max(size(obj.felems))` is missing its `1:`, so the `eDofs` union runs on the last element group only | `for k=1:max(size(obj.felems))` | **Done** — `0674e86` |
 | `FEAnalysis` stored the `felems` cell array in the caller's orientation and indexed it as a column, so a row-oriented multi-group model assembled only its first group | Normalise with `felems(:)` in the constructor | **Done** — `2969edc`, covered by `TestMultiGroupAssembly` |
+| `plotSolid` was renamed to `plot` on both `PlaneElem` and `SolidElasticElem`, leaving 13 example scripts calling a method that no longer exists | `.plotSolid(` → `.plot(` | **Done** — found while capturing the numerical oracle |
 
 The last two are invisible with a single element group and wrong with several, which is why
 neither had been noticed — every example in the suite has one group. Both were found while
@@ -79,7 +80,13 @@ weighted assembly     numel(I)=512  numel(K)=256   -> 1 of 2 groups assembled
 ```
 
 `CorbelModelMultiMat` builds `{fe1 fe2 fe3}` for its three materials and calls `solveWeighted`,
-so it could not have run on `develop` at all. It belongs on the "still broken" list in
+so it could not have run on `develop` at all.
+
+The `plotSolid` case is the same shape as the `ndofs`→`eDofs` rename Phase 1 finished: a method
+renamed on the element classes with its callers left behind. It went unnoticed for the same
+reason — all 13 stale callers are topology-optimisation benchmarks and modular-structure
+examples, and the smoke set contains neither. It surfaced only because the numerical oracle
+needed `Beam99.m` and `Lshape.m` to actually run. It belongs on the "still broken" list in
 [baseline-2026-09-10.md](baseline-2026-09-10.md) beside the five multi-block fixtures — and
 unlike those, it is now fixed.
 
