@@ -77,6 +77,16 @@ selectors moved to the predicate form, which reads identically under either `Sel
 there is nothing on `main` to reproduce. Its numbers are recorded below for completeness and
 explicitly marked as not a reference. Parity rests on `Beam99` and `Cantilever`.
 
+The two branches' runtime behaviour settles it beyond the node counts:
+
+| | `Lshape` outcome |
+|---|---|
+| `main` | **Never converges.** `Vrel` pinned at `100.0` — not one element removed — through 2234 iterations, then aborted. |
+| `develop` | **Converges.** Volume fraction `0.399984605804`, on target, in 985 ESO iterations. |
+
+A run that removes no material over two thousand iterations is not a reference value that a
+merged tree could be asked to reproduce.
+
 > This is also worth noting as a hazard for Phase 5 generally: `develop`'s `Selector` accepts
 > both conventions and `main`'s accepts one, so a call site merged from either feature branch
 > can change meaning silently depending on which `Selector` it lands next to. `develop`'s
