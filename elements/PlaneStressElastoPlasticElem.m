@@ -212,11 +212,14 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
             %     end
                 
                 if ( FiTr <= 0 )
+                    % Box 9.4 (ii): elastic step -- accept the trial state.
+                    % The accumulated plastic state is carried through
+                    % UNCHANGED; zeroing it here discarded the plastic history
+                    % of every point that yielded and then unloaded.
                     s     = sTr;
                     e     = eTr;
                     ep    = epTr;
                     dg    = 0;
-                    ep(:) = 0;
                 else
                     [ dg, ksi ] = obj.NR4RetMap( sTr, FiTr, x );
                     A11 = 3 * (1-obj.mat.nu) / (3*(1-obj.mat.nu)+E*dg);
