@@ -14,7 +14,7 @@ classdef (Abstract) FEAnalysis < handle
             end
             obj.mesh = mesh;
             obj.ndofs = obj.felems{1}.eDofs;
-            for k=max(size(obj.felems))
+            for k=1:max(size(obj.felems))
                 obj.ndofs = union(obj.ndofs,obj.felems{k}.eDofs);
             end
             obj.selTolerance=1.0E-05;
