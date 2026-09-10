@@ -244,20 +244,46 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
                 A3 =  sTr(3)^ 2;
             
             % (2) NR iterations
-            
-                fi = FiTr;
-                while( abs(fi/FiTr) >= 0.001 )
-                
+            %
+            %     Convergence follows Box 9.5 and HYPLAS SUVMPS: the residual is
+            %     normalised by the yield stress -- here sy^2, since Phi is in the
+            %     squared form of Box 9.3 -- rather than by Phi_trial. Normalising
+            %     by Phi_trial makes the achieved accuracy depend on how far past
+            %     yield the trial state happens to lie, so a large overshoot
+            %     terminates on a loose absolute residual and leaves the returned
+            %     stress off the yield surface.
+            %
+            %     MXITER mirrors the book's DATA MXITER / 50 /.
+                TOL    = 1e-10;
+                MXITER = 50;
+
+                fi        = FiTr;
+                converged = false;
+
+                for iter = 1:MXITER
+
                       H = 0;
-                      ksip = - A1 / (9*(1+E*dg/3/(1-nu))^3) * E / (1-nu)  - 2 * G * ( A2 + 4 * A3 ) / ( 1 + 2 * G * dg )^3;                    
-                      Hb = 0;                    
-                      Fip = 0.5 * ksip;                    
+                      ksip = - A1 / (9*(1+E*dg/3/(1-nu))^3) * E / (1-nu)  - 2 * G * ( A2 + 4 * A3 ) / ( 1 + 2 * G * dg )^3;
+                      Hb = 0;
+                      Fip = 0.5 * ksip;
                       dg = dg - fi / Fip;
-                    
+
                 % (3) check for convergence
                       ksi =  A1 / 6 /  (1 + E * dg / 3 / (1-nu) )^2 +  ( 0.5 * A2 + 2 * A3 ) / (1+2*G*dg)^2;
                       fi = 1.0/2.0*ksi - 1.0/3.0 * sy^2;
-            
+
+                      if abs(fi) <= TOL * sy^2
+                          converged = true;
+                          break;
+                      end
+
+               end
+
+               if ~converged
+                   error('PlaneStressElastoPlasticElem:returnMappingFailed', ...
+                         ['Plane stress return mapping failed to converge in %d ' ...
+                          'iterations (|Phi|/sy^2 = %g, tol = %g).'], ...
+                         MXITER, abs(fi)/sy^2, TOL);
                end
         end
     end
