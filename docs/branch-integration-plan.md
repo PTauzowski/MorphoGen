@@ -320,6 +320,11 @@ change because the DOF bookkeeping did.
 
 **Gate:** pass/fail baseline for both feature branches, plus numerical reference values from main.
 
+> **Captured** in [baseline-2026-09-10.md](baseline-2026-09-10.md). develop 6/6, CAS_Arm 5/6,
+> Vibrations 0/6 on the shared examples (all six reference the removed
+> `LinearElasticityWeighted`). The numerical references from `main` remain outstanding and
+> gate Phase 5, not Phase 1.
+
 ### Phase 1 — Repair develop *(blocking)*
 
 - `obj.ndofs` → `obj.eDofs` across 11 files; `obj.sf` → `obj.shapeFn` across 8.
