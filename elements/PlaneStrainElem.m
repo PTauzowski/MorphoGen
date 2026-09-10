@@ -3,11 +3,11 @@ classdef PlaneStrainElem < PlaneElem
     methods
         function obj = PlaneStrainElem(sf,p)
              obj = obj@PlaneElem(sf,p);
-             obj.ndofs=["ux" "uy"];
+             obj.eDofs=["ux" "uy"];
         end
         
         function B = strainDerivMatrix( obj, dNx )
-            ndofs = size(obj.elems,2) * size( obj.ndofs, 2 );
+            ndofs = size(obj.elems,2) * size( obj.eDofs, 2 );
             nip   = size(dNx,3); 
             nnd = size(dNx,2); 
             %B = zeros( 3, ndofs, npg );

@@ -10,11 +10,11 @@ sy=190;
 tic
 sfL4 = ShapeFunctionL4;
 mesh = Mesh();
-mesh.addRectMesh2D(0, 0, l, h, round(l/h*res), res, sfL4.pattern);
+elems = mesh.addRectMesh2D(0, 0, l, h, round(l/h*res), res, sfL4.pattern);
 fixedEdgeSelector = Selector( @(x)( abs(x(:,1)))<0.001 );
 loadedEdgeSelector = Selector( @(x)( abs(x(:,1) - l)<0.001 ) );
 
-fe=PlaneStressElastoPlasticElem( sfL4, mesh.elems );
+fe=PlaneStressElastoPlasticElem( sfL4, elems );
 material = PlaneStressMaterial('mat1');
 material.setElastoPlasticIzo(E, nu, sy);
 fe.setMaterial( material );

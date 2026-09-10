@@ -41,10 +41,10 @@ classdef SolidElasticElem < FiniteElement
         end
         function N = shapeMatrix( obj, points )
             nnodes = size(obj.elems, 2 );
-            nd = size( obj.ndofs, 2 );
+            nd = size( obj.eDofs, 2 );
             np = size( points, 1 );
             N = zeros( nd, nd*nnodes, np );
-            Nsf = obj.sf.computeValue(points);
+            Nsf = obj.shapeFn.computeValue(points);
             for k=1:np
                 N(1,1:3:nd*nnodes-2,k) = Nsf(k,:);
                 N(2,2:3:nd*nnodes-1,k) = Nsf(k,:);
@@ -54,11 +54,11 @@ classdef SolidElasticElem < FiniteElement
         function K = computeStifnessMatrix(obj, nodes, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
-            ndofs = size( obj.ndofs,2);
+            ndofs = size( obj.eDofs,2);
             dim = nnodes * ndofs;
-            integrator = obj.sf.createIntegrator();
+            integrator = obj.shapeFn.createIntegrator();
             nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
+            dN = obj.shapeFn.computeGradient( integrator.points );
             nnd = size(dN,1); 
             dNtr = permute(dN,[2,1,3]);
             dNtrc = cell(size(dNtr,3),1);
@@ -108,11 +108,11 @@ classdef SolidElasticElem < FiniteElement
         function K = computeGeometricStifnessMatrix(obj, nodes, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
-            ndofs = size( obj.ndofs,2);
+            ndofs = size( obj.eDofs,2);
             dim = nnodes * ndofs;
-            integrator = obj.sf.createIntegrator();
+            integrator = obj.shapeFn.createIntegrator();
             nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
+            dN = obj.shapeFn.computeGradient( integrator.points );
             dNtr = permute(dN,[2,1,3]);
             dNtrc = cell(size(dNtr,3),1);
             if ( nargin == 3 )
@@ -169,11 +169,11 @@ classdef SolidElasticElem < FiniteElement
         function M = computeMassMatrix(obj, nodes, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
-            ndofs = size( obj.ndofs,2);
+            ndofs = size( obj.eDofs,2);
             dim = nnodes * ndofs;
-            integrator = obj.sf.createIntegrator();
+            integrator = obj.shapeFn.createIntegrator();
             nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
+            dN = obj.shapeFn.computeGradient( integrator.points );
             N = obj.shapeMatrix( integrator.points );
             nnd = size(dN,1); 
             dNtr = permute(dN,[2,1,3]);
@@ -204,12 +204,12 @@ classdef SolidElasticElem < FiniteElement
         function Pnodal = thermalLoad(obj, nodes, Telems, Pnodal, alpha, varargin)
             nelems = size(Telems,1);
             nnodes = size(obj.elems,2);
-            ndofs = size( obj.ndofs,2);
+            ndofs = size( obj.eDofs,2);
             dim = nnodes * ndofs;
-            integrator = obj.sf.createIntegrator();
+            integrator = obj.shapeFn.createIntegrator();
             nip = size(integrator.points,1);
-            N=obj.sf.computeValue( integrator.points );
-            dN = obj.sf.computeGradient( integrator.points );
+            N=obj.shapeFn.computeValue( integrator.points );
+            dN = obj.shapeFn.computeGradient( integrator.points );
             nnd = size(dN,1); 
             dNtr = permute(dN,[2,1,3]);
             dNtrc = cell(size(dNtr,3),1);
@@ -261,12 +261,12 @@ classdef SolidElasticElem < FiniteElement
         function dK = computeStifnessMatrixGradMat(obj, nodes, q)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
-            ndofs = size( obj.ndofs,2);
+            ndofs = size( obj.eDofs,2);
             nsens = size(obj.mat.dD,3);
             dim = nnodes * ndofs;
-            integrator = obj.sf.createIntegrator();
+            integrator = obj.shapeFn.createIntegrator();
             nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
+            dN = obj.shapeFn.computeGradient( integrator.points );
             nnd = size(dN,1); 
             dNtr = permute(dN,[2,1,3]);
             dNtrc = cell(size(dNtr,3),1);
@@ -315,11 +315,11 @@ classdef SolidElasticElem < FiniteElement
         function K = computeStifnessMatrixConst(obj, nodes, x)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
-            ndofs = size( obj.ndofs,2);
+            ndofs = size( obj.eDofs,2);
             dim = nnodes * ndofs;
-            integrator = obj.sf.createIntegrator();
+            integrator = obj.shapeFn.createIntegrator();
             nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
+            dN = obj.shapeFn.computeGradient( integrator.points );
             nnd = size(dN,1); 
             dNtr = permute(dN,[2,1,3]);
             dNx = zeros(size(dN,2),size(dN,1), nip );
@@ -357,7 +357,7 @@ classdef SolidElasticElem < FiniteElement
         end
         function initializeResults(obj)
             nelems = size(obj.elems,1);
-            integrator = obj.sf.createIntegrator();
+            integrator = obj.shapeFn.createIntegrator();
             nip = size(integrator.points,1);
             obj.results.gp.strain = zeros(6,nelems,nip);
             obj.results.gp.stress = zeros(6,nelems,nip);
@@ -366,11 +366,11 @@ classdef SolidElasticElem < FiniteElement
         function computeResults(obj,nodes, q, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
-            ndofs = size( obj.ndofs,2);
+            ndofs = size( obj.eDofs,2);
             dim = nnodes * ndofs;
-            integrator = obj.sf.createIntegrator();
+            integrator = obj.shapeFn.createIntegrator();
             nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
+            dN = obj.shapeFn.computeGradient( integrator.points );
             nnd = size(dN,1); 
             dNtr = permute(dN,[2,1,3]);
             dNtrc = cell(size(dNtr,3),1);
@@ -448,7 +448,7 @@ classdef SolidElasticElem < FiniteElement
             obj.results.gp.all(14,:,:) = repmat(x,1,nip);
         end
         function faces = findFaces( obj, fnodes )
-              allfaces = obj.multiObjectList( obj.sf.faces );
+              allfaces = obj.multiObjectList( obj.shapeFn.faces );
               bfaces = false( size(allfaces,1), 1 );
               dfaces = setdiff( allfaces, fnodes ) ;
               for k=1:size(allfaces,1)
@@ -458,16 +458,16 @@ classdef SolidElasticElem < FiniteElement
         end
         function [P, volume] = loadLineIntegral(obj, mode, nodes, edges, dofnames, di, P, valueFn)
             inds = obj.findDofIndices( dofnames );
-            integrator = obj.sf.edgesf.createIntegrator();
-            N = obj.sf.edgesf.computeValue( integrator.points );
-            dN = obj.sf.edgesf.computeGradient( integrator.points );
+            integrator = obj.shapeFn.edgesf.createIntegrator();
+            N = obj.shapeFn.edgesf.computeValue( integrator.points );
+            dN = obj.shapeFn.edgesf.computeGradient( integrator.points );
             nip = size(dN,2);
             np  = size(dN,1);
             for k=1:size(edges,1)
                 elemX = nodes(edges(k,:),:);
                 lPoints= N*elemX;
                 dXY = dN * elemX;
-                Pfn = zeros( size(elemX,1), size( obj.ndofs,2) );
+                Pfn = zeros( size(elemX,1), size( obj.eDofs,2) );
                 lValues = valueFn( lPoints );
                 Pfn(:,inds) = lValues
                 if mode =="local"
@@ -488,14 +488,14 @@ classdef SolidElasticElem < FiniteElement
         end
         function [P, volume] = loadSurfaceIntegral(obj, mode, nodes, faces, dofnames, di, P, valueFn)
             inds = obj.findDofIndices( dofnames );
-            integrator = obj.sf.facesf.createIntegrator();
-            N = obj.sf.facesf.computeValue( integrator.points );
-            dN = obj.sf.facesf.computeGradient( integrator.points );
+            integrator = obj.shapeFn.facesf.createIntegrator();
+            N = obj.shapeFn.facesf.computeValue( integrator.points );
+            dN = obj.shapeFn.facesf.computeGradient( integrator.points );
             nip = size(dN,2);
             np  = size(dN,3);
             for k=1:size(faces,1)
                 elemX = nodes(faces(k,:),:);
-                Pfn = zeros( size(N,1), size( obj.ndofs,2) );
+                Pfn = zeros( size(N,1), size( obj.eDofs,2) );
                 Pfn(:,inds) = valueFn( N*elemX );
                 if mode =="local"
 %                     nXYZ = dXY./vecnorm(dXY')';
@@ -521,12 +521,12 @@ classdef SolidElasticElem < FiniteElement
             hold on;
             daspect([1 1 1]);
             if nargin==2
-                patch('Vertices', nodes, 'Faces', obj.elems(:,obj.sf.contour),'FaceColor','none','EdgeColor','k');
+                patch('Vertices', nodes, 'Faces', obj.elems(:,obj.shapeFn.contour),'FaceColor','none','EdgeColor','k');
             elseif nargin == 4
                 dg     = norm( max(nodes) - min(nodes) );
                 maxs = max( abs(min(min(varargin{1}))), abs(max(max(varargin{1})) ) );
                 defnodes = (nodes + varargin{1} ./ maxs * dg * varargin{2});
-                allfaces = reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))';
+                allfaces = reshape(obj.elems(:,obj.shapeFn.fcontours)',size(obj.shapeFn.fcontours,1),size(obj.shapeFn.fcontours,2)*size(obj.elems,1))';
                 [~,ifaces] = unique( sort(allfaces,2),'rows' );
                 patch('Vertices', defnodes, 'Faces', allfaces(ifaces,:),'FaceColor','none','EdgeColor','r');
             end
@@ -540,7 +540,7 @@ classdef SolidElasticElem < FiniteElement
                 col=varargin{1};
             end
             allfaces = reshape(obj.elems(:,obj.shapeFn.fcontours)',size(obj.shapeFn.fcontours,1),size(obj.shapeFn.fcontours,2)*size(obj.elems,1))';
-            %allfaces = obj.elems(obj.sf.fcontours,:);
+            %allfaces = obj.elems(obj.shapeFn.fcontours,:);
             [~,ifaces] = unique( sort(allfaces,2), 'rows' );
             A=allfaces(ifaces,:);
             delfaces=allfaces;
@@ -563,8 +563,8 @@ classdef SolidElasticElem < FiniteElement
             dg  = norm( max(nodes) - min(nodes) );
             maxs = max( abs(min(min(qnodal))), abs(max(max(qnodal)) ) );
             defnodes = (nodes + qnodal ./ maxs * dg * scale);
-            allfaces = reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))';
-            %allfaces = obj.elems(obj.sf.fcontours,:);
+            allfaces = reshape(obj.elems(:,obj.shapeFn.fcontours)',size(obj.shapeFn.fcontours,1),size(obj.shapeFn.fcontours,2)*size(obj.elems,1))';
+            %allfaces = obj.elems(obj.shapeFn.fcontours,:);
             [~,ifaces] = unique( sort(allfaces,2), 'rows' );
             A=allfaces(ifaces,:);
             delfaces=allfaces;
@@ -583,8 +583,8 @@ classdef SolidElasticElem < FiniteElement
             else
                 col=varargin{1};
             end
-            allfaces = reshape(obj.elems(elem_inds,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(find(elem_inds),1))';
-            [~,ifaces] = unique( sort(reshape(obj.elems(elem_inds,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(find(elem_inds),1))',2),'rows' );
+            allfaces = reshape(obj.elems(elem_inds,obj.shapeFn.fcontours)',size(obj.shapeFn.fcontours,1),size(obj.shapeFn.fcontours,2)*size(find(elem_inds),1))';
+            [~,ifaces] = unique( sort(reshape(obj.elems(elem_inds,obj.shapeFn.fcontours)',size(obj.shapeFn.fcontours,1),size(obj.shapeFn.fcontours,2)*size(find(elem_inds),1))',2),'rows' );
             patch('Vertices', nodes, 'Faces', allfaces(ifaces,:),'FaceColor','none','EdgeColor','k');
             patch('Vertices', nodes, 'Faces', allfaces(ifaces,:),'FaceColor',col);
         end
@@ -593,8 +593,8 @@ classdef SolidElasticElem < FiniteElement
             daspect([1 1 1]);
             colormap('jet');
             colorbar;
-            allfaces = reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))';
-            [~,ifaces] = unique( sort(reshape(obj.elems(:,obj.sf.fcontours)',size(obj.sf.fcontours,1),size(obj.sf.fcontours,2)*size(obj.elems,1))',2),'rows' );
+            allfaces = reshape(obj.elems(:,obj.shapeFn.fcontours)',size(obj.shapeFn.fcontours,1),size(obj.shapeFn.fcontours,2)*size(obj.elems,1))';
+            [~,ifaces] = unique( sort(reshape(obj.elems(:,obj.shapeFn.fcontours)',size(obj.shapeFn.fcontours,1),size(obj.shapeFn.fcontours,2)*size(obj.elems,1))',2),'rows' );
             patch('Vertices', nodes+scd*q, 'Faces', allfaces(ifaces,:), 'FaceVertexCData', C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
         end
     end

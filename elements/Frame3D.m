@@ -9,7 +9,7 @@ classdef Frame3D < FiniteElement
         function obj = Frame3D(elems)
             obj = obj@FiniteElement(ShapeFunctionsFrame3D,elems);
 
-            obj.ndofs=["ux" "uy" "uz" "fix" "fiy" "fiz"];
+            obj.eDofs=["ux" "uy" "uz" "fix" "fiy" "fiz"];
              obj.results.names = ["N" "Ty" "Tz" "Ms" "My" "Mz"];
              obj.results.descriptions = ["normal force" "shear force Ty" "shear force Tz" ...
                  "torsion moment" "bending moment My" "bending moment Mz" ];
@@ -19,7 +19,7 @@ classdef Frame3D < FiniteElement
         function L = computeTransformationMatrix(obj, nodes)
               nelems = size(obj.elems,1);
               nnodes = size(obj.elems,2);
-              ndofs = size( obj.ndofs,2);
+              ndofs = size( obj.eDofs,2);
               dim = nnodes * ndofs;
               L = zeros( dim , dim, nelems );
               c0 =zeros(3,3);
@@ -50,7 +50,7 @@ classdef Frame3D < FiniteElement
         function K = computeStifnessMatrix(obj, nodes, varargin)
               nelems = size(obj.elems,1);
               nnodes = size(obj.elems,2);
-              ndofs = size( obj.ndofs,2);
+              ndofs = size( obj.eDofs,2);
               dim = nnodes * ndofs;
               K  = zeros( dim , dim, nelems );
               Kl = obj.computeLocalStifnessMatrix(nodes,varargin);
@@ -64,7 +64,7 @@ classdef Frame3D < FiniteElement
         function K = computeLocalStifnessMatrix(obj, nodes, varargin)
               nelems = size(obj.elems,1);
               nnodes = size(obj.elems,2);
-              ndofs = size( obj.ndofs,2);
+              ndofs = size( obj.eDofs,2);
               dim = nnodes * ndofs;
               K  = zeros( dim , dim, nelems );
               EA=obj.E*obj.A; EJy=obj.E*obj.Jy; EJz=obj.E*obj.Jz; GKs=obj.G*obj.Ks;

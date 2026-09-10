@@ -11,8 +11,8 @@ cutTreshold = 0.005;
 
 ShapeFn = ShapeFunctionL8;
 mesh = Mesh();
-mesh.addRectMesh3D( 0, 0, 0, 2*l, l, l, 2*res, res, res, ShapeFn.localNodes);
-fe = SolidElasticElem( ShapeFn, mesh.elems );
+elems = mesh.addRectMesh3D( 0, 0, 0, 2*l, l, l, 2*res, res, res, ShapeFn.localNodes);
+fe = SolidElasticElem( ShapeFn, elems );
 mX = max(mesh.nodes(:,1));
 
 fe.props.h=1;

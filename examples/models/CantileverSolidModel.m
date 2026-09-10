@@ -5,8 +5,8 @@ classdef CantileverSolidModel < ModelLinear
     methods
         function obj = CantileverSolidModel(sf,l,res,E,nu,p)
             obj.mesh = Mesh();
-            obj.mesh.addRectMesh3D( 0, 0, 0, l, l/2, l/2, 2*res, res, res, sf.localNodes);
-            obj.fe = SolidElasticElem( sf, obj.mesh.elems );
+            elems = obj.mesh.addRectMesh3D( 0, 0, 0, l, l/2, l/2, 2*res, res, res, sf.localNodes);
+            obj.fe = SolidElasticElem( sf, elems );
     
             material = SolidMaterial('mat1');
             material.setElasticIzo(E, nu);

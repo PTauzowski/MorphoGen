@@ -218,7 +218,7 @@ classdef (Abstract) FEAnalysis < handle
             ires = zeros( nnodes, resnumber );
             for l=1:max(size(obj.felems))
                 el = obj.felems{l}.elems;
-                sfv=obj.felems{l}.sf.getRecoveryMatrix();
+                sfv=obj.felems{l}.shapeFn.getRecoveryMatrix();
                 for k=1:size(el,1)
                   neres=tensorprod(sfv, obj.felems{l}.results.gp.all(:,k,:),2,3);
                   nres( el( k, : ), : ) = nres( el( k, : ), : ) + neres;
@@ -321,7 +321,7 @@ classdef (Abstract) FEAnalysis < handle
                 for k=1:max(size(obj.felems))
                    valueIndex = find(obj.felems{k}.results.names == mapName);
                    if size(valueIndex,2)==0
-                        valueIndex = find(obj.felems{k}.ndofs == mapName);
+                        valueIndex = find(obj.felems{k}.eDofs == mapName);
                         if size(valueIndex,2)==0
                             error("Map name " + mapName + " not implemented in element:" + class(obj.felems{k}));
                         else

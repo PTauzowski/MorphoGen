@@ -6,9 +6,9 @@ classdef ConstStressSolidModel< ModelLinear
         function obj = ConstStressSolidModel(sf,l,res,E,nu,pressure)
             hlc=0.4;
             obj.mesh = Mesh();
-            obj.mesh.addRectMesh3D( 0, 0, 0, l, l*hlc, l*hlc, res, round(res*hlc), round(res*hlc), sf.localNodes);
+            elems = obj.mesh.addRectMesh3D( 0, 0, 0, l, l*hlc, l*hlc, res, round(res*hlc), round(res*hlc), sf.localNodes);
             %mesh.addRectMeshTetrahedral3D( '6T', [0 0 0], [2.5*l l l], [2.5*res, res, res] )
-            obj.fe = SolidElasticElem( sf, obj.mesh.elems );
+            obj.fe = SolidElasticElem( sf, elems );
        
             material = SolidMaterial('mat1');
             material.setElasticIzo(E, nu);

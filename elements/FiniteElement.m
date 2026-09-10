@@ -23,6 +23,7 @@ classdef (Abstract) FiniteElement < handle
         function obj = FiniteElement(shapeFn, elems)
                      obj.shapeFn=shapeFn;
                      obj.elems = elems;
+                     obj.props.h=1;
                      obj.props.thermal=zeros(size(elems,1),1);
         end
         function setMaterial(obj, mat)
@@ -42,7 +43,7 @@ classdef (Abstract) FiniteElement < handle
              multiList = reshape( obj.elems(:,ElemObjectList)',size( ElemObjectList ,1), size( ElemObjectList,2) * size( obj.elems, 1) )';
         end
         function edges = findEdges( obj, fnodes )
-            alledges = obj.multiObjectList( obj.sf.edges );
+            alledges = obj.multiObjectList( obj.shapeFn.edges );
             bedges = false( size(alledges,1), 1 );
             for k=1:size(alledges,1)
                 bedges(k) = isempty( setdiff( alledges(k,:), fnodes ) );
@@ -69,7 +70,7 @@ classdef (Abstract) FiniteElement < handle
               el = obj.elems;
               nres = zeros( nnodes, size( gpres, 2 ) );
               ires = zeros( nnodes, size( gpres, 2 ) );
-              sfv = obj.sf.getRecoveryMatrix();
+              sfv = obj.shapeFn.getRecoveryMatrix();
               for k=1:size(el,1)
                   neres = sfv * GPresults(:,:,k); %tensorprod(sfv,GPresults,3)
                   nres( el( k, : ), : ) = nres( el( k, : ), : ) + neres;
@@ -88,7 +89,7 @@ classdef (Abstract) FiniteElement < handle
             nip = size(integrator.points,1);
             N = obj.shapeMatrix( integrator.points );
             Ntr = permute(N,[2,1,3]);
-            dN = obj.sf.computeGradient( integrator.points );
+            dN = obj.shapeFn.computeGradient( integrator.points );
             dK = zeros( dim , dim , nip );
             K = zeros( dim , dim, nelems );
             for k=1:nelems
@@ -105,7 +106,7 @@ classdef (Abstract) FiniteElement < handle
             nudofs = size( obj.eDofs,2);
             dim = nnodes * nudofs;
             nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
+            dN = obj.shapeFn.computeGradient( integrator.points );
             dNtr = permute(dN,[2,1,3]);
             dNx = zeros(size(dN,2),size(dN,1), nip );
             K = zeros( dim , dim, nelems );

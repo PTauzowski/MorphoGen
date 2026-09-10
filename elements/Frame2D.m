@@ -15,7 +15,7 @@ classdef Frame2D < FiniteElement
         function L = computeTransformationMatrix(obj, nodes)
               nelems = size(obj.elems,1);
               nnodes = size(obj.elems,2);
-              ndofs = size( obj.ndofs,2);
+              ndofs = size( obj.eDofs,2);
               dim = nnodes * ndofs;
               L = zeros( dim , dim, nelems );
              for k=1:nelems
@@ -36,7 +36,7 @@ classdef Frame2D < FiniteElement
               EJ=obj.E*obj.J;
               nelems = size(obj.elems,1);
               nnodes = size(obj.elems,2);
-              ndofs = size( obj.ndofs,2);
+              ndofs = size( obj.eDofs,2);
               dim = nnodes * ndofs;
               K = zeros( dim , dim, nelems );
               for k=1:nelems
@@ -55,13 +55,13 @@ classdef Frame2D < FiniteElement
         function K = computeStifnessMatrix(obj, nodes, varargin)
               nelems = size(obj.elems,1);
               nnodes = size(obj.elems,2);
-              ndofs = size( obj.ndofs,2);
+              ndofs = size( obj.eDofs,2);
               dim = nnodes * ndofs;
               K  = zeros( dim , dim, nelems );
               Kl = obj.computeLocalStifnessMatrix(nodes,varargin);
               L  = obj.computeTransformationMatrix(nodes);              
               for k=1:nelems
-                 K(:,:,k) = L(:,:,k)' * Ke * L(:,:,k);
+                 K(:,:,k) = L(:,:,k)' * Kl(:,:,k) * L(:,:,k);
               end
               K=K(:);
         end
@@ -71,7 +71,7 @@ classdef Frame2D < FiniteElement
               EJ=obj.E*obj.J;
               nelems = size(obj.elems,1);
               nnodes = size(obj.elems,2);
-              ndofs = size( obj.ndofs,2);
+              ndofs = size( obj.eDofs,2);
               dim = nnodes * ndofs;
               K = zeros( dim , dim, nelems );
              for k=1:nelems

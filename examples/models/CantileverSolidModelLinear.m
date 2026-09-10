@@ -3,11 +3,11 @@ classdef CantileverSolidModelLinear < ModelLinearLoad
     methods
         function obj = CantileverSolidModelLinear(sf,w,res,E,nu,xp,resPt)
             obj.mesh = Mesh();
-            obj.mesh.addRectMesh3D( 0,0,0, 8*w, w, 4*w, 8*res,res,4*res, sf.localNodes );
+            elems = obj.mesh.addRectMesh3D( 0,0,0, 8*w, w, 4*w, 8*res,res,4*res, sf.localNodes );
             fixedFaceSelector = Selector( @(x)( abs(x(:,1))<0.001 ) );
             %loadedFaceSelector = Selector( @(x)( abs(x(:,1) - l)<0.001 ) );
             
-            obj.fe = SolidElasticElem( sf, obj.mesh.elems );
+            obj.fe = SolidElasticElem( sf, elems );
             
             obj.fe.plot(obj.mesh.nodes);
             obj.fe.props.h=1;

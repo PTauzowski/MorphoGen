@@ -4,12 +4,12 @@ classdef ColumnModel3D < ModelLinear
         function obj = ColumnModel3D(sf,b,h,l,nl,E,nu,rho,P,xp)
             obj.xp=xp;
             obj.mesh = Mesh();      
-            obj.mesh.addRectMesh3D( 0, 0, 0, b, h, l, round(nl*b/l), round(nl*h/l), nl, sf.localNodes );
-            obj.x=ones(size(obj.mesh.elems,1),1);
+            elems = obj.mesh.addRectMesh3D( 0, 0, 0, b, h, l, round(nl*b/l), round(nl*h/l), nl, sf.localNodes );
+            obj.x=ones(size(elems,1),1);
             fixedEdgeSelector = Selector( @(x)( abs(x(:,3)) < 0.001 ) );
             loadedEdgeSelector = Selector( @(x)( abs(x(:,3)-l) < 0.001 ) );
 
-            obj.fe=SolidElasticElem( sf, obj.mesh.elems );
+            obj.fe=SolidElasticElem( sf, elems );
             material = SolidMaterial('mat1');
             material.setElasticIzo(E, nu);
             material.rho=rho;

@@ -9,10 +9,10 @@ classdef PlaneElem < FiniteElement
         end
         function N = shapeMatrix( obj, points )
             nnodes = size(obj.elems, 2 );
-            nd = size( obj.ndofs, 2 );
+            nd = size( obj.eDofs, 2 );
             np = size(points,1);
             N = zeros( nd, nd*nnodes, np );
-            Nsf = obj.sf.computeValue(points);
+            Nsf = obj.shapeFn.computeValue(points);
             for k=1:np
                 N(1,1:2:nd*nnodes-1,k) = Nsf(k,:);
                 N(2,2:2:nd*nnodes,k) = Nsf(k,:);
@@ -21,11 +21,11 @@ classdef PlaneElem < FiniteElement
         function K = computeStifnessMatrix(obj, nodes, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
-            ndofs = size( obj.ndofs,2);
+            ndofs = size( obj.eDofs,2);
             dim = nnodes * ndofs;
-            integrator = obj.sf.createIntegrator();
+            integrator = obj.shapeFn.createIntegrator();
             nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
+            dN = obj.shapeFn.computeGradient( integrator.points );
             nnd = size(dN,1); 
             dNtr = permute(dN,[2,1,3]);
             dNtrc = cell(size(dNtr,3),1);
@@ -64,11 +64,11 @@ classdef PlaneElem < FiniteElement
         function K = computeGeometricStifnessMatrix(obj, nodes, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
-            ndofs = size( obj.ndofs,2);
+            ndofs = size( obj.eDofs,2);
             dim = nnodes * ndofs;
-            integrator = obj.sf.createIntegrator();
+            integrator = obj.shapeFn.createIntegrator();
             nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
+            dN = obj.shapeFn.computeGradient( integrator.points );
             dNtr = permute(dN,[2,1,3]);
             dNtrc = cell(size(dNtr,3),1);
             if ( nargin == 3 )
@@ -115,12 +115,12 @@ classdef PlaneElem < FiniteElement
         function M = computeMassMatrix(obj, nodes, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
-            ndofs = size( obj.ndofs,2);
+            ndofs = size( obj.eDofs,2);
             dim = nnodes * ndofs;
-            integrator = obj.sf.createIntegrator();
+            integrator = obj.shapeFn.createIntegrator();
             nip = size(integrator.points,1);
             N = obj.shapeMatrix( integrator.points );
-            dN = obj.sf.computeGradient( integrator.points );
+            dN = obj.shapeFn.computeGradient( integrator.points );
             dNtr = permute(dN,[2,1,3]);
             dNtrc = cell(size(dNtr,3),1);
             if ( nargin == 3 )
@@ -149,12 +149,12 @@ classdef PlaneElem < FiniteElement
         function dK = computeStifnessMatrixGradMat(obj, nodes, q, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
-            ndofs = size( obj.ndofs,2);
+            ndofs = size( obj.eDofs,2);
             nsens = size(obj.mat.dD,3);
             dim = nnodes * ndofs;
-            integrator = obj.sf.createIntegrator();
+            integrator = obj.shapeFn.createIntegrator();
             nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
+            dN = obj.shapeFn.computeGradient( integrator.points );
             nnd = size(dN,1); 
             dNtr = permute(dN,[2,1,3]);
             dNtrc = cell(size(dNtr,3),1);
@@ -196,12 +196,12 @@ classdef PlaneElem < FiniteElement
         function dK = computeStifnessMatrixGradX(obj, nodes, q, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
-            ndofs = size( obj.ndofs,2);
+            ndofs = size( obj.eDofs,2);
             nsens = size(obj.mat.dD,3);
             dim = nnodes * ndofs;
-            integrator = obj.sf.createIntegrator();
+            integrator = obj.shapeFn.createIntegrator();
             nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
+            dN = obj.shapeFn.computeGradient( integrator.points );
             nnd = size(dN,1); 
             dNtr = permute(dN,[2,1,3]);
             dNtrc = cell(size(dNtr,3),1);
@@ -240,11 +240,11 @@ classdef PlaneElem < FiniteElement
         function K = computeStifnessMatrixConst(obj, nodes, x)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
-            ndofs = size( obj.ndofs,2);
+            ndofs = size( obj.eDofs,2);
             dim = nnodes * ndofs;
-            integrator = obj.sf.createIntegrator();
+            integrator = obj.shapeFn.createIntegrator();
             nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
+            dN = obj.shapeFn.computeGradient( integrator.points );
             nnd = size(dN,1); 
             dNtr = permute(dN,[2,1,3]);
             dNtrc = cell(size(dNtr,3),1);
@@ -277,15 +277,15 @@ classdef PlaneElem < FiniteElement
         end
         function [P, volume] = loadLineIntegral(obj, mode, nodes, edges, dofnames, di, P, valueFn)
             inds = obj.findDofIndices( dofnames );
-            integrator = obj.sf.edgesf.createIntegrator();
-            N = obj.sf.edgesf.computeValue( integrator.points );
-            dN = obj.sf.edgesf.computeGradient( integrator.points );
+            integrator = obj.shapeFn.edgesf.createIntegrator();
+            N = obj.shapeFn.edgesf.computeValue( integrator.points );
+            dN = obj.shapeFn.edgesf.computeGradient( integrator.points );
             nip = size(dN,2);
             np  = size(dN,1);
             for k=1:size(edges,1)
                 elemX = nodes(edges(k,:),:);
                 dXY = dN * elemX;
-                Pfn = zeros( size(elemX,1), size( obj.ndofs,2) );
+                Pfn = zeros( size(elemX,1), size( obj.eDofs,2) );
                 Pfn(:,inds) = valueFn( N*elemX );
                 if mode =="local"
                     nXY = dXY./vecnorm(dXY')';
@@ -313,7 +313,7 @@ classdef PlaneElem < FiniteElement
                 dg     = norm( max(nodes) - min(nodes) );
                 maxs = max( abs(min(min(varargin{1}))), abs(max(max(varargin{1})) ) );
                 defnodes = (nodes + varargin{1} ./ maxs * dg * varargin{2});
-                patch('Vertices', defnodes, 'Faces', obj.elems(:,obj.sf.contour),'FaceColor','none','EdgeColor','r');
+                patch('Vertices', defnodes, 'Faces', obj.elems(:,obj.shapeFn.contour),'FaceColor','none','EdgeColor','r');
             end
         end
         function plot(obj,nodes)
@@ -327,7 +327,7 @@ classdef PlaneElem < FiniteElement
             daspect([1 1 1]);
             colormap('jet');
             colorbar;
-            patch('Vertices', nodes+scd*q, 'Faces', obj.elems(:,obj.sf.contour), 'FaceVertexCData', C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
+            patch('Vertices', nodes+scd*q, 'Faces', obj.elems(:,obj.shapeFn.contour), 'FaceVertexCData', C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
         end
     end
 end

@@ -4,12 +4,12 @@ classdef ColumnModel < ModelLinear
         function obj = ColumnModel(sf,b,h,l,nh,E,nu,P,xp)
             obj.xp=xp;
             obj.mesh = Mesh();      
-            obj.mesh.addRectMesh2D( 0, 0, b, l, round(nh*b/l), nh, sf.pattern );
-            obj.x=ones(size(obj.mesh.elems,1),1);
+            elems = obj.mesh.addRectMesh2D( 0, 0, b, l, round(nh*b/l), nh, sf.pattern );
+            obj.x=ones(size(elems,1),1);
             fixedEdgeSelector = Selector( @(x)( abs(x(:,2)) < 0.001 ) );
             loadedEdgeSelector = Selector( @(x)( abs(x(:,2)-l) < 0.001 ) );
 
-            obj.fe=PlaneStressElem( sf, obj.mesh.elems );
+            obj.fe=PlaneStressElem( sf, elems );
             material = PlaneStressMaterial('mat1');
             material.setElasticIzo(E, nu);
             obj.fe.props.h=h;

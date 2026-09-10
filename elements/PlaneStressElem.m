@@ -21,7 +21,7 @@ classdef PlaneStressElem < PlaneElem
         end
         function initializeResults(obj)
             nelems = size(obj.elems,1);
-            integrator = obj.sf.createIntegrator();
+            integrator = obj.shapeFn.createIntegrator();
             nip = size(integrator.points,1);
             obj.results.gp.strain = zeros(3,nelems,nip);
             obj.results.gp.stress = zeros(3,nelems,nip);
@@ -30,11 +30,11 @@ classdef PlaneStressElem < PlaneElem
         function computeResults(obj,nodes, q, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
-            ndofs = size( obj.ndofs,2);
+            ndofs = size( obj.eDofs,2);
             dim = nnodes * ndofs;
-            integrator = obj.sf.createIntegrator();
+            integrator = obj.shapeFn.createIntegrator();
             nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
+            dN = obj.shapeFn.computeGradient( integrator.points );
             nnd = size(dN,1); 
             dNtr = permute(dN,[2,1,3]);
             dNtrc = cell(size(dNtr,3),1);
@@ -109,12 +109,12 @@ classdef PlaneStressElem < PlaneElem
         function [HMs, dHMs] = computeHMstress(obj,nodes, nelem, q, ddq, penalty, varargin)
             nelems = size(obj.elems,1);
             nnodes = size(obj.elems,2);
-            ndofs = size( obj.ndofs,2);
+            ndofs = size( obj.eDofs,2);
             nsens = size(ddq,2);
             dim = nnodes * ndofs;
-            integrator = obj.sf.createIntegrator();
+            integrator = obj.shapeFn.createIntegrator();
             nip = size(integrator.points,1);
-            dN = obj.sf.computeGradient( integrator.points );
+            dN = obj.shapeFn.computeGradient( integrator.points );
             nnd = size(dN,1); 
             dNtr = permute(dN,[2,1,3]);
             dNtrc = cell(size(dNtr,3),1);

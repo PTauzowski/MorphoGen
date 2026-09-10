@@ -23,8 +23,8 @@ tic
 aspect=3;
 sfL4 = ShapeFunctionL4;
 mesh = Mesh();
-mesh.addRectMesh2D(0, 0, aspect*l, l, aspect*res, res, sfL4.pattern);
-fe=PlaneStressElem( sfL4, mesh.elems );
+elems = mesh.addRectMesh2D(0, 0, aspect*l, l, aspect*res, res, sfL4.pattern);
+fe=PlaneStressElem( sfL4, elems );
 material = PlaneStressMaterial('mat1');
 material.setElasticIzo(1, 0.3);
 fe.setMaterial( material );

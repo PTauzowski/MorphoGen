@@ -28,10 +28,10 @@ sfL4 = ShapeFunctionL4;
 mesh = Mesh();
 
 % Generating rectangular mesh ( aspect*h x h )
-mesh.addRectMesh2D(0, 0, aspect*h, h, aspect*res, res, sfL4.pattern);
+elems = mesh.addRectMesh2D(0, 0, aspect*h, h, aspect*res, res, sfL4.pattern);
 
 % Create plane stress finite element object
-fe=PlaneStressElem( sfL4, mesh.elems );
+fe=PlaneStressElem( sfL4, elems );
 
 % Create isotropic material object
 material = PlaneStressMaterial('mat1');

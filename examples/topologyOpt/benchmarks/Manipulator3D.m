@@ -17,9 +17,9 @@ cutTreshold = 0.05;
 
 ShapeFn = ShapeFunctionL8;
 mesh = Mesh();
-mesh.addRectMesh3D( R-Th, 0, 0, Th, 2*pi, Length, resTh, resCirc, resLen, ShapeFn.localNodes);
+elems = mesh.addRectMesh3D( R-Th, 0, 0, Th, 2*pi, Length, resTh, resCirc, resLen, ShapeFn.localNodes);
 mesh.transformToCylindrical3D( [0 0] );
-fe = SolidElasticElem( ShapeFn, mesh.elems );
+fe = SolidElasticElem( ShapeFn, elems );
 
 fe.props.h=1;
 material = SolidMaterial('mat1');

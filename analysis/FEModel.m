@@ -4,9 +4,23 @@ classdef FEModel < handle
             selTolerance;
     end
 
+    properties (Access=protected)
+            % Density/design field. Carried here to match the pre-refactor
+            % FEModel, which ModelLinear and every model fixture rely on.
+            % Conceptually it belongs on ModelLinear, its only consumer —
+            % relocating it is a change the merge does not force (Rule 2).
+            x;
+    end
+
     methods
 
         function obj = FEModel( felems, mesh )
+            % Model subclasses (ModelLinear and its fixtures) are built empty
+            % and populate mesh/fElems in their own constructors, so they reach
+            % this with no arguments. Only initialise DOFs when given both.
+            if nargin < 2
+                return;
+            end
             obj.fElems = felems;
             obj.mesh = mesh;
             obj.initDOFs();
