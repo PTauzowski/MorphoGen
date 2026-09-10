@@ -104,22 +104,39 @@ material removed at all — after 2234 iterations, and was aborted. That is the 
 described above showing up at runtime: with 99.4% of the nodes clamped there is nothing for the
 optimiser to remove.
 
-### The comparison against `develop` @ `2969edc`
+### The comparison against `develop` @ `ff92833`
 
-| Benchmark | Optimiser | `main` | `develop` | |
-|---|---|---:|---:|:--|
-| `Cantilever` (res 40) | `SIMP_MMA_…ElasticCompliance` | 76.7366325352 | 76.7366325352 | **identical** |
-| | volume fraction | 0.399999999808 | 0.399999999808 | **identical** |
-| | iterations | 113 | 113 | **identical** |
-| `Cantilever` (res 40) | `StressIntensityTopologyOptimizationVol` | 1275.94055647 | 1270.06320313 | differs |
-| | volume fraction | 0.398731423896 | 0.396894750978 | differs |
-| | iterations | 70 | 311 | differs |
+Both benchmarks, both optimisers, compared field by field:
 
-**The SIMP compliance path reproduces `main` exactly — all twelve significant figures, and the
-same iteration count.** That is the result worth having. It exercises assembly, the linear
-solver, the sensitivity computation and the DOF bookkeeping, so it says that develop's DOF
-refactor, the Phase 1 repairs and the two `FEAnalysis` fixes have not moved the physics by one
-ulp.
+| Benchmark | Optimiser | Quantity | `main` | `develop` | |
+|---|---|---|---:|---:|:--|
+| `Cantilever` (res 40) | SIMP | `objF` | 76.7366325352 | 76.7366325352 | **identical** |
+| | | volume fraction | 0.399999999808 | 0.399999999808 | **identical** |
+| | | iterations | 113 | 113 | **identical** |
+| `Beam99` (res 40) | SIMP | `objF` | 230.191384232 | 230.191384232 | **identical** |
+| | | volume fraction | 0.399999999988 | 0.399999999988 | **identical** |
+| | | iterations | 1017 | 1017 | **identical** |
+| `Cantilever` (res 40) | ESO | `objF` | 1275.94055647 | 1270.06320313 | differs |
+| | | volume fraction | 0.398731423896 | 0.396894750978 | differs |
+| | | iterations | 70 | 311 | differs |
+| `Beam99` (res 40) | ESO | `objF` | 1918.96595194 | 1915.94611678 | differs |
+| | | volume fraction | 0.399784573321 | 0.399155440995 | differs |
+| | | iterations | 96 | 422 | differs |
+
+**Both SIMP compliance runs reproduce `main` exactly — every digit captured, and the same
+iteration count, on two independent benchmarks.** That is the result worth having. The SIMP path
+exercises assembly, the linear solver, the sensitivity computation and the DOF bookkeeping, so
+it says that develop's DOF refactor, the Phase 1 repairs and the two `FEAnalysis` fixes have not
+moved the physics by one ulp.
+
+Two independent benchmarks agreeing to twelve figures also rules out coincidence: an assembly
+error that happened to leave one problem's compliance unchanged would not leave a second one
+unchanged as well.
+
+The ESO runs differ **in the same direction on both benchmarks** — develop reaches a *lower*
+objective at a slightly *lower* volume fraction, in four to five times as many iterations. That
+is the expected signature of a smaller removal step finding a better optimum, not of a
+perturbed stiffness matrix, which would have no reason to improve the objective consistently.
 
 ### The ESO difference is the optimiser, not the physics
 
