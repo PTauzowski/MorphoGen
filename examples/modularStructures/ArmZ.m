@@ -21,14 +21,14 @@ Ph=cp*1;
 sfL8= ShapeFunctionL8();
 mesh = snakeSegmentModel(width, length, height, r, R, sfL8.localNodes,resC);
 halfSymetricalSelector = Selector( @(x)(  (width/2 - x(:,1)  ) > 0.01 ) );
-mesh.removeNodes( halfSymetricalSelector );
+elems = mesh.removeNodes( halfSymetricalSelector );
 
-fe = SolidElasticElem( sfL8, mesh.elems );
+fe = SolidElasticElem( sfL8, elems );
 maxMesh = max(mesh.nodes);
 minMesh = min(mesh.nodes);
 l=max(maxMesh-minMesh);
 
-x=ones(1,size(mesh.elems,1));
+x=ones(1,size(elems,1));
 
 fe.props.h=1;
 material = SolidMaterial('mat1');

@@ -3,11 +3,11 @@ classdef LShapeSolidModel < ModelLinearLoad
     methods
         function obj = LShapeSolidModel(sf,l,res,E,nu,xp,resX)
             obj.mesh = Mesh();
-            obj.mesh.addLshape3D( l, 0.4*l, res, sf.localNodes );
+            elems = obj.mesh.addLshape3D( l, 0.4*l, res, sf.localNodes );
             fixedFaceSelector = Selector( @(x)( abs(x(:,3) - l)<0.001 ) );
             loadedFaceSelector = Selector( @(x)( abs(x(:,1) - l)<0.001 ) );
             
-            obj.fe = SolidElasticElem( sf, obj.mesh.elems );
+            obj.fe = SolidElasticElem( sf, elems );
             
             obj.fe.plot(obj.mesh.nodes);
             obj.fe.props.h=1;

@@ -13,8 +13,8 @@ penal = 3;
 
 sfL8 = ShapeFunctionL8;
 mesh = Mesh();
-mesh.addLshape3D( 2*l, 0.8*l, 2*res, sfL8.localNodes);
-fe=SolidElasticElem( sfL8, mesh.elems );
+elems = mesh.addLshape3D( 2*l, 0.8*l, 2*res, sfL8.localNodes);
+fe=SolidElasticElem( sfL8, elems );
 
 material = SolidMaterial('mat1');
 material.setElasticIzo(1, 0.3);

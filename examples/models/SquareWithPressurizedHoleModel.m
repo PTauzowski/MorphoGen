@@ -7,8 +7,8 @@ classdef SquareWithPressurizedHoleModel < ModelLinear
             x0 = x(1);
             y0 = x(2);
             obj.mesh = Mesh();
-            obj.mesh.addRectWithHoleMesh2D( a, x0, y0, hf, res, sf.pattern );
-            obj.fe=PlaneStressElem( sf, obj.mesh.elems );
+            elems = obj.mesh.addRectWithHoleMesh2D( a, x0, y0, hf, res, sf.pattern );
+            obj.fe=PlaneStressElem( sf, elems );
             material = PlaneStressMaterial('mat1');
             material.setElasticIzo(E, nu);
             obj.fe.setMaterial( material );
