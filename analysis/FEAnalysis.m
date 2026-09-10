@@ -8,7 +8,11 @@ classdef (Abstract) FEAnalysis < handle
     methods
         function obj = FEAnalysis(felems, mesh)
             if iscell(felems)
-                obj.felems = felems;
+                % Canonical orientation: a column. Call sites write the cell
+                % array both ways ({fe1 fe2} and {fe1; fe2}), and the accessors
+                % below index it as a column, so normalise here rather than
+                % making every accessor orientation-proof.
+                obj.felems = felems(:);
             else
                 obj.felems = { felems };
             end
@@ -263,7 +267,7 @@ classdef (Abstract) FEAnalysis < handle
             plot(obj.mesh.nodes(sn,1), obj.mesh.nodes(sn,2), 'o');
         end
         function plotFiniteElements(obj)
-             for k=1:max(size(obj.felems,2))
+             for k=1:numel(obj.felems)
                  obj.felems{k}.plot(obj.mesh.nodes);
              end
         end
