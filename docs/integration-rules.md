@@ -54,6 +54,21 @@ Any other bug found during the merge is **recorded, not fixed** — open an issu
 A bug fix silently bundled into a merge commit is indistinguishable from a merge error when the
 numbers later disagree.
 
+#### Recorded, not fixed
+
+**Gauss-point result layout is inconsistent between element families.**
+`PlaneStressElem` has its `permute` call commented out and indexes
+`results.gp.stress` as `(component, elem, ip)`; `SolidElasticElem` permutes to
+`(elem, ip, component)`. So `gp.stress(1,:,:)` means *sxx everywhere* for plane elements and
+*element 1, all points, all components* for solids.
+
+The code is **identical on `develop`, `Vibrations` and `CAS_Arm`**, so this is pre-existing and
+not a merge artefact — which is exactly why it is recorded rather than fixed here. It is a
+latent trap for any code that consumes both families, and worth an issue for after the merge.
+
+Found by the constant-stress patch test on its first run, which is a fair advertisement for
+writing that test early.
+
 **Transitional wrappers — decided, see D1.** The plan proposes thin deprecated wrappers so the
 11 legacy `globalMatrixAggregation` call sites keep working during Phase 5, removed in Phase 6.
 Strictly, a wrapper is new code. Two readings, both defensible:
@@ -154,9 +169,58 @@ the third is the real validation.
   number of rigid-body modes (3 in 2D, 6 in 3D). *This is the single most valuable element test
   — it catches almost every transformation-matrix error, which is exactly what a merge of
   divergent `Frame3D` implementations risks.*
-- Patch test: a constant-strain field is reproduced exactly.
 - `Frame3DSectionProps`: EA, EIy, EIz, GJ, GAy, GAz each enter the local stiffness matrix
   independently *(already covered by the CAS_Arm test — convert it)*.
+- **Constant-stress patch test** — specified separately below; it is the one test that
+  validates inter-element load application.
+
+#### The constant-stress patch test
+
+The most valuable test in the suite, because it is the only one that exercises the edge/face
+load integral — the path where a wrong Jacobian or a lumped-instead-of-consistent nodal force
+produces results that look plausible and are wrong.
+
+**Setup.** A rectangular beam, uniform pressure applied to one edge (2D) or face (3D), shear
+(roller) support on the opposite edge or face — restrained normal to it, free to slide — plus
+one node pinned in the remaining directions to remove rigid-body motion.
+
+**Assertion.** At **every Gauss point of every element**, the stress component in the loading
+direction equals the applied pressure, and the other components are zero:
+
+```
+σxx == p    at all (element, integration point)
+σyy == 0,  σxy == 0                    (2D)
+σyy == σzz == σxy == σyz == σzx == 0   (3D)
+```
+
+**Tolerance is machine precision, not engineering tolerance.** Any element able to represent a
+constant strain state must reproduce this exactly, on any mesh, at any resolution — that is the
+defining property of a patch test. Use a relative tolerance around `1e-10`; a result that is
+merely close is a failure, not a pass.
+
+Assert on Gauss-point values, not nodal ones: `fe.results.gp.stress(:, elem, ip)` is already
+populated by `computeResults`. Nodal results are extrapolated and averaged between elements,
+which is exactly the smoothing that would mask a bad load integral.
+
+**Parameterise over shape functions.** The existing example already sweeps `ShapeFunctionL4`,
+`L9`, `L16` and `T3`; all must pass identically.
+
+**The fixtures already exist** — this is a conversion under Rule 1, not new development:
+
+| Asset | Role |
+|---|---|
+| `examples/elasticity/planeProblems/ConstStressTest.m` | 2D driver — currently plots and prints, asserts nothing |
+| `examples/elasticity/solidProblems/ConstStressSolidTest.m` | 3D driver |
+| `examples/models/ConstPlaneStressModel.m` | 2D fixture: `elementLoadLineIntegral` on `x = 2l`, `ux` fixed on `x = 0`, `uy` pinned at the origin |
+| `examples/models/ConstPlaneStressModelTriangular.m` | triangular-element variant |
+| `examples/models/ConstStressSolidModel.m` | 3D fixture: `elementLoadSurfaceIntegral` on `x = l`, `ux` fixed on `x = 0`, `uy`/`uz` pinned at the origin |
+
+The work is to turn the driver scripts into `TestCase` classes that assert the condition above,
+keeping the models as fixtures.
+
+**Useful side effect.** Both fixtures construct `LinearElasticityWeighted` and call
+`solveWeighted`, so this test is a direct canary for the D3 API change: when that class folds
+into `LinearElasticity`, the patch test is the first thing that should be made to pass again.
 
 **Solvers** — `math/LinearEquationsSystem.m`, `LinearEquationsSystemTr2D.m`, `subsolv`, `mmasub`
 

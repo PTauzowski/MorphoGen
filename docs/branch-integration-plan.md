@@ -278,6 +278,23 @@ try, run(ex); fprintf('PASS %s\n',ex);
 catch e, fprintf('FAIL %s :: %s\n',ex,e.message); end
 ```
 
+The list, chosen to cover distinct code paths and stay fast — the heavy topology-optimisation
+runs belong in a separate slower suite, not in something you run after every conflict resolution:
+
+| Example | Path exercised |
+|---|---|
+| `elasticity/planeProblems/ConstStressTest.m` | **Constant-stress patch test** — edge load integral, inter-element load application. See Rule 3. |
+| `elasticity/solidProblems/ConstStressSolidTest.m` | Same in 3D — face load integral |
+| `elasticity/planeProblems/CantileverTest.m` | Plane stress, the canonical case |
+| `elasticity/planeProblems/LameProblemTest.m` | Has an analytical solution |
+| `elasticity/solidProblems/CantileverSolidTest.m` | 3D solid path |
+| `elasticity/planeProblems/InclinedSupportTest.m` | Rotated supports — `LinearEquationsSystemTr2D` |
+
+The two `ConstStress*` cases lead deliberately: they are the only ones that fail loudly when the
+edge or face load integral is wrong, and their fixtures exist on `develop`, `Vibrations` and
+`CAS_Arm` alike (5 files each), so the same test runs on every branch being merged. They are
+absent from `main`, so they form no part of main's numerical baseline.
+
 Run on `Vibrations` and `CAS_Arm`; that pair of transcripts is the acceptance baseline.
 
 Then use `main` for what pass/fail cannot give: **numbers**. Record final compliance, volume
