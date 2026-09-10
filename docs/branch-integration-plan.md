@@ -320,10 +320,18 @@ change because the DOF bookkeeping did.
 
 **Gate:** pass/fail baseline for both feature branches, plus numerical reference values from main.
 
-> **Captured** in [baseline-2026-09-10.md](baseline-2026-09-10.md). develop 6/6, CAS_Arm 5/6,
-> Vibrations 0/6 on the shared examples (all six reference the removed
-> `LinearElasticityWeighted`). The numerical references from `main` remain outstanding and
-> gate Phase 5, not Phase 1.
+> **Captured.** Pass/fail in [baseline-2026-09-10.md](baseline-2026-09-10.md): develop 6/6,
+> CAS_Arm 5/6, Vibrations 0/6 on the shared examples (all six reference the removed
+> `LinearElasticityWeighted`). Numerical references in
+> [numerical-oracle-main.md](numerical-oracle-main.md).
+>
+> **Phase 0 is complete, and the numerical half changed what R7 can gate.** Of the six optimiser
+> runs nominated above, one is a valid parity target. `Lshape` is degenerate on `main` — it
+> clamps 99.4% of the domain and never converges — and both ESO runs compare *different
+> algorithms*, because develop rewrote the element-removal schedule. What remains is the SIMP
+> compliance path, and it already reproduces `main` exactly: `objF = 76.7366325352`, volume
+> fraction `0.399999999808`, 113 iterations, identical on both branches. Read R7 against the
+> table in the oracle document rather than against "the three benchmarks".
 
 ### Phase 1 — Repair develop *(blocking)*
 
