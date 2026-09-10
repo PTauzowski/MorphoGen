@@ -435,6 +435,26 @@ This does not apply to genuine code documentation: method notes explaining *what
 implementation does* remain welcome in `docs/`. The line is between documenting the software and
 drafting a paper.
 
+### D5 — main's orphaned design classes are preserved, not superseded *(2026-09-10)*
+
+Four topology-optimisation classes exist only on `main`, added in `58535be` for the SoftwareX
+paper after develop had diverged. All four are **ported, not dropped**:
+
+| File | Disposition |
+|---|---|
+| `design/StressConstrainedTopologyOptimization.m` | **Preserve.** A distinct formulation, to be completed in future work. It is *not* superseded by the `StressIntensity*` family despite the similar name — stress-constrained optimisation and stress-intensity ESO are different methods. |
+| `design/FatigueConstrainedTopologyOptimization.m` | Preserve — no successor anywhere downstream. |
+| `design/ReliabilityConstrainedTopologyOptimization.m` | Preserve — no successor anywhere downstream. |
+| `design/TopologyOptimization99.m` | Preserve — the classic 99-line reference implementation. |
+
+`analysis/ElastoPlasticAnalysis.m` is the one exception: deliberately deleted on develop's line
+in `a6b112a` (2023-11-13) and superseded by `ElastoPlasticity.m`. Safe to drop.
+
+This matters because an incomplete formulation looks exactly like dead code to the reference
+check that Rule 1 requires before deletion. `StressConstrainedTopologyOptimization` has no
+callers today and would be deleted by a mechanical sweep. It is exempt: **absence of callers is
+not evidence of deadness for a formulation still under development.**
+
 ---
 
 ## When the rules do not answer
