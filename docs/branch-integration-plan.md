@@ -337,16 +337,27 @@ Mechanical and self-contained; also shrinks the Phase 5 conflict surface.
 
 ### Phase 2 — Settle the three API questions
 
-Decide before touching a conflict marker. Recommended:
+Decide before touching a conflict marker.
 
-- **Assembly entry point** — adopt `assemblyGlobalMatrix(fname, x, is_const)`. It subsumes both
-  CAS_Arm calls (`is_const` covers the unweighted case). Keep thin deprecated wrappers so the
-  4 + 7 legacy call sites keep working during migration.
-- **Density weighting** — adopt Vibrations' consolidation. Port CAS_Arm's 2026 stress-constrained
-  additions to `LinearElasticityWeighted` into `LinearElasticity` first; do not drop them.
-- **DOF naming** — develop's `eDofs` / `shapeFn` wins everywhere.
+- **Assembly entry point** — **decided, [D6](integration-rules.md#d6--assembly-entry-point-keep-develops-two-method-shape-2026-09-10).**
+  Keep develop's `globalMatrixAggregation(fname)` + `globalMatrixAggregationWeighted(fname, x)`,
+  hoisted to `FEAnalysis` as CAS_Arm has them. **This reverses what this phase originally
+  recommended** — Vibrations' `assemblyGlobalMatrix(fname, x, is_const)` turned out to relocate
+  the density multiply from the element to the assembler, and to skip the weighting silently
+  when `numel(x)` does not match one group's element count. D1 wrappers carry Vibrations' 8
+  call sites to Phase 6. The concatenation axis moves with it, in the same commit.
+- **Density weighting** — **decided, [D7](integration-rules.md#d7--density-weighting-folds-into-linearelasticity-and-the-port-runs-three-ways-2026-09-10).**
+  Adopt Vibrations' consolidation, but the port runs three ways: CAS_Arm's stiffness cache and
+  adjoint solver in, Vibrations' `selfLoadFactor` in, and Vibrations' commented-out
+  `prepareRHSVectors()` call *not* carried over.
+- **DOF naming** — develop's `eDofs` / `shapeFn` wins everywhere. Decided, D2.
 
-**Gate:** the three answers written down.
+**Gate:** the three answers written down. ✅ **Met** — D2, D6, D7.
+
+> Deciding these surfaced two Rule 1 errors in `FEAnalysis`, both confined to the
+> multi-element-group path and both invisible with a single group: a `for k=max(size(...))`
+> missing its `1:`, and three inconsistent assumptions about the orientation of the `felems`
+> cell array. Recorded in D6; each gets its own commit before Phase 5 touches these methods.
 
 ### Phase 3 — Triage the library before merging into it
 

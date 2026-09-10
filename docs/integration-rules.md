@@ -57,12 +57,17 @@ cannot bisect a commit that did two things. So:
 > Fix it, commit it alone, say in the message what was wrong. Never inside a conflict resolution.
 
 Where the fix is needed to make a merge step verifiable at all, do it *before* that step rather
-than during it. Two such errors are already known:
+than during it. Four such errors are known:
 
 | Error | Fix | When |
 |---|---|---|
-| `Frame2D.computeStifnessMatrix` multiplies by `Ke`, never assigned | `Ke` → `Kl(:,:,k)` | Phase 1 *(moot if `Frame2D` is deleted as dead)* |
+| `Frame2D.computeStifnessMatrix` multiplies by `Ke`, never assigned | `Ke` → `Kl(:,:,k)` | Phase 1 — **done** *(moot if `Frame2D` is deleted as dead)* |
 | `FEAnalysis.plotSupport`: `1:size(irots)` is not a scalar colon operand | `1:max(size(irots))` | Before capturing main's baseline; already fixed on develop |
+| `FEAnalysis:17`: `for k=max(size(obj.felems))` is missing its `1:`, so the `eDofs` union runs on the last element group only | `for k=1:max(size(obj.felems))` | Before Phase 5 — found while deciding D6 |
+| `FEAnalysis` assumes the orientation of the `felems` cell array three different ways — `size(...,1)` at lines 31/36/45, `size(...,2)` at 266, `max(size(...))` elsewhere | Settle on one; `getElemIndices` is the one that matters | Before Phase 5 — found while deciding D6 |
+
+The last two are invisible with a single element group and wrong with several, which is why
+neither has been noticed. They are recorded in full in [D6](#d6--assembly-entry-point-keep-develops-two-method-shape-2026-09-10).
 
 #### Not an error — deferred under Rule 2
 
@@ -300,9 +305,14 @@ still converges to something plausible. That gap is why Rule 3 matters.
 | Fix the `Ke` bug | 1 | Allowed — merge-blocking |
 | Fix any *other* error found en route | 1 | Allowed — in its own commit |
 | Unify the `gp.stress` index order | 2 | Forbidden — not an error; breaks callers |
-| Choose one assembly API | 2 | Allowed |
+| Choose one assembly API | 2 | Allowed (D6) |
+| Relocate the SIMP weighting from the element into the assembler | 2 | Forbidden (D6) — the merge forces a name, not a layering |
+| Hoist `globalMatrixAggregationWeighted` to `FEAnalysis` | 1 | Allowed (D6) — moving an existing method up one class |
+| Fix the `felems` orientation and missing-`1:` errors | 1 | Allowed — own commit, before Phase 5 |
+| Adopt CAS_Arm's `matrixIndexCache` | 2 | Deferred (D6) — performance the merge does not force |
 | Add transitional wrappers | 1 | Allowed (D1) — must be removed in Phase 6 |
 | Restore `alphas` into the `Multi*` base | 1 | Allowed (D3) — moving existing code |
+| Restore `prepareRHSVectors()` that Vibrations commented out | 1 | Allowed (D7) — an omission, not an API decision |
 | Port main's 11 orphans (4 are design classes) | 1 | Allowed — moving existing code |
 | Write element/solver tests | 3 | Required |
 | Improve `Mesh` API ergonomics | 2 | Forbidden |
@@ -454,6 +464,174 @@ This matters because an incomplete formulation looks exactly like dead code to t
 check that Rule 1 requires before deletion. `StressConstrainedTopologyOptimization` has no
 callers today and would be deleted by a mechanical sweep. It is exempt: **absence of callers is
 not evidence of deadness for a formulation still under development.**
+
+### D6 — Assembly entry point: keep develop's two-method shape, hoisted *(2026-09-10)*
+
+**This reverses the plan's Phase 2 recommendation.** §8 proposed adopting Vibrations'
+`assemblyGlobalMatrix(fname, x, is_const)` on the grounds that `is_const` subsumes the
+unweighted case. Reading the three implementations rather than their signatures overturns that.
+
+**Adopted:** CAS_Arm's shape — `globalMatrixAggregation(fname)` and
+`globalMatrixAggregationWeighted(fname, x)`, both on `FEAnalysis`.
+
+This *is* develop's design. CAS_Arm changed two things about it, both of which are moves rather
+than inventions: it hoisted `globalMatrixAggregationWeighted` from `LinearElasticityWeighted`
+up to the base class, and it replaced grow-in-loop concatenation with a preallocated cell plus
+`vertcat`. Moving an existing method up one class is Rule 1 "moving what already exists".
+
+#### Why not Vibrations' entry point
+
+**1. It is a layering change, not a rename.** develop's elements apply the density themselves:
+
+```matlab
+% elements/PlaneElem.m — computeStifnessMatrix(obj, nodes, varargin)
+if ( nargin == 3 ), x = varargin{1}; else, x = ones(nelems,1); end
+...
+K(:,:,k) = x(k)*Ke;
+```
+
+Vibrations moved that multiply up into the assembler (`Ke = reshape(x,1,1,ne) .* Ke`) and left
+the elements unweighted. On Vibrations, `PlaneElem` and `SolidElasticElem` **no longer define
+`computeStifnessMatrix` at all** — the base `FiniteElement.computeStifnessMatrix(nodes, el_idx)`
+does, and its third argument means an element index, not a density. Adopting the signature means
+adopting the layering, which rewrites every element class in `elements/`.
+
+Rule 2's test settles it: *would this change be unnecessary if the branches had never diverged?*
+Choosing a name between three dialects — forced by the merge. Relocating the SIMP weighting
+between two layers — not forced. The first is in scope, the second is not.
+
+**2. Its weighting silently no-ops on multi-group models.** The multiply is guarded:
+
+```matlab
+if (numel(x)==ne)          % ne = this element group's count
+    Ke = reshape(x,1,1,ne) .* Ke;
+end
+```
+
+When `x` is the global density vector and `ne` is one group's element count, the guard fails,
+the weighting is **skipped with no error**, and the solve proceeds against an unweighted
+stiffness matrix. develop and CAS_Arm slice per group — `x(ei{k})` via `getElemIndices()` —
+which is correct by construction.
+
+The configuration that triggers this is the multi-element-group model, which is precisely what
+develop's DOF refactor exists to enable and what the five outstanding multi-block fixtures
+exercise. Importing a silent-wrong-answer path into the one capability the merge is being done
+for is not a trade worth making.
+
+#### Migrating Vibrations' call sites
+
+Vibrations' 8 `assemblyGlobalMatrix` call sites get a D1 wrapper, removed in Phase 6:
+
+```matlab
+function K = assemblyGlobalMatrix(obj, fname, x, is_const)   % deprecated, Phase 6
+    if is_const, fname = 'computeStifnessMatrixConst'; end
+    K = obj.globalMatrixAggregationWeighted(fname, x);
+end
+```
+
+#### Coupled change — the concatenation axis moves with it
+
+`globalMatrixIndices` and the aggregator must use the **same** concatenation axis, because
+`sparse(I,J,K)` consumes all three as `I(:), J(:), V(:)` and the linear order must agree:
+
+| Branch | `globalMatrixIndices` | Aggregator |
+|---|---|---|
+| `develop` | horizontal — `[ I reshape(Ie',[],1) ]` | horizontal — `[ K elemK ]` |
+| `Vibrations` | vertical — `[ I; reshape(...) ]` | vertical — `[ K; Ke(:) ]` |
+| `CAS_Arm` | vertical | vertical — `vertcat(parts{:})` |
+
+Each branch is internally consistent, which is why all three run. A resolution that takes the
+aggregator from one branch and `globalMatrixIndices` from another produces a global matrix whose
+entries land at the wrong `(I,J)` — and **a single element group masks it completely**, so every
+smoke example would still pass.
+
+> **Adopt CAS_Arm's vertical form for both methods, in one commit. Never split them across two.**
+
+CAS_Arm also caches the index arrays (`matrixIndexCache`). That is a performance change the
+merge does not force — **defer it**, and take it only if a profile later justifies it.
+
+#### Two Rule 1 errors found while deciding this
+
+Both are in the multi-element-group path, both are invisible with a single group, and both get
+their own commit before the Phase 5 merge touches these methods:
+
+| Error | Location | Effect |
+|---|---|---|
+| `for k=max(size(obj.felems))` — missing `1:` | `analysis/FEAnalysis.m:17` | The `eDofs` union runs on the **last group only**. With one group `max(size)==1`, so it is accidentally correct today. |
+| `felems` orientation is assumed three different ways | `size(...,1)` at lines 31, 36, 45; `size(...,2)` at 266; `max(size(...))` elsewhere | `getElemIndices` returns one entry instead of *n* when the cell array's orientation disagrees, so `x(ei{k})` weights the wrong elements. |
+
+The second matters directly to this decision: the per-group slicing that makes CAS_Arm's
+aggregator correct depends on `getElemIndices` being right, and it is not yet.
+
+### D7 — Density weighting folds into `LinearElasticity`, and the port runs three ways *(2026-09-10)*
+
+**Adopted:** Vibrations' consolidation — one `LinearElasticity` carrying an `isConst` flag,
+`LinearElasticityWeighted` deleted. The plan's §8 recommendation stands.
+
+What does **not** stand is its framing of the cost — "port CAS_Arm's 2026 stress-constrained
+additions first". The consolidated class has to absorb work from all three branches, and one of
+the three contributions is a *removal* that must not be carried over.
+
+**From CAS_Arm's `LinearElasticityWeighted` (2026-05)** — Vibrations' consolidated class has no
+equivalent of any of it:
+
+- the assembled-stiffness cache — `cachedWeightedX`, `cachedWeightedKvals`,
+  `cachedWeightedFunction`, the `retainStiffness` flag, `hasCachedWeightedStiffness`,
+  `clearWeightedStiffnessCache`
+- `solveAdjointWithLoad(xPenal, P_adj_fem)` — adjoint sensitivity analysis reusing that cache
+- `weightedStiffnessFunction()`, `saveMatrices(filename)`
+
+The cache and the adjoint solve are one feature: `solveAdjointWithLoad` exists to avoid
+reassembling `K` for the adjoint system. Porting either alone loses the point.
+
+**From Vibrations:** `selfLoadFactor` and the `loadElementsSelfWeight(x, 0.1)` path in `solve`.
+
+**From develop and CAS_Arm — restore `prepareRHSVectors()`.** Vibrations' `LinearElasticity.solve`
+has it commented out:
+
+```matlab
+% bj.prepareRHSVectors();          % Vibrations — typo'd out, not removed deliberately
+```
+
+develop and CAS_Arm both call it, Vibrations still *defines* it, and six other Vibrations
+analyses still call it — so this is local to `LinearElasticity`, not a considered API change.
+Taking Vibrations' method body wholesale imports the omission silently.
+
+It is not cosmetic. `prepareRHSVectors` calls `setCurrentLoadToRightHandSideVectors` and then
+zeroes `Pnodal`, so it is the step that moves accumulated nodal load into the RHS. The plan's
+§6 claim that the multi-RHS load API is "present and compatible on all three" is true of the
+*methods* and false of this *call path*: on Vibrations' `LinearElasticity` it is never invoked.
+
+#### Signature reconciliation
+
+Three arities and two different return values meet here:
+
+| Branch | Signature | Returns |
+|---|---|---|
+| `develop` | `LinearElasticity.solve()` | `[qn, K]` — nodal displacements **and** the global matrix |
+| `develop` | `LinearElasticityWeighted.solveWeighted(x)` | `qfem` |
+| `CAS_Arm` | `LinearElasticityWeighted.solveWeighted(x, retainStiffness)` | `qfem` |
+| `Vibrations` | `LinearElasticity.solve(x)` | `qfem` |
+
+Consolidated signature: **`solve(x, retainStiffness)`, both optional.** Absent `x` means
+unweighted, preserving develop's `solve()` call sites; `retainStiffness` defaults false,
+preserving CAS_Arm's six-argument sites and Vibrations' `solve(x)` alike.
+
+The return value is the sharp edge: develop's `solve()` yields `[qn, K]` and the others yield
+`qfem`. Callers taking two outputs must keep working, so the consolidated `solve` returns
+`[qfem, K]` with `K` computed only when a second output is requested (`nargout > 1`).
+
+#### Scope note
+
+**44 files on `develop` reference `LinearElasticityWeighted`**, independently of the 51 stale
+callers the plan attributes to Vibrations. Those 44 are not broken today — the class exists on
+develop — but D7 makes them all Phase 6 migration work. Phase 6's caller migration is therefore
+substantially larger than §4.3's "51 files" implies, and should be planned as the bulk of that
+phase rather than one bullet in it.
+
+**Rule 3 consequence.** The patch test already constructs `LinearElasticityWeighted` and calls
+`solveWeighted`, so it is the canary for this change — it is the first thing that must be made
+to pass again once the fold lands, exactly as §"The constant-stress patch test" anticipated.
 
 ---
 
