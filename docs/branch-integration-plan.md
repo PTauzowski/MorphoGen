@@ -166,7 +166,31 @@ The arm work moved to a self-contained `examples/ManipulatorArm/` in January 202
 
 Eighteen months of parallel work, 145 files — one conflicting example script.
 
-### 5.2 What leaked into the library
+### 5.2 Study register
+
+Which paper each branch belongs to is currently recorded nowhere — not in `README.md`, not in
+the branches, only in the branch names, and those are cryptic (`CASXsubmission`, `CAS_Arm`).
+This is the gap that makes the whole history hard to reason about, so the register starts here
+and moves into per-study `README.md` files during Phase 3.
+
+| Study | Branch | Folder after merge | Publication |
+|---|---|---|---|
+| Robotic arm | `CAS_Arm` | `examples/ManipulatorArm/` *(exists)* | [Overleaf](https://www.overleaf.com/project/688de221e7936ceed901d5a6) — in preparation |
+| Beam vibrations | `Vibrations` | `examples/Vibrations/` *(Phase 3)* | *to fill in* |
+| Pillar | `Vibrations` | `examples/Pillar/` *(exists)* | *to fill in* |
+| Buckling | `Buckling` ⊂ `Vibrations` | folded into the above | *to fill in* |
+| CAS submission | `CASXsubmission` ⊂ all | folded into the above | *to fill in* |
+| SoftwareX release | `main` | `examples/benchmarkProblems/`, `examples/modularStructures/` | *DOI to fill in* |
+
+Note that `Vibrations` carries **two** studies — the beam-vibration work and the Pillar model.
+They separate cleanly into two folders at Phase 3; the branch name only ever named one of them,
+which is itself an argument for the folder-per-study convention.
+
+Two cautions on links. An Overleaf project URL is access-controlled, not a citation — it is
+useful to collaborators and opaque to everyone else, so once a study is published the DOI should
+sit beside it. And the link belongs in the study's `README.md`, never in the code.
+
+### 5.3 What leaked into the library
 
 Every file each branch added to `analysis/`, `design/`, `elements/`, classified by who calls it:
 
@@ -295,12 +319,18 @@ git switch -c prep/arm        origin/CAS_Arm
 ```
 
 - **Delete the dead** (7 files). Verify with a whole-tree reference check, not by eye.
-- **Demote the study-specific** (9 files) into each study's `HelperFunctions/`.
+- **Demote the study-specific** (5 files) into the arm study's `HelperFunctions/`.
 - **Give each study a folder.** Move the beam-vibration and Pillar studies into
   `examples/Vibrations/` and `examples/Pillar/`, as the arm study already is. This is where the
   24 hunks of example conflict go away.
+- **Give each study a `README.md`** — two or three lines: what the study does, which paper it
+  belongs to, and the link. Populate from the register in §5.2 and fill its gaps while the
+  people who know them are still in the conversation. This is the cheapest step in the plan and
+  the one that prevents the next reader facing the question this survey had to answer by
+  archaeology.
 
-**Gate:** smoke harness still green on each prep branch — a demoted file is still on the path.
+**Gate:** smoke harness still green on each prep branch — a demoted file is still on the path;
+every study folder has a README naming its paper.
 
 ### Phase 4 — Stage one: combine the feature branches
 
@@ -338,8 +368,9 @@ numerical values match main's references.
 - Migrate the **51 files** still calling `LinearElasticityWeighted` to
   `LinearElasticity(felems, mesh, isConst)` + `solve(x)`; remove the Phase 2 wrappers.
 - **Port main's six orphan examples** into the current layout before re-pointing it.
-- Untrack accumulated junk: 7 `.DS_Store` + 5 `.idea/` on Vibrations, 4 + 6 on CAS_Arm, 4 LaTeX
-  build artefacts (`.aux`, `.log`, `.out`, `.toc`) under `docs/` on CAS_Arm. Extend `.gitignore`.
+- Untrack accumulated junk: 7 `.DS_Store` + 5 `.idea/` on Vibrations, 4 + 6 on CAS_Arm.
+  Extend `.gitignore` to cover these **and** the article material excluded by D4 (`ai/`,
+  `*.tex`, `*.bib`, and LaTeX build artefacts), so the exclusion is enforced not remembered.
 - **Tag each study branch where it stands** — `paper/casx-2024`, `paper/buckling`,
   `paper/vibrations`, `paper/cas-arm`, `release/softwarex`.
 - Delete the disposable branches (`prep/*`, `integration/features`).
@@ -349,9 +380,12 @@ numerical values match main's references.
 
 **Gate:** no references to removed APIs; main's unique examples preserved; single active line.
 
-> Separate conversation: the `ai/` directory on Vibrations (27 files of paper-writing prompts)
-> and `resources/project/` (~470 MATLAB project XML files on every branch, churning constantly).
-> Neither is source code; the latter is a strong candidate for untracking.
+> **Article material is excluded entirely** — see decision **D4** in
+> [integration-rules.md](integration-rules.md). The `ai/` prompt system (27 files on Vibrations,
+> 3 on CAS_Arm) now lives in its own repository, and the `.tex` method paper on CAS_Arm is
+> mastered on Overleaf. 35 files are dropped rather than merged; no `.m` file references any of
+> them. `resources/project/` (~470 MATLAB project XML files on every branch, churning constantly)
+> remains a separate question.
 
 ---
 
@@ -390,14 +424,57 @@ reconciliation pass.
 
 ## 11. Convention going forward
 
+### How the divergence actually happened
+
+These branches were made under deadline. A conference date approaches, a branch is cut to solve
+one task, the paper ships, and nobody returns. That is not carelessness — it is the rational
+move when the deadline is real and the library does not do what you need. It also explains the
+shape of the mess precisely: **the divergence is concentrated in the library, not the examples.**
+Under time pressure you change whatever is nearest, and the nearest thing is the class you are
+already calling.
+
+Any convention that only works when there is time will therefore break at the next deadline.
+The rule below is designed to be the *fast* path, not the virtuous one.
+
+### The rule
+
 | Kind of work | Lives in | Lifetime |
 |---|---|---|
 | A paper, submission, or specific task | `examples/<StudyName>/`, `examples/<StudyName>/HelperFunctions/` | Permanent — the record of what was published. |
-| A capability the study needs and the library lacks | `analysis/`, `elements/`, `design/`, `mesh/` | Permanent, written to serve more than the one study. |
+| A capability meant to be reused | `analysis/`, `elements/`, `design/`, `mesh/` | Permanent, tested, written to serve more than one study. |
 | The branch itself | short-lived, off `develop` | Weeks, not years. Merged and retired; the study survives as its folder. |
 
-Two habits carry most of the benefit: **name the study folder for the study**
-(`ManipulatorArm`, `Pillar`, `BeamVibrations`) rather than filing scripts under shared
-`models/` and `tests/` directories where two papers will eventually want the same filename;
-and **when a study needs the library to change, change the library on a branch that merges
-within the week**, so the next study starts from that change instead of forking around it.
+### Under deadline: copy down, never up
+
+The pressure valve is explicit, and it is what makes this survivable:
+
+> **When you need library behaviour the library does not have, and the deadline is close: copy
+> what you need into `examples/<YourStudy>/HelperFunctions/` and change it there. Never edit the
+> shared library under deadline pressure.**
+
+This is *faster* than the alternative — no consideration of other callers, no tests, no review,
+nothing to coordinate. It is also invisible to everyone else: a duplicated helper in your own
+folder conflicts with nobody, whereas an edit to `FEAnalysis.m` conflicts with everybody. The
+cost is duplication, which is cheap and local. The cost of the alternative is what this document
+exists to fix.
+
+Promotion into the library is then a **separate, deliberate act** taken when there is time —
+when a second study wants the same thing, which is the real evidence that it is library
+material. That is when it gets generalised, tested, and reviewed.
+
+The one habit that carries the rest: **name the study folder for the study** (`ManipulatorArm`,
+`Pillar`, `BeamVibrations`) rather than filing scripts under shared `models/` and `tests/`
+directories where two papers will eventually want the same filename.
+
+### Why this makes tests affordable
+
+Testing everything is not affordable under deadline, and a rule that demands it will be ignored.
+The bar is asymmetric on purpose:
+
+| Code | Tests required |
+|---|---|
+| Study code in `examples/<Study>/` | **No.** It is a record of one experiment; its correctness is evidenced by the paper. |
+| Library code in `analysis/`, `elements/`, `design/`, `mesh/`, `math/` | **Yes.** Other studies depend on it, so a silent break costs more than one paper. |
+
+This puts the cost exactly where the benefit is, and gives the promotion step its meaning: the
+test suite is the price of admission to the library, paid deliberately and never under deadline.

@@ -54,7 +54,7 @@ Any other bug found during the merge is **recorded, not fixed** — open an issu
 A bug fix silently bundled into a merge commit is indistinguishable from a merge error when the
 numbers later disagree.
 
-**Transitional wrappers — open question.** The plan proposes thin deprecated wrappers so the
+**Transitional wrappers — decided, see D1.** The plan proposes thin deprecated wrappers so the
 11 legacy `globalMatrixAggregation` call sites keep working during Phase 5, removed in Phase 6.
 Strictly, a wrapper is new code. Two readings, both defensible:
 
@@ -62,8 +62,8 @@ Strictly, a wrapper is new code. Two readings, both defensible:
   by the end of Phase 6.
 - *Forbidden* — migrate all 11 call sites in one commit and never introduce the wrapper.
 
-**This needs a decision before Phase 2.** The second is cleaner and the call-site count is
-small enough to make it practical.
+**Decided: permitted as scaffolding** — see D1 below. The obligation that comes with it is
+removal in Phase 6; a wrapper that outlives the merge has become a feature by accident.
 
 ---
 
@@ -91,7 +91,7 @@ Redesigning `DOFManager` beyond what is needed to make it work with the merged e
 introducing an interface or base class that neither branch has; changing the `Mesh` API because
 the merged version is awkward; adopting a package/namespace layout.
 
-### The unsettled architectural question
+### The architectural question — decided (D2)
 
 develop's DOF refactor is **half-finished**: `FiniteElement` declares `eDofs`/`shapeFn`, but 11
 files still read `obj.ndofs` and 8 read `obj.sf`. There are two ways to satisfy Rule 2, and the
@@ -103,12 +103,12 @@ rules as written do not choose between them:
 - **(b) Revert it.** Drop the refactor, take the working element classes from `CAS_Arm`, and
   land the studies on the older architecture that demonstrably runs.
 
-**(a) is recommended** — the capability is real, `CAS_Arm` has already partly adopted `eDofs`
-(11 files), and reverting would discard 39 commits of deliberate work. But (b) is a legitimate
-reading of "preserve the existing architecture", and choosing (a) should be a recorded decision
-rather than an assumption. Note that (a) carries a known risk: because develop does not run,
-`DOFManager` has never been exercised against real models, so Phase 5 may surface genuine design
-gaps in `initDOFs` rather than mere merge conflicts.
+**(a) was chosen** — see [D2](#d2--develops-dof-refactor-is-finished-not-reverted-2026-09-10).
+The capability is real, `CAS_Arm` has already partly adopted `eDofs` (11 files), and reverting
+would discard 39 commits of deliberate work. (b) remained a legitimate reading of "preserve the
+existing architecture", which is why the choice is recorded rather than assumed. The known risk
+stands: because develop does not run, `DOFManager` has never been exercised against real models,
+so Phase 5 may surface genuine design gaps in `initDOFs` rather than mere merge conflicts.
 
 ---
 
@@ -182,6 +182,22 @@ grow without limit and stall the merge indefinitely. The bound:
 **Tests must cover the 14 library files the merge actually touches. Coverage beyond that is
 follow-up work, tracked separately, and does not gate the merge.**
 
+Study code is explicitly **not** in scope. `examples/<Study>/` is the record of one experiment
+and its correctness is evidenced by the paper it produced; testing it now would be auditing
+published results, which is a different project. The asymmetry is deliberate and permanent:
+
+| Code | Tests required |
+|---|---|
+| Study code in `examples/<Study>/` | No |
+| Library code in `analysis/`, `elements/`, `design/`, `mesh/`, `math/` | Yes |
+
+The reason is cost, not principle. These branches exist because a conference deadline made
+forking the library cheaper than extending it properly. A test rule that ignores that pressure
+will be ignored in turn at the next deadline. Requiring tests only for library code puts the
+cost where the benefit is — many studies depend on the library, so a silent break there costs
+more than one paper — and makes the library's test suite the deliberate price of admission,
+paid when a capability is promoted, never under deadline.
+
 ### Relationship to the smoke harness
 
 The plan's Phase 0 smoke harness and these unit tests answer different questions and both are
@@ -209,7 +225,8 @@ still converges to something plausible. That gap is why Rule 3 matters.
 | Fix the `Ke` bug | 1 | Allowed — merge-blocking |
 | Fix any *other* bug found en route | 1 | **Record, do not fix** |
 | Choose one assembly API | 2 | Allowed |
-| Add transitional wrappers | 1 | **Undecided — settle before Phase 2** |
+| Add transitional wrappers | 1 | Allowed (D1) — must be removed in Phase 6 |
+| Restore `alphas` into the `Multi*` base | 1 | Allowed (D3) — moving existing code |
 | Port main's 6 orphan examples | 1 | Allowed — moving existing code |
 | Write element/solver tests | 3 | Required |
 | Improve `Mesh` API ergonomics | 2 | Forbidden |
@@ -307,6 +324,40 @@ merge's job, not new development. The optional parameter plumbing falls under D1
 **Rule 3 consequence:** this is a required test. A multi-load optimiser whose weighting silently
 degrades to uniform produces plausible output and passes any smoke test. Assert that non-uniform
 `alphas` yield a different intensity field than uniform ones.
+
+### D4 — Article material is excluded from the merge *(2026-09-10)*
+
+The article-writing prompt system has moved to its own repository and is developed there as a
+distinct project. The articles themselves are mastered on Overleaf. Neither belongs in a
+computational codebase, and neither is merged.
+
+**Excluded — 35 files, dropped rather than resolved:**
+
+| Material | Branch | Files |
+|---|---|---|
+| `ai/` — prompt system, workflows, agents, schemas | Vibrations | 27 |
+| `ai/out/` — generated literature and style analyses | CAS_Arm | 3 |
+| `docs/frameBasedSolver_method.tex` | CAS_Arm | 1 |
+| `docs/frameBasedSolver_method.{aux,log,out,toc}` — LaTeX build artefacts | CAS_Arm | 4 |
+
+**Verified safe:** no `.m` file on either branch references `ai/` or
+`frameBasedSolver_method`. The exclusion breaks no code path.
+
+**Consequences:**
+
+1. Add `ai/`, `*.tex`, `*.bib` and the LaTeX build artefacts (`*.aux`, `*.log`, `*.out`,
+   `*.toc`, `*.bbl`, `*.blg`, `*.synctex.gz`) to `.gitignore` in Phase 6, so the exclusion is
+   enforced rather than remembered.
+2. `docs/` on `develop` becomes unambiguously *documentation about the code* — this plan, these
+   rules — and never paper text. The name collision with CAS_Arm's `docs/` resolves itself once
+   the `.tex` material is dropped.
+3. Where a study folder benefits from naming its publication, that goes in a short
+   `examples/<Study>/README.md` — a citation and a link, not the manuscript. Only one study
+   currently has a README; the rest can gain one during Phase 3 at negligible cost.
+
+This does not apply to genuine code documentation: method notes explaining *what the
+implementation does* remain welcome in `docs/`. The line is between documenting the software and
+drafting a paper.
 
 ---
 
