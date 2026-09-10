@@ -303,7 +303,7 @@ still converges to something plausible. That gap is why Rule 3 matters.
 | Choose one assembly API | 2 | Allowed |
 | Add transitional wrappers | 1 | Allowed (D1) — must be removed in Phase 6 |
 | Restore `alphas` into the `Multi*` base | 1 | Allowed (D3) — moving existing code |
-| Port main's 6 orphan examples | 1 | Allowed — moving existing code |
+| Port main's 11 orphans (4 are design classes) | 1 | Allowed — moving existing code |
 | Write element/solver tests | 3 | Required |
 | Improve `Mesh` API ergonomics | 2 | Forbidden |
 | Add a new analysis type | 1 | Forbidden |

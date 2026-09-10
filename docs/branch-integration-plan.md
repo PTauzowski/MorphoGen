@@ -57,7 +57,7 @@ flowchart LR
 | `CAS_Arm` | 2026-05-20 | 90 | **Merge.** 145-file arm study; only branch that runs. |
 | `Buckling` | 2025-10-30 | 0 | Ancestor of Vibrations → tag `paper/buckling` |
 | `CASXsubmission` | 2024-08-19 | 0 | Ancestor of all three → tag `paper/casx-2024` |
-| `main` | 2025-02-24 | 23 | **Runs.** Numerical oracle; port 6 orphan examples before re-pointing. |
+| `main` | 2025-02-24 | 23 | **Runs.** Numerical oracle; port 11 orphans (incl. 4 design classes) before re-pointing. |
 | `refactoring` | 2024-08-19 | 14 | Fully contained by basename — no unique files → tag and retire |
 
 ---
@@ -130,14 +130,30 @@ MATLAB tolerated a non-scalar colon operand, R2025b rejects it. `develop` alread
 `1:max(size(irots))`; both feature branches refactored the function away. The pattern appears
 nowhere else in the repository. With that one fix applied locally, main runs clean.
 
-**Six of main's example files exist on no other branch** (the rest were relocated, not lost —
-`Beam99.m` and friends live under `examples/topologyOpt/benchmarks/` downstream):
+**Eleven of main's files exist on no other branch.** Six are example scripts; the other five
+are *library* code, which matters far more. The rest of main's examples were relocated, not lost
+— `Beam99.m` and friends live under `examples/topologyOpt/benchmarks/` downstream.
+
+Library (added on main in `58535be`, 2024-04-23 "SoftX c.d." — written for the SoftwareX paper
+*after* develop had diverged, so they were never on develop's line at all):
+
+| File | Note |
+|---|---|
+| `design/FatigueConstrainedTopologyOptimization.m` | no successor downstream |
+| `design/ReliabilityConstrainedTopologyOptimization.m` | no successor downstream |
+| `design/StressConstrainedTopologyOptimization.m` | possibly superseded by the `StressIntensity*` family — different formulation, needs a call |
+| `design/TopologyOptimization99.m` | the classic 99-line reference implementation |
+| `analysis/ElastoPlasticAnalysis.m` | **safe to drop** — deliberately deleted on develop's line in `a6b112a` (2023-11-13) and superseded by `ElastoPlasticity.m` |
+
+Examples:
 
 - `RobotArm.m`, `CantileverVarCutThreshold.m`
 - `TrussZ_bending_shear.m`, `TrussZ_bending_torsion.m`, `TrussZ_shear_torsion.m`,
   `TrussZ_iterative_plots_torsion.m`
 
-The `cutThreshold` feature itself survives on `Vibrations`.
+The `cutThreshold` feature itself survives on `Vibrations`. Fast-forwarding `main` would drop
+four published topology-optimisation capabilities, not merely six scripts — an earlier count of
+six came from scanning only `examples/`.
 
 ### 4.3 Vibrations — a consolidation with 51 stale callers
 
@@ -384,7 +400,8 @@ numerical values match main's references.
 
 - Migrate the **51 files** still calling `LinearElasticityWeighted` to
   `LinearElasticity(felems, mesh, isConst)` + `solve(x)`; remove the Phase 2 wrappers.
-- **Port main's six orphan examples** into the current layout before re-pointing it.
+- **Port main's eleven orphans** into the current layout before re-pointing it — the four
+  `design/` classes first, since those are library capability rather than scripts.
 - Untrack accumulated junk: 7 `.DS_Store` + 5 `.idea/` on Vibrations, 4 + 6 on CAS_Arm.
   Extend `.gitignore` to cover these **and** the article material excluded by D4 (`ai/`,
   `*.tex`, `*.bib`, and LaTeX build artefacts), so the exclusion is enforced not remembered.
