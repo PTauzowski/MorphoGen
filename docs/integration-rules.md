@@ -21,6 +21,8 @@ from the merge or from an improvement made along the way.
 - Moving a file from the library into a study folder (`examples/<Study>/HelperFunctions/`).
 - Editing a call site so existing code keeps working under the API chosen in Phase 2.
 - Deleting code that is dead — see the ruling below.
+- **Fixing errors** — code that cannot run, or that computes the wrong answer.
+  One condition: **in its own commit, never bundled with a merge resolution.** See the ruling below.
 - Writing tests. This is the stated exception; see Rule 3.
 
 ### Forbidden
@@ -43,31 +45,40 @@ calls is work with no product. Deletion is permitted, subject to two conditions:
 1. Deadness is proven by a whole-tree reference check, not by inspection.
 2. The branch tip is tagged first, so the file stays reachable forever.
 
-**Bug fixes are permitted only where they block the merge.** Two are known:
+**Fixing errors is permitted — in its own commit.** An error is code that cannot run, or that
+computes the wrong answer. Merging something known to be broken helps nobody, and a merge is
+when these surface, so they get fixed.
 
-| Fix | Why it is permitted |
-|---|---|
-| `Frame2D.computeStifnessMatrix`: `Ke` → `Kl(:,:,k)` | `Ke` is never assigned; the function cannot run. *(Moot if `Frame2D` is deleted as dead.)* |
-| `FEAnalysis.plotSupport`: `1:size(irots)` → `1:max(size(irots))` | Blocks every example on `main`, which is the numerical oracle. Already fixed on develop. |
+The single condition exists because of how this codebase fails. There is no numerical baseline
+yet, results are plausible-looking floating-point fields, and a fix bundled into a merge
+resolution is **indistinguishable from a merge error** when the numbers later disagree — you
+cannot bisect a commit that did two things. So:
 
-Any other bug found during the merge is **recorded, not fixed** — open an issue and move on.
-A bug fix silently bundled into a merge commit is indistinguishable from a merge error when the
-numbers later disagree.
+> Fix it, commit it alone, say in the message what was wrong. Never inside a conflict resolution.
 
-#### Recorded, not fixed
+Where the fix is needed to make a merge step verifiable at all, do it *before* that step rather
+than during it. Two such errors are already known:
 
-**Gauss-point result layout is inconsistent between element families.**
-`PlaneStressElem` has its `permute` call commented out and indexes
-`results.gp.stress` as `(component, elem, ip)`; `SolidElasticElem` permutes to
-`(elem, ip, component)`. So `gp.stress(1,:,:)` means *sxx everywhere* for plane elements and
-*element 1, all points, all components* for solids.
+| Error | Fix | When |
+|---|---|---|
+| `Frame2D.computeStifnessMatrix` multiplies by `Ke`, never assigned | `Ke` → `Kl(:,:,k)` | Phase 1 *(moot if `Frame2D` is deleted as dead)* |
+| `FEAnalysis.plotSupport`: `1:size(irots)` is not a scalar colon operand | `1:max(size(irots))` | Before capturing main's baseline; already fixed on develop |
 
-The code is **identical on `develop`, `Vibrations` and `CAS_Arm`**, so this is pre-existing and
-not a merge artefact — which is exactly why it is recorded rather than fixed here. It is a
-latent trap for any code that consumes both families, and worth an issue for after the merge.
+#### Not an error — deferred under Rule 2
 
-Found by the constant-stress patch test on its first run, which is a fair advertisement for
-writing that test early.
+**Gauss-point result layout differs between element families.** `PlaneStressElem` has its
+`permute` call commented out and indexes `results.gp.stress` as `(component, elem, ip)`;
+`SolidElasticElem` permutes to `(elem, ip, component)`. So `gp.stress(1,:,:)` means
+*sxx everywhere* for plane elements and *element 1, all points, all components* for solids.
+
+Nothing here computes a wrong answer — each family is self-consistent and its own callers index
+it correctly — so this is not an error under the rule above. Unifying it would change a public
+result layout and break every caller of one family or the other, which makes it an architectural
+change the merge does not force: **out of scope under Rule 2**, and worth an issue afterwards.
+
+The code is identical on `develop`, `Vibrations` and `CAS_Arm`, so it is pre-existing rather
+than a merge artefact. Found by the constant-stress patch test on its first run, which is a fair
+advertisement for writing that test early.
 
 **Transitional wrappers — decided, see D1.** The plan proposes thin deprecated wrappers so the
 11 legacy `globalMatrixAggregation` call sites keep working during Phase 5, removed in Phase 6.
@@ -287,7 +298,8 @@ still converges to something plausible. That gap is why Rule 3 matters.
 | Delete the 7 dead files | 1 | Allowed, with proof + tag |
 | Finish develop's `eDofs` rename | 2 | Allowed — merge-blocking |
 | Fix the `Ke` bug | 1 | Allowed — merge-blocking |
-| Fix any *other* bug found en route | 1 | **Record, do not fix** |
+| Fix any *other* error found en route | 1 | Allowed — in its own commit |
+| Unify the `gp.stress` index order | 2 | Forbidden — not an error; breaks callers |
 | Choose one assembly API | 2 | Allowed |
 | Add transitional wrappers | 1 | Allowed (D1) — must be removed in Phase 6 |
 | Restore `alphas` into the `Multi*` base | 1 | Allowed (D3) — moving existing code |
