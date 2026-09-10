@@ -177,18 +177,45 @@ between the branches, deliberately and on develop's side.
 > `main` as-is**. The reshape is not the cause. Recorded because it is the answer most likely to
 > be assumed by the next reader.
 
+### `develop` @ `ff92833` — the pre-merge regression baseline
+
+Where `main` cannot serve as an oracle, `develop`'s own pre-merge values still can. Phase 5's
+question is *"did the merge change anything?"*, not *"does this match the 2025 release?"* — so
+for the four runs that cannot be compared to `main`, the bar becomes reproducing these:
+
+| Benchmark | Optimiser | `objF` | Volume fraction | Elements | Iterations |
+|---|---|---:|---:|---:|---:|
+| `Cantilever` (res 40) | ESO | 1270.06320313 | 0.396894750978 | 3200 | 311 |
+| `Cantilever` (res 40) | SIMP | 76.7366325352 | 0.399999999808 | 3200 | 113 |
+| `Beam99` (res 40) | ESO | 1915.94611678 | 0.399155440995 | 4800 | 422 |
+| `Beam99` (res 40) | SIMP | 230.191384232 | 0.399999999988 | 4800 | 1017 |
+| `Lshape` (res 20) | ESO | 2591.90024561 | 0.399984605804 | 6480 | 985 |
+| `Lshape` (res 20) | SIMP | 207.330342294 | 0.400000000146 | 6480 | 333 |
+
+All six converge on `develop`. Note that `Lshape` — the benchmark that never converges on
+`main` — reaches its volume target on both optimisers here, which is the clearest single
+statement that the corrected selectors are right.
+
+Captured after the `plotSolid` migration in `ff92833`; before it, `Beam99` and `Lshape` could
+not run on `develop` at all.
+
 ### What actually gates Phase 5
 
 Of the six optimiser runs the plan nominated, exactly **one** is a valid numerical parity target:
 
-| Target | Status |
-|---|---|
-| `Cantilever` res 40, SIMP | **The gate.** Already reproduces exactly. |
-| `Beam99`, SIMP | Valid — comparable, `main` value recorded above |
-| `Cantilever`/`Beam99`, ESO | Not comparable — the removal schedule differs by design |
-| `Lshape`, either | Not comparable — `main`'s problem is degenerate and does not converge |
+| Target | Gated against `main`? | Bar for Phase 5 |
+|---|---|---|
+| `Cantilever` res 40, SIMP | **Yes** | Reproduce `main`. Already does, exactly. |
+| `Beam99`, SIMP | **Yes** | Reproduce `main`. Already does, exactly. |
+| `Cantilever`/`Beam99`, ESO | No — removal schedule differs by design | Reproduce **develop's** pre-merge values above |
+| `Lshape`, either | No — `main`'s problem is degenerate | Reproduce **develop's** pre-merge values above |
 
-R7 should be read against that table rather than against "the three benchmarks".
+R7 should be read against that table rather than against "the three benchmarks". Losing `main`
+as an oracle for four of the six runs does **not** leave them ungated: the merge is not supposed
+to change any of them, so `develop`'s own pre-merge numbers are a sufficient regression bar. The
+two `main`-backed rows are stronger — they check against an independently published
+implementation rather than against ourselves — which is exactly why it matters that those two
+are the ones exercising assembly, solve, sensitivity and DOF bookkeeping.
 <!-- ORACLE_TABLE_END -->
 
 ---
