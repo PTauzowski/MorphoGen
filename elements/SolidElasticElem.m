@@ -445,7 +445,7 @@ classdef SolidElasticElem < FiniteElement
             obj.results.gp.all(11,:,:) = syz;
             obj.results.gp.all(12,:,:) = sxz;
             obj.results.gp.all(13,:,:) = sHM;
-            obj.results.gp.all(14,:,:) = repmat(x,1,nip);
+            obj.results.gp.all(14,:,:) = repmat(reshape(x(:)', 1, nelems, 1), 1, 1, nip);
         end
         function faces = findFaces( obj, fnodes )
               allfaces = obj.multiObjectList( obj.shapeFn.faces );
