@@ -30,7 +30,8 @@ Three findings drive everything below:
 
 `main` is a separate case: it is the SoftwareX publication line, it has not moved since
 February 2025, and **it still works**. That gives it two roles — a numerical reference to
-validate the merge against, and six example files that exist nowhere else.
+validate the merge against, and eleven files that exist nowhere else — four of them
+topology-optimisation classes, not scripts.
 
 ---
 
