@@ -63,11 +63,25 @@ than during it. Four such errors are known:
 |---|---|---|
 | `Frame2D.computeStifnessMatrix` multiplies by `Ke`, never assigned | `Ke` → `Kl(:,:,k)` | Phase 1 — **done** *(moot if `Frame2D` is deleted as dead)* |
 | `FEAnalysis.plotSupport`: `1:size(irots)` is not a scalar colon operand | `1:max(size(irots))` | Before capturing main's baseline; already fixed on develop |
-| `FEAnalysis:17`: `for k=max(size(obj.felems))` is missing its `1:`, so the `eDofs` union runs on the last element group only | `for k=1:max(size(obj.felems))` | Before Phase 5 — found while deciding D6 |
-| `FEAnalysis` assumes the orientation of the `felems` cell array three different ways — `size(...,1)` at lines 31/36/45, `size(...,2)` at 266, `max(size(...))` elsewhere | Settle on one; `getElemIndices` is the one that matters | Before Phase 5 — found while deciding D6 |
+| `FEAnalysis:17`: `for k=max(size(obj.felems))` is missing its `1:`, so the `eDofs` union runs on the last element group only | `for k=1:max(size(obj.felems))` | **Done** — `0674e86` |
+| `FEAnalysis` stored the `felems` cell array in the caller's orientation and indexed it as a column, so a row-oriented multi-group model assembled only its first group | Normalise with `felems(:)` in the constructor | **Done** — `2969edc`, covered by `TestMultiGroupAssembly` |
 
 The last two are invisible with a single element group and wrong with several, which is why
-neither has been noticed. They are recorded in full in [D6](#d6--assembly-entry-point-keep-develops-two-method-shape-2026-09-10).
+neither had been noticed — every example in the suite has one group. Both were found while
+deciding D6 and are recorded in full there.
+
+The second was not latent. Measured on a two-group model before the fix:
+
+```
+getTotalElemsNumber   4  (true total 8)
+getElemIndices        1 range   (should be 2)
+weighted assembly     numel(I)=512  numel(K)=256   -> 1 of 2 groups assembled
+```
+
+`CorbelModelMultiMat` builds `{fe1 fe2 fe3}` for its three materials and calls `solveWeighted`,
+so it could not have run on `develop` at all. It belongs on the "still broken" list in
+[baseline-2026-09-10.md](baseline-2026-09-10.md) beside the five multi-block fixtures — and
+unlike those, it is now fixed.
 
 #### Not an error — deferred under Rule 2
 
