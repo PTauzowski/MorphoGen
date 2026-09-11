@@ -40,8 +40,10 @@ model.fixDOF( edgeX0, ["ux" "uy"] , [0 0]);
 %model.plotNodes(".",'b');
 
 
-dofs=DOFManagerNonuniform(mesh,{ frameElem planeElem });
-[I,J,V,Ksize] = dofs.getIndices( frameElem );
+% DOF numbering is done by FEModel.initDOFs, called from the constructor
+% above: nodes touched only by planeElem carry ux,uy and nodes touched by
+% frameElem carry ux,uy,fiz, unioned per node. This model is the one place
+% in the repository where that nonuniform path is exercised.
 
 elems=frameElem.elems(1:3,:);
 
