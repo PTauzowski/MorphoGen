@@ -225,9 +225,16 @@ Every file each branch added to `analysis/`, `design/`, `elements/`, classified 
 > [integration-rules.md](integration-rules.md), which also covers the `alphas` weighting that
 > CAS_Arm's refactor dropped and Vibrations depends on.
 
-> `elements/Frame2D.m` is the clearest case in the repository: referenced by nothing on either
+> ~~`elements/Frame2D.m` is the clearest case in the repository: referenced by nothing on either
 > feature branch, broken on `develop`, and a five-hunk conflict in *every* merge combination.
-> Its correct resolution is deletion. Git keeps it if a study needs 2D frames later.
+> Its correct resolution is deletion.~~
+>
+> **Wrong, corrected 2026-09-11.** Dead on both feature branches, yes — but *live on develop*,
+> which this census did not look at because it was a census of what the feature branches added.
+> `FrameOnElasticGround.m` and `FrameOnElasticGroundModel.m` construct it, and develop repaired
+> its `Ke` bug in Phase 1. **`Frame2D` is kept.** Deleting it on the two prep branches
+> (`6e5c7d3`, `9b3d1b4`) was still the right move and gets the outcome wanted anyway: the
+> five-hunk add/add conflict is gone and develop's copy now survives the merge untouched.
 
 The two `StressIntensityMulti*` classes collide as add/add, but the resolution is *not* to give
 each study a copy — they are shared library capability. CAS_Arm refactored them behind a
@@ -398,7 +405,10 @@ every study folder has a README naming its paper.
 > | Delete the dead — `prep/arm` (2 files) | done, `6e5c7d3` |
 > | Delete the dead — `prep/vibrations` (5 files) | done, `9b3d1b4` |
 > | Demote the 5 arm-only helpers | done, `eaf2a09` |
-> | Study folders | **blocked on [D8](integration-rules.md#d8--the-shape-function-family-was-renamed-on-vibrations-open--needs-a-decision) and on the §5.2 register gaps** |
+> | [D8](integration-rules.md) shape-function rename — develop | done, `9c4b934` (67 files) |
+| [D8](integration-rules.md) shape-function rename — `prep/arm` | done, `a8c2f1e` (79 files) |
+| Study folders | **blocked on the §5.2 register gaps** |
+| [D9](integration-rules.md) `DOFManager*` disposition | **open** |
 >
 > Gates: `prep/arm` runs the smoke set **5/6** — the same single failure (`LameProblemTest`)
 > CAS_Arm had before the triage, so no regression. `prep/vibrations` passes its native
@@ -491,8 +501,16 @@ git merge integration/features    # 26 files, 73 hunks; 43 after triage
 Resolve by the rules in §9, in dependency order — `elements/`, then `analysis/`, then `design/`,
 then `examples/` — running the smoke harness after each group.
 
-**Gate:** harness green; DOF-manager path exercised by at least one mixed frame/solid model;
+**Gate:** harness green; `FEModel.initDOFs` exercised by at least one mixed frame/solid model;
 numerical values match main's references.
+
+> **Reworded 2026-09-11.** This gate previously said "DOF-manager path", which names the wrong
+> thing: `analysis/DOFManager*.m` is abandoned scaffolding that no library file calls and three
+> quarters of which cannot run — see **D9** in [integration-rules.md](integration-rules.md). The
+> DOF numbering that matters is `FEModel.initDOFs`, and the model that exercises it is
+> `FrameOnElasticGround`, now in the smoke set and passing: 4336 nodes, `[2;3]` DOFs per node,
+> 8688 global DOFs across `{ux,uy,fiz}`. The gate is therefore already met on `develop` for the
+> nonuniform case, ahead of Phase 5 rather than during it.
 
 ### Phase 6 — Migrate callers and clean up
 

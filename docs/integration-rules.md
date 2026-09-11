@@ -36,11 +36,18 @@ from the merge or from an improvement made along the way.
 
 **Deleting dead code is permitted.** Rule 1 says "only already existing should be moved", which
 does not obviously cover deletion. The intent of the rule is to prevent *growth*, not to force
-the carrying of corpses. Seven files are referenced by nothing (`Frame2D`,
-`StressIntensityTopologyOptimizationVol2`, `FreeVibrationsTopologyOpt`,
-`StressIntensityTopologyOptimizationMultiLoad`, `SolidElasticElem-old`), and `Frame2D` is a
-five-hunk conflict in every merge combination. Merging three divergent copies of a file nobody
-calls is work with no product. Deletion is permitted, subject to two conditions:
+the carrying of corpses. Six files are referenced by nothing on the branches that carry them
+(`Frame2D`, `StressIntensityTopologyOptimizationVol2`, `FreeVibrationsTopologyOpt`,
+`StressIntensityTopologyOptimizationMultiLoad`, `SolidElasticElem-old`). Merging three
+divergent copies of a file nobody calls is work with no product.
+
+> **`Frame2D` is the exception, corrected 2026-09-11.** It is dead on both *feature* branches,
+> which is where the original census was taken, and live on `develop` — `FrameOnElasticGround.m`
+> and `FrameOnElasticGroundModel.m` both construct it, and develop repaired its `Ke` bug in
+> Phase 1. **It is kept.** Deleting it on the two prep branches was still right: it turned a
+> five-hunk add/add conflict into develop's copy surviving untouched, which is the outcome
+> wanted. The lesson generalises — deadness is a property of a *tree*, and the merge target is
+> the tree that decides. Deletion is permitted, subject to two conditions:
 
 1. Deadness is proven by a whole-tree reference check, not by inspection.
 2. The branch tip is tagged first, so the file stays reachable forever.
@@ -724,6 +731,58 @@ Local variable names (`sfL4 = ShapeFunctionQ4()` and friends) were deliberately 
 They are R8 territory — the merge does not force them — and changing them would have turned a
 mechanical sweep into 53 files of cosmetic edits that have to be read. The mismatch is visible
 and harmless; it can be tidied after the merge, or never.
+
+---
+
+### D9 — The `analysis/DOFManager*.m` family is abandoned scaffolding *(open — needs a decision)*
+
+**Found 2026-09-11, running the only example that exercises mixed element classes.**
+
+The plan calls develop "the branch that holds the DOF-manager rewrite" and treats that as the
+reason develop is the merge target. The measurement is more specific than that, and splits in
+two.
+
+**The capability is real and it works.** DOF numbering lives in `FEModel.initDOFs()` — 80
+documented lines that union each node's DOFs across every element class touching it. Run against
+`FrameOnElasticGround`, the one mixed frame/plane model in the repository, it is correct:
+
+```
+mesh nodes           : 4336
+DOFs per node (uniq) : [2;3]      ux,uy on plane-only nodes; ux,uy,fiz where the frame attaches
+model DOFs total     : 8688
+distinct DOF types   : ux,uy,fiz
+```
+
+This is the capability §10 of the plan lists as "unproven at scale". It is now proven for the
+nonuniform case, and the example runs in 0.4 s, so it has been added to the smoke set.
+
+**The four `DOFManager` classes are something else: an abandoned attempt to extract that logic
+into a strategy hierarchy.** All four were last touched on 2025-01-10, nine months before
+develop's tip. No library file references any of them. Worse, they cannot work as written:
+
+| File | Defect |
+|---|---|
+| `DOFManagerNonuniform.m` | Constructor computes `nodalDOFS`, `DOFsInds`, `globalDOFs`, `elemDOFs` as locals and assigns **none** of its four properties, so `obj.nodesToDofs` is `[]` when `getIndices` indexes it |
+| `DOFManagerUniform.m` | `getIndices` reads `obj.eDofs` and `obj.elems`; neither it nor its base `DOFManager` declares either |
+| `DOFManagerNodalUniform.m` | `getIndices` reads `obj.elems`; the class declares only `nDOFs` |
+| `DOFManager.m` | Abstract base. Sound, and unused. |
+
+Three of the four would throw on first call. The only caller anywhere was a two-line probe in
+`FrameOnElasticGround.m`, which is why that example failed — removed in `5b98521` under Rule 1,
+leaving a working model.
+
+**The question.** These are dead by exactly the test Rule 1 requires, but D5 cautions that
+absence of callers is not evidence of deadness for work still under development, and these sit
+on the merge target rather than on a branch being retired.
+
+| | |
+|---|---|
+| **Delete** | Honest: the logic they were extracting works where it already is, and a reader who finds four DOF managers next to a working `initDOFs` will reasonably assume the managers are the live path. Git keeps them. |
+| **Keep with a note** | If the extraction is meant to resume, a header comment saying so costs nothing and D5 is precedent for it. |
+
+Either way, **the Phase 5 gate must be reworded**: "DOF-manager path exercised by at least one
+mixed frame/solid model" names the wrong thing. The path that needs exercising is
+`FEModel.initDOFs`, and the model that exercises it is `FrameOnElasticGround`.
 
 ---
 
