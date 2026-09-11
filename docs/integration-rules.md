@@ -734,9 +734,10 @@ and harmless; it can be tidied after the merge, or never.
 
 ---
 
-### D9 — The `analysis/DOFManager*.m` family is abandoned scaffolding *(open — needs a decision)*
+### D9 — The `analysis/DOFManager*.m` family is deleted as abandoned scaffolding *(2026-09-11)*
 
-**Found 2026-09-11, running the only example that exercises mixed element classes.**
+**Adopted:** delete all four. Found 2026-09-11, running the only example that exercises mixed
+element classes.
 
 The plan calls develop "the branch that holds the DOF-manager rewrite" and treats that as the
 reason develop is the merge target. The measurement is more specific than that, and splits in
@@ -777,8 +778,19 @@ on the merge target rather than on a branch being retired.
 
 | | |
 |---|---|
-| **Delete** | Honest: the logic they were extracting works where it already is, and a reader who finds four DOF managers next to a working `initDOFs` will reasonably assume the managers are the live path. Git keeps them. |
-| **Keep with a note** | If the extraction is meant to resume, a header comment saying so costs nothing and D5 is precedent for it. |
+| **Delete** ← chosen | Honest: the logic they were extracting works where it already is, and a reader who finds four DOF managers next to a working `initDOFs` will reasonably assume the managers are the live path. Git keeps them. |
+| Keep with a note | If the extraction is meant to resume, a header comment saying so costs nothing and D5 is precedent for it. |
+
+**Why this is not a D5 case.** D5 exempts a formulation still under development from the
+deadness test — `StressConstrainedTopologyOptimization` has no callers because it is unfinished
+*work*, not because it is abandoned. These four are different in kind: they are not a
+formulation but a *refactor* of code that already exists and works. There is nothing here that
+`FEModel.initDOFs` does not already do, so nothing is lost that git does not keep. The
+distinction worth carrying forward is that **absence of callers is ambiguous for new
+capability and decisive for a superseded refactor.**
+
+Deleted on develop with the suite unchanged at 24 passed / 1 failed. No
+`resources/project/*.xml` record referenced any of them.
 
 Either way, **the Phase 5 gate must be reworded**: "DOF-manager path exercised by at least one
 mixed frame/solid model" names the wrong thing. The path that needs exercising is

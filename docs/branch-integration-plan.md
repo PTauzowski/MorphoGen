@@ -408,7 +408,7 @@ every study folder has a README naming its paper.
 > | [D8](integration-rules.md) shape-function rename — develop | done, `9c4b934` (67 files) |
 > | [D8](integration-rules.md) shape-function rename — `prep/arm` | done, `f0d6942` (79 files) |
 > | Study folders | **blocked on the §5.2 register gaps** |
-> | [D9](integration-rules.md) `DOFManager*` disposition | **open** |
+> | [D9](integration-rules.md) `DOFManager*` deleted (4 files) | done, see below |
 >
 > Gates: `prep/arm` runs the smoke set **5/6** — the same single failure (`LameProblemTest`)
 > CAS_Arm had before the triage, so no regression. `prep/vibrations` passes its native
