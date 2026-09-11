@@ -656,6 +656,62 @@ to pass again once the fold lands, exactly as §"The constant-stress patch test"
 
 ---
 
+### D8 — The shape-function family was renamed on Vibrations *(open — needs a decision)*
+
+**Found during the Phase 3 triage, 2026-09-11. Not identified by the survey, and it blocks
+Phase 4.**
+
+`Vibrations` renamed five shape-function classes, adopting a scheme in which the letter names
+the element geometry:
+
+| develop · CAS_Arm | Vibrations | Geometry |
+|---|---|---|
+| `ShapeFunctionL4` | `ShapeFunctionQ4` | quadrilateral |
+| `ShapeFunctionL9` | `ShapeFunctionQ9` | quadrilateral |
+| `ShapeFunctionL16` | `ShapeFunctionQ16` | quadrilateral |
+| `ShapeFunctionL8` | `ShapeFunctionH8` | hexahedron |
+| `ShapeFunctionL27` | `ShapeFunctionH27` | hexahedron |
+
+`ShapeFunctionL2`, `L3`, `L4l`, `T3`, `T4`, `T6` are untouched on every branch, so after the
+rename `L` means *line*, `Q` *quad*, `H` *hex*, `T` *triangle/tet* — internally consistent,
+which the old scheme was not: `L4` was a quad and `L8` a hex.
+
+**The rename is pure.** `ShapeFunctionL4.m` and `ShapeFunctionQ4.m` are byte-identical apart
+from the classdef line and the constructor name; `L8`/`H8` differ additionally by one internal
+`facesf` reference. No shape function, derivative or integration rule changes. **R7 numerical
+parity is therefore unaffected by the choice** — this is a naming decision with no physics in
+it.
+
+**Why it blocks.** Call-site census over every `.m` file:
+
+| | L-family | Q/H-family |
+|---|---:|---:|
+| `develop` | **61 files** | 0 |
+| `prep/arm` | **73 files** | 0 |
+| `prep/vibrations` | 0 | **84 files** |
+
+The danger is that this conflicts *nowhere*. The five old files are deletes on the Vibrations
+side and the five new ones are adds; git merges both cleanly. The Phase 4 merge
+(`prep/vibrations ← prep/arm`) therefore produces, without a single conflict marker, a tree in
+which 73 arm files construct classes that do not exist — and Phase 5 adds develop's 61. This is
+§10's "clean textual merge, semantically wrong" risk realised in a file set §10 did not name.
+
+**The options.**
+
+| | Files to migrate | Notes |
+|---|---:|---|
+| Adopt `Q`/`H` (Vibrations' scheme) | 134 (61 develop + 73 arm) | Keeps the better scheme. Larger sweep, but it runs on the two branches we are already editing. |
+| Keep `L` (develop's scheme) | 84 (vibrations) | Smaller sweep, but reverts a deliberate improvement and leaves `L4`-the-quad next to `L2`-the-line permanently. |
+
+Either way the migration is a mechanical, verifiable substitution — five whole-word names, no
+semantic review — and it must land **before** Phase 4, on whichever branches lose the vote, so
+that the merge sees one vocabulary.
+
+Note the interaction with **R8**: R8 forbids renames *the merge does not force*. This one is
+forced — the branches already disagree, so there is no option that renames nothing.
+
+---
+
 ## When the rules do not answer
 
 For anything the rules do not cover: the default is **no**. The merge is finished when the

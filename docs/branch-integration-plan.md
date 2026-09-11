@@ -390,6 +390,79 @@ git switch -c prep/arm        origin/CAS_Arm
 **Gate:** smoke harness still green on each prep branch — a demoted file is still on the path;
 every study folder has a README naming its paper.
 
+> **In progress, 2026-09-11.** Both prep branches are cut. The deletions and the demotion are
+> done and gated; the study folders are not.
+>
+> | Step | State |
+> |---|---|
+> | Delete the dead — `prep/arm` (2 files) | done, `6e5c7d3` |
+> | Delete the dead — `prep/vibrations` (5 files) | done, `9b3d1b4` |
+> | Demote the 5 arm-only helpers | done, `eaf2a09` |
+> | Study folders | **blocked on [D8](integration-rules.md#d8--the-shape-function-family-was-renamed-on-vibrations-open--needs-a-decision) and on the §5.2 register gaps** |
+>
+> Gates: `prep/arm` runs the smoke set **5/6** — the same single failure (`LameProblemTest`)
+> CAS_Arm had before the triage, so no regression. `prep/vibrations` passes its native
+> `examples/Pillar/quickTest.m`, and all five demoted helpers resolve through
+> `addpath(genpath(...))` from their new location.
+>
+> Two corrections to this plan came out of the triage.
+>
+> **`SolidElasticElem-old.m` is dead by construction, not by census** — a dash is not a valid
+> MATLAB identifier, so the file cannot be loaded as a class at all. Worth stating because the
+> reference check Rule 1 demands would have reported its `classdef SolidElasticElem` line as a
+> live definition of the *real* class.
+>
+> **`analysis/SORAold.m` is *not* dead** and is not in the seven. It looks dead — the name says
+> so — but `examples/reliability/Corbel2DReliabilityMultimatStress.m` constructs it on four
+> live lines. It was never on the deletion list; it is recorded here because a mechanical sweep
+> for "old"-suffixed files would have taken it.
+
+#### The example conflicts are not all path collisions
+
+§7 classifies all 24 hunks of example conflict as "path collisions, not disagreements", to be
+dissolved by routing scripts into study folders. Measured against the real merge, that holds for
+six of the ten files and **fails for four**:
+
+| File | Conflict | Actually |
+|---|---|---|
+| `examples/topologyOpt/tests/Cantilever2DBuckling.m` | add/add | Study file — buckling. **Moves.** |
+| `examples/topologyOpt/tests/CantileverShort2DBuckling.m` | add/add | Study file — buckling. **Moves.** |
+| `examples/topologyOpt/tests/CantileverBuckling3D.m` | add/add | Study file — buckling. **Moves.** |
+| `examples/topologyOpt/tests/ManipulatorBuckling3D.m` | add/add | Study file — buckling. **Moves.** |
+| `examples/models/ManipulatorModel3D.m` | add/add | Arm study, relocated on CAS_Arm (876 lines vs 189). **Moves**, per Phase 4. |
+| `examples/elasticity/solidProblems/ChocolateTest.m` + `models/ChocolateModel.m` | content | Shared fixture. **Stays.** |
+| `examples/models/ColumnModel.m` | add/add | **Shared fixture — stays. Not a collision.** |
+| `examples/models/ColumnModel3D.m` | add/add | **Shared fixture — stays. Not a collision.** |
+| `examples/models/Pylon2DModel.m` | add/add | **Shared fixture — stays. Not a collision.** |
+
+The last three are the same model on both branches — 32, 31 and 91 lines, diverging by 3, 4 and
+1 lines respectively. They are not two studies wanting one filename; they are one fixture that
+each branch edited as its library API moved underneath it, and every caller is a generic example
+(`ColumnTest.m`, `ColumnTest3D.m`, `Pylon2DDisplacement.m`), not study code. Moving either copy
+into a study folder would leave two same-named files on the `genpath` path shadowing each other
+— strictly worse than the conflict.
+
+Their diffs are a useful preview of the API seam, because they are small enough to read whole:
+
+```
+-            elems = obj.mesh.addRectMesh2D( 0, 0, b, l, ... );   develop
+-            obj.fe = PlaneStressElem( sf, elems );
++            obj.mesh.addRectMesh2D( 0, 0, b, l, ... );           Vibrations
++            obj.fe = PlaneStressElem( sf, obj.mesh.elems );
+
+-            material.rho = rho;                                  develop
++            material.setMassIzoMatrix(rho);                      Vibrations
+```
+
+The first is the multi-block question in miniature: `obj.mesh.elems` is every element in the
+mesh, which is correct only while a model has one block — the case develop's DOF refactor exists
+to move past. develop's captured `elems` is the form that survives. The second is a genuine
+capability Vibrations added (`SolidMaterial.setMassIzoMatrix`, which develop has only on
+`PlaneStressMaterial`) and must be carried over, not resolved away.
+
+**These four resolve at Phase 5 by the API decisions, not at Phase 3 by a move.** Phase 3's
+example work is therefore the six study files, not ten.
+
 ### Phase 4 — Stage one: combine the feature branches
 
 ```sh
