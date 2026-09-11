@@ -25,7 +25,7 @@ basename='TrussZ_superposition';
 
 
 %finite element definition
-ShapeFn = ShapeFunctionL8;
+ShapeFn = ShapeFunctionH8;
 mesh = Mesh();
 elems = mesh.addrectPipe(w,h,l1,th,nth,ShapeFn.localNodes);
 fe = SolidElasticElem( ShapeFn, elems );

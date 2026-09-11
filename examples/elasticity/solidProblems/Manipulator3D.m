@@ -7,7 +7,7 @@ r=0.4;
 res=20;
 alpha=30;
 betas=[ 23 15 83 42 56 ];
-ShapeFn = ShapeFunctionL8;
+ShapeFn = ShapeFunctionH8;
 segmentLength=0.6;
 model = ManipulatorModel3D(segmentLength,R,r,res, alpha, betas, ShapeFn);
 

@@ -19,7 +19,7 @@ Rfilter = R*3*pi/resCirc;
 penal=3;
 cutTreshold = 0.005;
 
-ShapeFn = ShapeFunctionL8;                     
+ShapeFn = ShapeFunctionH8;                     
 model = ManipulatorModel3D(Length,R,r,resLen, alpha, betas, ShapeFn);
 fe = SolidElasticElem( ShapeFn, model.elems );
 fe.plot(model.mesh.nodes);

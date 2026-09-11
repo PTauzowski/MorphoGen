@@ -3,7 +3,7 @@ close all;
 res = 20;
 l = 3;
 tic
-sfL4 = ShapeFunctionL4;
+sfL4 = ShapeFunctionQ4;
 mesh = Mesh();
 elems=mesh.addRectMesh2D(0, 0, 2*l, l, 2*res, res, sfL4.pattern);
 fe=PlaneStressElem( sfL4, elems );

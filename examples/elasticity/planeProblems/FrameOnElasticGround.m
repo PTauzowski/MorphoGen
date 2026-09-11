@@ -20,11 +20,11 @@ lgr=30;
 hgr=15;
 resgr=5;
 
-%model = FrameOnElasticGroundModel( Ecl, hcl, Ebm, hbm, b, lspan, hfloor, nspan, nfloor, Egr, nugr, lgr, hgr, resgr, ShapeFunctionL4 );
+%model = FrameOnElasticGroundModel( Ecl, hcl, Ebm, hbm, b, lspan, hfloor, nspan, nfloor, Egr, nugr, lgr, hgr, resgr, ShapeFunctionQ4 );
 
 xp = [(lgr-nspan*lspan)/2 hgr];
 
-shapeFn2D=ShapeFunctionL16();
+shapeFn2D=ShapeFunctionQ16();
        
 mesh=Mesh();
 frameElem = Frame2D( mesh.addHframe(nspan,lspan,nfloor,hfloor,xp));

@@ -8,7 +8,7 @@ E=210000;
 nu=0.3;
 sy=190;
 tic
-sfL4 = ShapeFunctionL4;
+sfL4 = ShapeFunctionQ4;
 mesh = Mesh();
 elems = mesh.addRectMesh2D(0, 0, l, h, round(l/h*res), res, sfL4.pattern);
 fixedEdgeSelector = Selector( @(x)( abs(x(:,1)))<0.001 );

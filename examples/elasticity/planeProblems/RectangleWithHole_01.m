@@ -6,7 +6,7 @@ x0 = 5;
 y0 = 5;
 a=10;
 hf = 0.5;
-sf = ShapeFunctionL4;
+sf = ShapeFunctionQ4;
 
 
 

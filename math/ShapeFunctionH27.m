@@ -1,6 +1,6 @@
-classdef ShapeFunctionL27 < ShapeFunctions3D
+classdef ShapeFunctionH27 < ShapeFunctions3D
     methods
-        function obj = ShapeFunctionL27() 
+        function obj = ShapeFunctionH27() 
             
 %            m_corners = { 0, 2, 6, 8, 18, 20, 24, 26 };
   %          m_edges   = { {0,1,2}, {6,7,8}, {18,19,20}, {24,25,26}, {0,3,6}, {2,5,8}, {18,21,24}, {20,23,26}, {0,9,18}, {2,11,20}, {6,15,24}, {8,17,26} };
@@ -14,7 +14,7 @@ classdef ShapeFunctionL27 < ShapeFunctions3D
             obj.edgesf = ShapeFunctionL3;
             obj.faces    = [ 7,4,1,16,13,10,25,22,19; 3,6,9,12,15,18,21,24,27; 1,2,3,10,11,12,19,20,21; 9,8,7,18,17,16,27,26,25; 7,8,9,4,5,6,1,2,3; 19,20,21,22,23,24,25,26,27 ]';
             obj.fcontours    = [ 1,2,3,12,21,20,19,10; 3,6,9,18,27,24,21,12; 9,8,7,16,25,26,27,18; 7,4,1,10,19,22,25,16; 7,8,9,6,3,2,1,4; 19,20,21,24,27,26,25,22 ]';
-            obj.facesf = ShapeFunctionL9;
+            obj.facesf = ShapeFunctionQ9;
             obj.pattern = [ 0 1 2 0 1 2 0 1 2 0 1 2 0 1 2 0 1 2 0 1 2 0 1 2 0 1 2; 
                             0 0 0 1 1 1 2 2 2 0 0 0 1 1 1 2 2 2 0 0 0 1 1 1 2 2 2; 
                             0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 ]';

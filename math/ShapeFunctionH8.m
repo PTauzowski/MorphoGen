@@ -1,6 +1,6 @@
-classdef ShapeFunctionL8 < ShapeFunctions3D
+classdef ShapeFunctionH8 < ShapeFunctions3D
     methods
-        function obj = ShapeFunctionL8() 
+        function obj = ShapeFunctionH8() 
             obj.localNodes = [-1 -1 -1;  1 -1 -1; -1 1 -1; 1 1 -1; ...                            
                               -1 -1  1;  1 -1  1; -1 1  1;  1 1  1];
             obj.vertices = [ 1 2 3 4 5 6 7 8 ]';
@@ -8,7 +8,7 @@ classdef ShapeFunctionL8 < ShapeFunctions3D
             obj.edgesf = ShapeFunctionL2;
             obj.faces    = [ 1 2 5 6;  2 4 6 8;  4 3 8 7; 3 1 7 5; 4 3 2 1; 5 6 7 8 ]';
             obj.fcontours    = [ 1 2 6 5;  2 4 8 6; 4 3 7 8; 3 1 5 7; 4 3 1 2; 5 6 8 7 ]';
-            obj.facesf = ShapeFunctionL4;
+            obj.facesf = ShapeFunctionQ4;
             obj.pattern  = [ 0 1 0 1 0 1 0 1; 0 0 1 1 0 0 1 1; 0 0 0 0 1 1 1 1 ]';
         end
         function value = computeValue( ~, xi )

@@ -21,7 +21,7 @@ cutTreshold=0.005;
 % * FEM task definition *
 tic
 aspect=3;
-sfL4 = ShapeFunctionL4;
+sfL4 = ShapeFunctionQ4;
 mesh = Mesh();
 elems = mesh.addRectMesh2D(0, 0, aspect*l, l, aspect*res, res, sfL4.pattern);
 fe=PlaneStressElem( sfL4, elems );

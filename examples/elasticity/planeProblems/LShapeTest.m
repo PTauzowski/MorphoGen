@@ -2,7 +2,7 @@ clear;
 close all;
 
 % four noded Lagrange shape functions
-sf=ShapeFunctionL4;
+sf=ShapeFunctionQ4;
 
 % Length of the longest edge
 l=1;

@@ -7,9 +7,9 @@ E=210000;
 nu=0.3;
 pressure=[-100 0];
 
-modelL4  = ConstPlaneStressModel(ShapeFunctionL4,l,res,E,nu,pressure);
-modelL9  = ConstPlaneStressModel(ShapeFunctionL9,l,res,E,nu,pressure);
-modelL16 = ConstPlaneStressModel(ShapeFunctionL16,l,res,E,nu,pressure);
+modelL4  = ConstPlaneStressModel(ShapeFunctionQ4,l,res,E,nu,pressure);
+modelL9  = ConstPlaneStressModel(ShapeFunctionQ9,l,res,E,nu,pressure);
+modelL16 = ConstPlaneStressModel(ShapeFunctionQ16,l,res,E,nu,pressure);
 modelT3 = ConstPlaneStressModelTriangular(ShapeFunctionT3,l,res,E,nu,pressure);
 
 model=modelT3;

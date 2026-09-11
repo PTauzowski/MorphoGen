@@ -7,8 +7,8 @@ E=210000;
 nu=0.3;
 pressure=100;
 
-modelL8  = ConstStressSolidModel(ShapeFunctionL8,l,res,E,nu,pressure);
-modelL27 = ConstStressSolidModel(ShapeFunctionL27,l,res,E,nu,pressure);
+modelL8  = ConstStressSolidModel(ShapeFunctionH8,l,res,E,nu,pressure);
+modelL27 = ConstStressSolidModel(ShapeFunctionH27,l,res,E,nu,pressure);
 %modelL64 = ConstStressSolidModel(ShapeFunctionL64,l,res,E,nu,pressure);
 %modelT6  = ConstStressSolidModel(ShapeFunctionT6,l,res,E,nu,pressure);
 

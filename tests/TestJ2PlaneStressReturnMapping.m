@@ -47,7 +47,7 @@ classdef TestJ2PlaneStressReturnMapping < matlab.unittest.TestCase
         function buildElement(testCase)
             % A single element is enough; returnMapping is point-wise.
             [~, fe] = evalc( ...
-                'PlaneStressElastoPlasticElem(ShapeFunctionL4, [1 2 3 4])');
+                'PlaneStressElastoPlasticElem(ShapeFunctionQ4, [1 2 3 4])');
             [~, m]  = evalc('PlaneStressMaterial(''j2'')');
             evalc(sprintf('m.setElastoPlasticIzo(%g, %g, %g)', ...
                           testCase.E, testCase.Nu, testCase.Sy));

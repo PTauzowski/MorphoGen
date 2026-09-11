@@ -1,6 +1,6 @@
-classdef ShapeFunctionL9 < ShapeFunctions2D
+classdef ShapeFunctionQ9 < ShapeFunctions2D
     methods
-        function obj = ShapeFunctionL9() 
+        function obj = ShapeFunctionQ9() 
             obj.localNodes = [-1 -1; 0 -1; 1 -1; -1 0; 0 0; 1 0; -1 1; 0 1; 1 1];
             obj.vertices=[1 3 7 9]';
             obj.edges = [1 2 3; 3 6 9; 9 8 7; 7 4 1]';

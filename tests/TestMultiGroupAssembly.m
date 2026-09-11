@@ -32,7 +32,7 @@ classdef TestMultiGroupAssembly < matlab.unittest.TestCase
 
     methods (TestMethodSetup)
         function buildTwoGroupsOnOneMesh(testCase)
-            sf = ShapeFunctionL4;
+            sf = ShapeFunctionQ4;
             testCase.mesh = Mesh();
             elems = testCase.mesh.addRectMesh2D( ...
                 0, 0, testCase.NX, testCase.NY, testCase.NX, testCase.NY, sf.pattern);

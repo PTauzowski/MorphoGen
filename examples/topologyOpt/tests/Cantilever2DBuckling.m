@@ -22,7 +22,7 @@ cutTreshold = 0.005;
 penal = 3;
 
 % Type of shape function to be used (here: four node Langrange)
-sfL4 = ShapeFunctionL4;
+sfL4 = ShapeFunctionQ4;
 
 % Creating FE mesh object
 mesh = Mesh();

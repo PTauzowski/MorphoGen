@@ -305,12 +305,12 @@ classdef Mesh < handle
             mesh.nodes = [ 0.5*( mesh.nodes(:,1)+1 ).*x00+0.5*(1-mesh.nodes(:,1)).*(xs+ri*cos( (beta-alpha)/2 .* mesh.nodes(:,2) + (beta+alpha)/2)) ...
                            0.5*( mesh.nodes(:,1)+1 ).*((y1-y00)/2*mesh.nodes(:,2)+(y00+y1)/2)+0.5*(1-mesh.nodes(:,1)).*(ys+ri*sin( (beta-alpha)/2 .* mesh.nodes(:,2) + (beta+alpha)/2)) ];           
             % elems2 = obj.merge( mesh.nodes, elems );
-            % elems3 = obj.addShapedMesh2D( ShapeFunctionL4(), [80 y00; x1 y00; 80 40; x1 ys+ri*sin(alpha1)], [div div], pattern );
-            % elems4 = obj.addShapedMesh2D( ShapeFunctionL4(),  [xs+ri*cos(beta) ys+ri*sin(beta); x00 y1; x00-40 x00-80; x00 x00-80], [div div], pattern );
+            % elems3 = obj.addShapedMesh2D( ShapeFunctionQ4(), [80 y00; x1 y00; 80 40; x1 ys+ri*sin(alpha1)], [div div], pattern );
+            % elems4 = obj.addShapedMesh2D( ShapeFunctionQ4(),  [xs+ri*cos(beta) ys+ri*sin(beta); x00 y1; x00-40 x00-80; x00 x00-80], [div div], pattern );
             elems = [ elems; obj.merge( mesh.nodes, elems1 ) ];
             elems = [ elems; ...
-                      obj.addShapedMesh2D( ShapeFunctionL4(), [80 y00; x1 y00; 80 40; x1 ys+ri*sin(alpha1)], [div div], pattern ); ...
-                      obj.addShapedMesh2D( ShapeFunctionL4(),  [xs+ri*cos(beta) ys+ri*sin(beta); x00 y1; x00-40 x00-80; x00 x00-80], [div div], pattern )];
+                      obj.addShapedMesh2D( ShapeFunctionQ4(), [80 y00; x1 y00; 80 40; x1 ys+ri*sin(alpha1)], [div div], pattern ); ...
+                      obj.addShapedMesh2D( ShapeFunctionQ4(),  [xs+ri*cos(beta) ys+ri*sin(beta); x00 y1; x00-40 x00-80; x00 x00-80], [div div], pattern )];
         end
         function elems = addRectWithHoleMesh2D( obj, a, x0, y0, holefactor, div, pattern )
             r=a*holefactor;
@@ -335,7 +335,7 @@ classdef Mesh < handle
         end
         function elems = addQuarterCircle( obj, x0 , R, nr, pattern )
              mesh1 = Mesh();
-             shapeFn = ShapeFunctionL4();
+             shapeFn = ShapeFunctionQ4();
              elems1 = mesh1.addShapedMesh2D( shapeFn, x0+[ 0 0; R/2 0; 0 R/2; R/2/1.41 R/2/1.41 ], nr, pattern );
 
              sfL2 = ShapeFunctionL2();
@@ -369,10 +369,10 @@ classdef Mesh < handle
         end
         function elems = addQuarterCylinder( obj, x0 , R, h, nr, pattern )
              mesh1 = Mesh();
-             shapeFn = ShapeFunctionL8();
+             shapeFn = ShapeFunctionH8();
              elems = mesh1.addShapedMesh3D( shapeFn, x0+[ 0 0 0; R/2 0 0; 0 R/2 0; R/2/1.41 R/2/1.41 0; 0 0 h; R/2 0 h; 0 R/2 h; R/2/1.41 R/2/1.41 h], [nr(1) nr(1) nr(2)], pattern );
 
-             sfL2 = ShapeFunctionL4();
+             sfL2 = ShapeFunctionQ4();
              sl1 = ShapeObjectRectangular(sfL2,x0+[0 R/2 0; R/2/1.41 R/2/1.41 0; 0 R/2 h; R/2/1.41 R/2/1.41 h ]);
              sl2 = ShapeObjectRectangular(sfL2,x0+[R/2/1.41 R/2/1.41 0; R/2 0 0; R/2/1.41 R/2/1.41 h; R/2 0 h]);
              sc1 = CylinderObject(x0,R,90,45,0,h);

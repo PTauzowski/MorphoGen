@@ -239,8 +239,8 @@ Assert on Gauss-point values, not nodal ones: `fe.results.gp.stress(:, elem, ip)
 populated by `computeResults`. Nodal results are extrapolated and averaged between elements,
 which is exactly the smoothing that would mask a bad load integral.
 
-**Parameterise over shape functions.** The existing example already sweeps `ShapeFunctionL4`,
-`L9`, `L16` and `T3`; all must pass identically.
+**Parameterise over shape functions.** The existing example already sweeps `ShapeFunctionQ4`,
+`Q9`, `Q16` and `T3`; all must pass identically.
 
 **The fixtures already exist** — this is a conversion under Rule 1, not new development:
 
@@ -656,10 +656,12 @@ to pass again once the fold lands, exactly as §"The constant-stress patch test"
 
 ---
 
-### D8 — The shape-function family was renamed on Vibrations *(open — needs a decision)*
+### D8 — The shape-function family takes Vibrations' geometry-letter names *(2026-09-11)*
 
-**Found during the Phase 3 triage, 2026-09-11. Not identified by the survey, and it blocks
-Phase 4.**
+**Adopted:** `Q`/`H`. develop and CAS_Arm migrate to Vibrations' names before Phase 4.
+
+Found during the Phase 3 triage, 2026-09-11; not identified by the survey, and it would have
+blocked Phase 4 silently.
 
 `Vibrations` renamed five shape-function classes, adopting a scheme in which the letter names
 the element geometry:
@@ -709,6 +711,19 @@ that the merge sees one vocabulary.
 
 Note the interaction with **R8**: R8 forbids renames *the merge does not force*. This one is
 forced — the branches already disagree, so there is no option that renames nothing.
+
+**Carried out on develop**, 67 files and 87 substitutions in one commit: the five class files
+renamed, every `.m` call site swept, the five `resources/project/*.xml` records repointed, and
+the one `README.md` example updated. The sweep is a single word-boundary-guarded substitution
+rule with no per-file judgement, which is what makes it reviewable at that size — and the guard
+is load-bearing: `ShapeFunctionL4l` is a *different, live* class that a naive `ShapeFunctionL4`
+substitution would have silently renamed to `ShapeFunctionQ4l`, and it is referenced by
+`ShapeFunctionQ16`.
+
+Local variable names (`sfL4 = ShapeFunctionQ4()` and friends) were deliberately **not** touched.
+They are R8 territory — the merge does not force them — and changing them would have turned a
+mechanical sweep into 53 files of cosmetic edits that have to be read. The mismatch is visible
+and harmless; it can be tidied after the merge, or never.
 
 ---
 

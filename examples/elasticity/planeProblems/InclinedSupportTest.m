@@ -2,7 +2,7 @@ clear;
 close all;
 res = 20;
 l = 3;
-sf = ShapeFunctionL4;
+sf = ShapeFunctionQ4;
 endAngle = 45;
 E=1;
 nu=0.3;

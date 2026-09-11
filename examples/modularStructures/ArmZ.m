@@ -18,7 +18,7 @@ cp=0.001;
 Ps=cp*4;
 Ph=cp*1;
 
-sfL8= ShapeFunctionL8();
+sfL8= ShapeFunctionH8();
 mesh = snakeSegmentModel(width, length, height, r, R, sfL8.localNodes,resC);
 halfSymetricalSelector = Selector( @(x)(  (width/2 - x(:,1)  ) > 0.01 ) );
 elems = mesh.removeNodes( halfSymetricalSelector );

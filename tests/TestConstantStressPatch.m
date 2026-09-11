@@ -33,9 +33,9 @@ classdef TestConstantStressPatch < matlab.unittest.TestCase
 
     properties (TestParameter)
         % 2D: quadrilateral orders plus the triangular variant.
-        planeElement = {'L4', 'L9', 'L16', 'T3'};
+        planeElement = {'Q4', 'Q9', 'Q16', 'T3'};
         % 3D: hexahedral orders.
-        solidElement = {'L8', 'L27'};
+        solidElement = {'H8', 'H27'};
     end
 
     methods (TestClassSetup)
