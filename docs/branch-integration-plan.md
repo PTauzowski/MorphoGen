@@ -407,7 +407,9 @@ every study folder has a README naming its paper.
 > | Demote the 5 arm-only helpers | done, `eaf2a09` |
 > | [D8](integration-rules.md) shape-function rename — develop | done, `9c4b934` (67 files) |
 > | [D8](integration-rules.md) shape-function rename — `prep/arm` | done, `f0d6942` (79 files) |
-> | Study folders | **blocked on the §5.2 register gaps** |
+> | Study folders — `prep/vibrations` | done, `d3ca053` |
+> | Study folders + README — `prep/arm` | done, `ba508a5` |
+> | §5.2 register gaps | **open — four publication rows, left as TODO in the READMEs** |
 > | [D9](integration-rules.md) `DOFManager*` deleted (4 files) | done, see below |
 >
 > Gates: `prep/arm` runs the smoke set **5/6** — the same single failure (`LameProblemTest`)
@@ -472,6 +474,37 @@ capability Vibrations added (`SolidMaterial.setMassIzoMatrix`, which develop has
 
 **These four resolve at Phase 5 by the API decisions, not at Phase 3 by a move.** Phase 3's
 example work is therefore the six study files, not ten.
+
+#### What Phase 3 actually cost the merge
+
+Measured the way §7 measured: check out the base, attempt the merge, count conflicted files and
+`<<<<<<<` markers. The method reproduces §7's figure for `Vibrations ← CAS_Arm` exactly (19
+files, 21 hunks, 3 modify/delete), so the columns are comparable.
+
+| Merge | Before Phase 3 | After Phase 3 |
+|---|---|---|
+| `develop ← vibrations` | 29 files · **88 hunks** | 24 files · **68 hunks** |
+| `develop ← arm` | 25 files · 64 hunks | 26 files · 64 hunks |
+| Phase 4: `vibrations ← arm` | 19 files · 21 hunks · 3 m/d | 23 files · 23 hunks · **5 m/d** |
+
+**One merge got materially cheaper, one did not move, and the Phase 4 merge got slightly
+worse.** That last result is worth stating plainly because it contradicts the expectation in
+§5.1. Moving the three arm-buckling files into `examples/Vibrations/Buckling/` does not dissolve
+their modify/delete conflicts against CAS_Arm — git follows the rename and re-reports them at
+the new path. It adds two. What the move buys is not fewer conflicts but easier ones: every one
+of the five is now a *keep ours*, because the other side deleted a file it had relocated rather
+than abandoned.
+
+The 20 hunks that did come off `develop ← vibrations` are mostly **D8's doing, not the folder
+moves'** — `Pylon2DModel.m` left the conflict list entirely once the shape-function names
+agreed, and the five class-file add/adds went with it.
+
+The honest summary of §5.1: **the example layout was never where the merge cost lived.** The
+expensive files before Phase 3 were `Mesh.m`, `FEAnalysis.m`, `SolidElasticElem.m`,
+`PlaneElem.m` and `LinearElasticity.m`, and they are the expensive files after it. Study folders
+are worth doing — they are what stops the *next* two papers colliding, which is §11's argument
+and a good one — but they are not a merge-cost optimisation, and Phase 3 should not have been
+sold as one.
 
 ### Phase 4 — Stage one: combine the feature branches
 
