@@ -12,7 +12,7 @@ cutTreshold = 0.005;
 %penalty factor
 penal = 3;
 
-sfL4 = ShapeFunctionL4;
+sfL4 = ShapeFunctionQ4;
 mesh = Mesh();
 mesh.addLshape(2*l, 0.8*l, 2*res, sfL4.pattern);
 fe=PlaneStressElem( sfL4, mesh.elems );

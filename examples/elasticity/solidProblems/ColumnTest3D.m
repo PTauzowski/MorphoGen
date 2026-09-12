@@ -2,7 +2,7 @@ clear;
 close all;
 
 %%% Initialization %%%
-sf=ShapeFunctionL8;
+sf=ShapeFunctionH8;
 l=1; b=0.1; h=0.1; lw=2*l; nl=300;
 
 E=205E9; nu=0.3; rho=7850; 

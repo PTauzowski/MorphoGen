@@ -19,7 +19,7 @@ fatigueData.Dc = 0.2;
 fatigueData.P=1000;
 fatigueData.Nexp=42150;
 
-model = SpecimenModelLinear(ShapeFunctionL4,a,div,E,nu,fatigueData.P);
+model = SpecimenModelLinear(ShapeFunctionQ4,a,div,E,nu,fatigueData.P);
 % model.setResultNode([0.4*l 0.2*l 0.4*l]);
 model.plotModel();
 

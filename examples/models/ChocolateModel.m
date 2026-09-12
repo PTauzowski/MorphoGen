@@ -14,7 +14,7 @@ classdef ChocolateModel < ModelLinear
             obj.zCoords = sort(unique(round(obj.mesh.nodes(:,3)*obj.zTol)/obj.zTol),'descend');
             obj.computeZNodalCoords();
             obj.nTempVars=size(find((round((obj.zCoords-ganTh)*obj.zTol)/obj.zTol)>0),1)-3;
-            obj.fe = SolidElasticElem( ShapeFunctionL27, obj.mesh.elems );
+            obj.fe = SolidElasticElem( ShapeFunctionH27, obj.mesh.elems );
             obj.analysis = LinearElasticityWeighted( obj.fe, obj.mesh, false );
             
 
@@ -150,8 +150,8 @@ classdef ChocolateModel < ModelLinear
             
           
             % One tile model generation
-            ShapeFn8 = ShapeFunctionL8;
-            ShapeFn27 = ShapeFunctionL27;
+            ShapeFn8 = ShapeFunctionH8;
+            ShapeFn27 = ShapeFunctionH27;
 
             mesh = Mesh();
             mesh2 = Mesh();

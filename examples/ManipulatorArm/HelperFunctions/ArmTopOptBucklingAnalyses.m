@@ -16,7 +16,7 @@ function  [analysisSecondOrder,  analysisWithBuckling, const_elems ] = ArmTopOpt
     penal=3;
     cutTreshold = 0.005;
     
-    ShapeFn = ShapeFunctionL8;
+    ShapeFn = ShapeFunctionH8;
     mesh = Mesh();
     mesh.addManipulatorHalfSegment3D(r, R, h, alpha*pi/180, resTh, resCirc, resHeight, ShapeFn.localNodes);
     fe = SolidElasticElem( ShapeFn, mesh.elems );

@@ -26,7 +26,7 @@ fatigueData.P=-1;
 xp=[-b/2 -b/2 h-h1];
 P = [0 0 -10];
 
-model = PylonModel(ShapeFunctionL8,h,h1,b,b1,resb,E,nu,xp,[-b/2 -b/2 h-h1]);
+model = PylonModel(ShapeFunctionH8,h,h1,b,b1,resb,E,nu,xp,[-b/2 -b/2 h-h1]);
 model.plotModel();
 
 randomVariables={RandomVariable("Normal",P(1),0.2) RandomVariable("Normal",P(2),0.1) RandomVariable("Normal",P(3),1)};

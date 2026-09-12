@@ -25,7 +25,7 @@ basename='TrussZ_bending';
 
 
 %finite element definition
-ShapeFn = ShapeFunctionL8;
+ShapeFn = ShapeFunctionH8;
 mesh = Mesh();
 mesh.addrectPipe(w,h,l1,th,nth,ShapeFn.localNodes);
 fe = SolidElasticElem( ShapeFn, mesh.elems );

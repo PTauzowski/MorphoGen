@@ -23,7 +23,7 @@ fatigueData.Nexp=42150;
 xp=[l 0.2*l 0.4*l];
 P = [1 -6];
 
-model = LShapeSolidModel(ShapeFunctionL8,l,res,E,nu,xp,P);
+model = LShapeSolidModel(ShapeFunctionH8,l,res,E,nu,xp,P);
 model.setResultNode([0.4*l 0.2*l 0.4*l]);
 model.plotModel();
 

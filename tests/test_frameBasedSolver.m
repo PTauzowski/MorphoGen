@@ -28,7 +28,7 @@ res_th    = 1;
 alpha_deg = 22.5;
 betas_deg = [0 0 0 0 0 0 0];
 Pz        = -100;
-ShapeFn   = ShapeFunctionL8();
+ShapeFn   = ShapeFunctionH8();
 use_offset = 0;
 
 fprintf('Building ManipulatorModel3D (minimal mesh: res=%d, res_th=%d)...\n', res, res_th);

@@ -26,7 +26,7 @@ xp=[l w/2 0];
 P = [-2 0 -5];
 
 
-model = CantileverSolidModelLinear(ShapeFunctionL8,w,res,E,nu,xp,xp);
+model = CantileverSolidModelLinear(ShapeFunctionH8,w,res,E,nu,xp,xp);
 model.plotModel();
 
 randomVariables={RandomVariable("Normal",P(1),0.2) RandomVariable("Normal",P(2),0.1) RandomVariable("Normal",P(3),0.5)};

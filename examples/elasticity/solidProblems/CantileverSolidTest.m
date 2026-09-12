@@ -7,8 +7,8 @@ E=210000;
 nu=0.3;
 pressure=100;
 
-modelL8  = CantileverSolidModel(ShapeFunctionL8,l,res,E,nu,pressure);
-modelL27 = CantileverSolidModel(ShapeFunctionL27,l,res,E,nu,pressure);
+modelL8  = CantileverSolidModel(ShapeFunctionH8,l,res,E,nu,pressure);
+modelL27 = CantileverSolidModel(ShapeFunctionH27,l,res,E,nu,pressure);
 %modelL64 = ConstStressSolidModel(ShapeFunctionL64,l,res,E,nu,pressure);
 %modelT6  = ConstStressSolidModel(ShapeFunctionT6,l,res,E,nu,pressure);
 

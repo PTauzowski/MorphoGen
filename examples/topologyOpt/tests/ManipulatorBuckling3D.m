@@ -15,7 +15,7 @@ Rfilter = R*3*pi/resCirc;
 penal=3;
 cutTreshold = 0.005;
 
-ShapeFn = ShapeFunctionL8;
+ShapeFn = ShapeFunctionH8;
 mesh = Mesh();
 mesh.addRectMesh3D( R-Th, 0, 0, Th, 2*pi, Length, resTh, resCirc, resLen, ShapeFn.localNodes);
 mesh.transformToCylindrical3D( [0 0] );

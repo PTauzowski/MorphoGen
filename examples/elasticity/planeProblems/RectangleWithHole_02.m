@@ -6,7 +6,7 @@ x0 = 5;
 y0 = 5;
 a=10;
 hf = 0.5;
-sf = ShapeFunctionL16;
+sf = ShapeFunctionQ16;
 mesh = Mesh();
 mesh.addRectWithHoleMesh2D( 10, x0, y0, hf, res, sf.pattern );
 %mesh.transformMeshDeg2D( [137 0], -90, [-137 0] );

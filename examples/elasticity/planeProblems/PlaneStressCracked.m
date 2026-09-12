@@ -4,7 +4,7 @@ res = 20;
 l = 3;
 conn=l/res*10;
 tic
-sf = ShapeFunctionL16;
+sf = ShapeFunctionQ16;
 mesh = Mesh();
 mesh.addRectMesh2D(0, 0, 2*l, l, 2*res, res, sf.pattern);
 mesh2 = Mesh();

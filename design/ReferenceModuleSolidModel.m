@@ -51,7 +51,7 @@ classdef ReferenceModuleSolidModel < handle
             resCirc   = round(2*pi*R / (R-r) * res_th);
             resLen    = max(1, round(h / (R-r) * res_th));
 
-            ShapeFn = ShapeFunctionL8;
+            ShapeFn = ShapeFunctionH8;
             obj.mesh = Mesh();
             obj.mesh.addManipulatorHalfSegment3D(r, R, h, alpha_rad, ...
                                                  res_th, resCirc, resLen, ...

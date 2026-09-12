@@ -4,7 +4,7 @@ close all;
 l=3;         % long edge length
 res = 20;    % short edge resolution
 
-model = LShapeModelLinear(  ShapeFunctionL4,...
+model = LShapeModelLinear(  ShapeFunctionQ4,...
                              l, ...         % long edge length
                             res, ...         % short edge resolution
                             210000, ...     % Young Modulus

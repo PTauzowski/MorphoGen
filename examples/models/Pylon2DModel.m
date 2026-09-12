@@ -16,7 +16,7 @@ classdef Pylon2DModel < ModelLinearLoad
             z3=h;
            
 
-            sfL4=ShapeFunctionL4();
+            sfL4=ShapeFunctionQ4();
             obj.mesh = Mesh();
             x=[ bc*x2 z1; x3*bc z1; x2 z2; x3 z2];
             obj.mesh.addShapedMesh2D(sfL4, x , resb, resh-resh1, sfL4.pattern );

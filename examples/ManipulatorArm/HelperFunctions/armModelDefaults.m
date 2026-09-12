@@ -19,7 +19,7 @@ function arm = armModelDefaults(preset)
     arm.alpha_deg = arm.alpha;
     arm.res = 15;
     arm.Pz = 100;
-    arm.ShapeFn = ShapeFunctionL8();
+    arm.ShapeFn = ShapeFunctionH8();
 
     switch preset
         case "thick"

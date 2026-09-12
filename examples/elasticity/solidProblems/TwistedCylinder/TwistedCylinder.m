@@ -31,7 +31,7 @@ Ms = arm.Pz * R;        % [N·m]
 % Mesh resolution — same formula as ManipulatorModel3D
 resCirc = round(2*pi*R / (R-r) * res_th);          % circumferential
 resLen  = max(1, round(h / (R-r) * res_th));        % axial
-ShapeFn = ShapeFunctionL8();
+ShapeFn = ShapeFunctionH8();
 
 fprintf('Cylinder: R=%.4f m, r=%.4f m, h=%.4f m, t=%.4f m\n', R, r, h, R-r);
 fprintf('Mesh: resCirc=%d, resLen=%d, res_th=%d\n', resCirc, resLen, res_th);

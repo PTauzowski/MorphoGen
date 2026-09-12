@@ -1,6 +1,6 @@
-classdef ShapeFunctionL16 < ShapeFunctions2D
+classdef ShapeFunctionQ16 < ShapeFunctions2D
     methods
-        function obj = ShapeFunctionL16() 
+        function obj = ShapeFunctionQ16() 
             obj=obj@ShapeFunctions2D()
             obj.localNodes = [-1 -1/3 1/3 1 -1   -1/3  1/3  1    -1 -1/3 1/3 1   -1 -1/3 1/3 1; ...
                               -1 -1  -1   1 -1/3 -1/3 -1/3 -1/3  1/3 1/3 1/3 1/3  1   1   1  1]';
