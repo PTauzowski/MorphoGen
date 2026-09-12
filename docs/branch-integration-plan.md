@@ -397,18 +397,26 @@ git switch -c prep/arm        origin/CAS_Arm
 **Gate:** smoke harness still green on each prep branch — a demoted file is still on the path;
 every study folder has a README naming its paper.
 
-> **In progress, 2026-09-11.** Both prep branches are cut. The deletions and the demotion are
-> done and gated; the study folders are not.
+> **Rebuilt and complete, 2026-09-12.** The original 2026-09-11 triage was lost: it lived only
+> on local `prep/*` branches that were never pushed, and the six commits it cited
+> (`6e5c7d3`, `9b3d1b4`, `eaf2a09`, `f0d6942`, `d3ca053`, `ba508a5`) exist in no clone and on no
+> remote. Only the work that had landed on `develop` survived — D8's rename there, D9, and this
+> documentation. **The documentation is what made the rebuild cheap**: every step was specified,
+> including three corrections a mechanical sweep would have got wrong.
+>
+> Rebuilt from those specifications and **pushed**, with the study tips tagged first so nothing
+> here can be lost the same way again.
 >
 > | Step | State |
 > |---|---|
-> | Delete the dead — `prep/arm` (2 files) | done, `6e5c7d3` |
-> | Delete the dead — `prep/vibrations` (5 files) | done, `9b3d1b4` |
-> | Demote the 5 arm-only helpers | done, `eaf2a09` |
-> | [D8](integration-rules.md) shape-function rename — develop | done, `9c4b934` (67 files) |
-> | [D8](integration-rules.md) shape-function rename — `prep/arm` | done, `f0d6942` (79 files) |
-> | Study folders — `prep/vibrations` | done, `d3ca053` |
-> | Study folders + README — `prep/arm` | done, `ba508a5` |
+> | Tag the study tips — `paper/*`, `release/softwarex` | done, pushed |
+> | Delete the dead — `prep/vibrations` (5 files) | done, `0025fec` |
+> | Delete the dead — `prep/arm` (2 files) | done, `b9a66ac` |
+> | Demote the 5 arm-only helpers | done, `8e3ad1c` |
+> | [D8](integration-rules.md) shape-function rename — develop | done, `9c4b934` (69 files) |
+> | [D8](integration-rules.md) shape-function rename — `prep/arm` | done, `3427bc6` (77 files) |
+> | Study folders — `prep/vibrations` | done, `c08b4d9` |
+> | Study README — `prep/arm` | done, `1662c6a` |
 > | §5.2 register gaps | **open — four publication rows, left as TODO in the READMEs** |
 > | [D9](integration-rules.md) `DOFManager*` deleted (4 files) | done, see below |
 >
@@ -481,11 +489,28 @@ Measured the way §7 measured: check out the base, attempt the merge, count conf
 `<<<<<<<` markers. The method reproduces §7's figure for `Vibrations ← CAS_Arm` exactly (19
 files, 21 hunks, 3 modify/delete), so the columns are comparable.
 
-| Merge | Before Phase 3 | After Phase 3 |
-|---|---|---|
-| `develop ← vibrations` | 29 files · **88 hunks** | 24 files · **68 hunks** |
-| `develop ← arm` | 25 files · 64 hunks | 26 files · 64 hunks |
-| Phase 4: `vibrations ← arm` | 19 files · 21 hunks · 3 m/d | 23 files · 23 hunks · **5 m/d** |
+| Merge | Before Phase 3 | After Phase 3 | After the 2026-09-12 rebuild |
+|---|---|---|---|
+| `develop ← vibrations` | 29 files · **88 hunks** | 24 files · **68 hunks** | 24 files · **68 hunks** |
+| `develop ← arm` | 25 files · 64 hunks | 26 files · 64 hunks | 26 files · 64 hunks |
+| Phase 4: `vibrations ← arm` | 19 files · 21 hunks · 3 m/d | 23 files · 23 hunks · **5 m/d** | 21 files · 23 hunks · **3 m/d** |
+
+**The rebuild reproduces the lost triage.** Two of the three merges match the original to the
+file and the hunk, which is the evidence that the rebuilt branches are the same work rather than
+merely similar work.
+
+The Phase 4 row differs, and in the better direction: 3 modify/deletes rather than 5. The
+original triage relocated the arm model fixtures as part of Phase 3; the rebuild deliberately
+does not, because §Phase 4 already assigns that relocation — *take CAS_Arm's tree, replay the
+Vibrations edits, delete the old path* — and doing half of it early is what produced the two
+extra rename/delete pairs the original reported. The three that remain are exactly the three
+non-content decisions Phase 4 lists: `analysis/LinearElasticityWeighted.m`,
+`examples/topologyOpt/benchmarks/Manipulator3Dfull.m`, and the old
+`examples/topologyOpt/ManipulatorArm/` path.
+
+That is a small correction to the §5.1 post-mortem below. Moving studies into folders does not
+*by itself* add modify/deletes — moving them **into a path the other branch is also still
+editing** does. The fix is sequencing, not abandoning the move.
 
 **One merge got materially cheaper, one did not move, and the Phase 4 merge got slightly
 worse.** That last result is worth stating plainly because it contradicts the expectation in
