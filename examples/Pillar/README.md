@@ -1,4 +1,19 @@
-# Pillar Mesh Generator
+# Pillar
+
+Mesh generator and FE model for a quarter axisymmetric semiconductor nano-pillar.
+
+| | |
+|---|---|
+| **Branch of record** | `Vibrations` (tagged `paper/vibrations`) |
+| **Publication** | *TODO — add the DOI once published* |
+
+This study shares the `Vibrations` branch with the beam-vibration work in
+`examples/Vibrations/`; they are two separate studies, which is why they have
+two folders.
+
+---
+
+## Pillar Mesh Generator
 
 This directory contains a mesh generator for a quarter axisymmetric pillar-on-ground structure, suitable for finite element analysis of semiconductor nano-pillars.
 
