@@ -168,35 +168,35 @@ classdef (Abstract) FEAnalysis < handle
             q = obj.qnodal;
         end
 
-        % function clearCurrentLoad(obj)
-        %         obj.Pnodal(:)=0;
-        %         obj.Pfem=[];
-        % end
-        % function P = getCurrentNodalLoad(obj)
-        %     P=obj.Pnodal;
-        % end
-        % function P = getCurrentFEMlLoad(obj)
-        %     P=obj.Pfem;
-        % end
-        % function P = setCurrentNodalLoad(obj,P)
-        %     obj.Pnodal=P;
-        % end
-        % function createNextRightHandSideVector(obj)
-        %     obj.Pfem=[obj.Pfem obj.toFEMVector(obj.Pnodal) ];
-        %     obj.Pnodal(:) = 0;
-        % end
-        % function setRightHandSideVectorAsCurrent(obj,n)
-        %     obj.Pnodal = obj.fromFEMVector( obj.Pfem(:,n) );
-        % end
-        % 
-        % function setCurrentLoadToRightHandSideVectors(obj,n)
-        %     if size(obj.Pfem,2)==0  
-        %         obj.Pfem = obj.toFEMVector( obj.Pnodal );
-        %     else
-        %         obj.Pfem(:,n) =  obj.Pfem(:,n) + obj.toFEMVector( obj.Pnodal );
-        %     end
-        % end
-        % 
+        function clearCurrentLoad(obj)
+                obj.Pnodal(:)=0;
+                obj.Pfem=[];
+        end
+        function P = getCurrentNodalLoad(obj)
+            P=obj.Pnodal;
+        end
+        function P = getCurrentFEMlLoad(obj)
+            P=obj.Pfem;
+        end
+        function P = setCurrentNodalLoad(obj,P)
+            obj.Pnodal=P;
+        end
+        function createNextRightHandSideVector(obj)
+            obj.Pfem=[obj.Pfem obj.toFEMVector(obj.Pnodal) ];
+            obj.Pnodal(:) = 0;
+        end
+        function setRightHandSideVectorAsCurrent(obj,n)
+            obj.Pnodal = obj.fromFEMVector( obj.Pfem(:,n) );
+        end
+        
+        function setCurrentLoadToRightHandSideVectors(obj,n)
+            if size(obj.Pfem,2)==0  
+                obj.Pfem = obj.toFEMVector( obj.Pnodal );
+            else
+                obj.Pfem(:,n) =  obj.Pfem(:,n) + obj.toFEMVector( obj.Pnodal );
+            end
+        end
+
         function prepareRHSVectors(obj)
             obj.setCurrentLoadToRightHandSideVectors(size(obj.Pfem,2));
             obj.Pnodal(:)=0;
@@ -260,7 +260,10 @@ classdef (Abstract) FEAnalysis < handle
         function initializeResults(obj)
             cellfun(@(x) x.initializeResults(),obj.felems);
         end
-        function computeElementResults(obj,x)
+        function computeElementResults(obj,varargin)
+            % x is optional, matching CAS_Arm and develop. Vibrations made it
+            % required, which broke every caller that omits it.
+            if numel(varargin) >= 1 && ~isempty(varargin{1}), x = varargin{1}; else, x = 1; end
             resnumber=0;
             nnodes=size(obj.mesh.nodes, 1);
             ei = obj.getElemIndices();

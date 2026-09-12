@@ -27,7 +27,12 @@ classdef PlaneStressElem < PlaneElem
             obj.results.gp.stress = zeros(3,nelems,nip);
             obj.results.gp.all = zeros(size(obj.results.names,2),nelems,nip);
         end
-        function computeResults(obj,nodes, q, x, el_idx)
+        function computeResults(obj,nodes, q, varargin)
+            % x and el_idx are optional, matching CAS_Arm and develop. The body
+            % below is Vibrations' and needs both, so they are defaulted here
+            % rather than the signature being made strict again.
+            if numel(varargin) >= 1 && ~isempty(varargin{1}), x = varargin{1}; else, x = 1; end
+            if numel(varargin) >= 2, el_idx = varargin{2}; else, el_idx = []; end
             nelems = size(obj.elems,1);
             xrows=nelems;
             if (~isempty(el_idx))
@@ -35,6 +40,13 @@ classdef PlaneStressElem < PlaneElem
             end
             if numel(x) == nelems
                 xrows=1;
+            end
+            if isscalar(x)
+                % A scalar density means "uniform". The gp.all(18,...) write
+                % below is CAS_Arm's and reshapes x per element, so expand
+                % it here rather than special-casing the write.
+                x = repmat(x, nelems, 1);
+                xrows = 1;
             end
             nnodes = size(obj.elems,2);
             ndofs = size( obj.ndofs,2);
