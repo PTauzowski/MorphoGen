@@ -181,11 +181,15 @@ classdef TopologyOptimization < handle
                     ip = ismember(elem_inds{i},obj.const_elems);
                     active_el = elem_inds{i};
                     active_el(ip) = [];
-                    obj.FEAnalysis.felems{i}.plotSolidSelected(obj.FEAnalysis.mesh.nodes,x(elem_inds{i})>0.5);
+
+                    %pnodes = [ obj.FEAnalysis.mesh.nodes(:,1) abs(obj.FEAnalysis.mesh.nodes(:,2)) obj.FEAnalysis.mesh.nodes(:,3)];
+                    pnodes = obj.FEAnalysis.mesh.nodes;
+                 obj.FEAnalysis.felems{i}.plotSolidSelected(pnodes,x(elem_inds{i})>0.5);
                     %obj.FEAnalysis.felems{i}.plotSolidSelected([obj.FEAnalysis.mesh.nodes(:,1) obj.FEAnalysis.mesh.nodes(:,2) -obj.FEAnalysis.mesh.nodes(:,3)],x(elem_inds{i})>0.5);
                     
-                    obj.FEAnalysis.felems{i}.plotSolidSelected(obj.FEAnalysis.mesh.nodes,obj.const_elems',[0.6,0.6,0.6]);
+                 obj.FEAnalysis.felems{i}.plotSolidSelected(pnodes,obj.const_elems,[0.6,0.6,0.6]);
                     %obj.FEAnalysis.felems{i}.plotSolidSelected([obj.FEAnalysis.mesh.nodes(:,1) obj.FEAnalysis.mesh.nodes(:,2) -obj.FEAnalysis.mesh.nodes(:,3)],obj.const_elems,[0.6,0.6,0.6]);
+                    
                 end
             else
                 for i=1:size( obj.FEAnalysis.felems, 2)
@@ -195,7 +199,7 @@ classdef TopologyOptimization < handle
                     %patch('Vertices', problem.nodes, 'Faces', problem.felems{i}.elems(faces,problem.felems{i}.sf.contour),'FaceColor',[0.8 0.8 0.8],'EdgeColor','none');
                     C = 1-obj.FEAnalysis.felems{i}.results.nodal.all(:,18);
                     %C = obj.FEAnalysis.felems{i}.results.nodal.all(:,17);
-                    patch('Vertices', obj.FEAnalysis.mesh.nodes, 'Faces', obj.FEAnalysis.felems{i}.elems(faces,obj.FEAnalysis.felems{i}.sf.contour), 'FaceVertexCData',C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
+                    patch('Vertices', obj.FEAnalysis.mesh.nodes, 'Faces', obj.FEAnalysis.felems{i}.elems(faces,obj.FEAnalysis.felems{i}.sf.contour), 'FaceVertexCData',C , "FaceColor", "interp", "EdgeColor","k", "LineStyle", "none","FaceAlpha", 1 );
                    % patch('Vertices', [100-obj.FEproblem.mesh.nodes(:,1) obj.FEproblem.mesh.nodes(:,2:3)], 'Faces', obj.FEproblem.felems{i}.elems(faces,obj.FEproblem.felems{i}.sf.contour), 'FaceVertexCData',C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
                 %title(obj.results.descriptions(valueIndex));
                 end

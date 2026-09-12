@@ -461,12 +461,8 @@ classdef Mesh < handle
              mesh1.addShapedMesh3D( shapeFn, x0+[ 0 0 0; R/2 0 0; 0 R/2 0; R/2/1.41 R/2/1.41 0; 0 0 h; R/2 0 h; 0 R/2 h; R/2/1.41 R/2/1.41 h], [nr(1) nr(1) nr(2)], pattern );
 
              sfL2 = ShapeFunctionQ4();
-             a = R/(2*sqrt(2));
-
-            sl1 = ShapeObjectRectangular(sfL2, x0+[0 R/2 0; a a 0; 0 R/2 h; a a h]);
-            sl2 = ShapeObjectRectangular(sfL2, x0+[a a 0; R/2 0 0; a a h; R/2 0 h]);
-
-           
+             sl1 = ShapeObjectRectangular(sfL2,x0+[0 R/2 0; R/2/1.41 R/2/1.41 0; 0 R/2 h; R/2/1.41 R/2/1.41 h ]);
+             sl2 = ShapeObjectRectangular(sfL2,x0+[R/2/1.41 R/2/1.41 0; R/2 0 0; R/2/1.41 R/2/1.41 h; R/2 0 h]);
              sc1 = CylinderObject(x0,R,90,45,0,h);
              sc2 = CylinderObject(x0,R,45,0,0,h);
 
@@ -627,7 +623,7 @@ classdef Mesh < handle
         function addManipulatorHalfSegment3D(obj,r,R,h,alpha,nr,nc,nz,lnodes)
             mesh=Mesh();
             mesh.addRectMesh3D( r, 0, 0, R-r, 2*pi, h, nr, nc, nz, lnodes);
-            mesh.transformToCylindrical3D([R 0]);
+            mesh.transformToCylindrical3D([0 0]);
            [mesh.convex_hull_nodes, ~] = convhull(mesh.nodes(:,1), mesh.nodes(:,2), mesh.nodes(:,3));
 
             xp=mesh.nodes;
@@ -815,6 +811,11 @@ classdef Mesh < handle
             obj.nodes(nodesToRemove,:)=[];
             obj.elems(elemsToRemove,:)=[];
         end
+        function leaveElemsByNumbers( obj, elemsToLeave )
+            elemsToRemove=true(size(obj.elems,1),1);
+            elemsToRemove(elemsToLeave)=false;
+            obj.removeElemsByNumbers(elemsToRemove);
+        end
         function transformNodesXY( obj, transformFn )
             obj.nodes = transformFn( obj.nodes );
         end
@@ -825,13 +826,210 @@ classdef Mesh < handle
             obj.nodes=mesh.Nodes';
             obj.elems=mesh.Elements';
         end
-        function exportMeshToFile(obj, filenamebase)
-            nodes=obj.nodes;
-            elems=obj.elems;
-            save([filenamebase '_mesh.mat'],"nodes","elems");
-            dlmwrite([filenamebase '_nodes.txt'],obj.nodes,'delimiter','\t','precision','%7.3f');
-            dlmwrite([filenamebase '_elems.txt'],obj.elems,'delimiter','\t','precision',6,'-append');
+        
+        % function [tnodes, telems] = getTetrahedralMesh(obj,selected)
+        %     Tetrahedra = [
+        %         2 5 3 1;  % Tetrahedron 1
+        %         2 8 3 5;  % Tetrahedron 2
+        %         3 5 8 7;  % Tetrahedron 3
+        %         8 5 2 6;  % Tetrahedron 4
+        %         3 8 2 4;  % Tetrahedron 5
+        %     ];
+        %     snodes=false(size(obj.nodes,1),1);
+        %     snodes(obj.elems(selected,:))=true;
+        %     nSelElems=size(find(selected),1);
+        %     nSelNodes=size(find(snodes),1);
+        %     tnodes=obj.nodes;
+        %     telems=reshape(obj.elems(selected,Tetrahedra'),4,5*nSelElems)';
+        % end
+
+        function [tnodes, telems] = getTetrahedralMesh(obj, selected)
+            % Tetrahedra mapping for a single hexahedron
+            Tetrahedra = [
+                5 2 1 4;  % Tetrahedron 1
+                8 5 2 6;  % Tetrahedron 2
+                4 5 2 8;  % Tetrahedron 3
+                7 5 4 8;  % Tetrahedron 4
+                4 7 1 5;  % Tetrahedron 5
+                1 7 4 3;  % Tetrahedron 5
+            ];
+            
+            % Identify selected nodes
+            snodes = false(size(obj.nodes, 1), 1);
+            snodes(obj.elems(selected, :)) = true;
+            
+            % Map global indices of selected nodes
+            globalToLocal = find(snodes);
+            localToGlobal = zeros(size(snodes));
+            localToGlobal(globalToLocal) = 1:length(globalToLocal);
+            
+            % Filter nodes and elements
+            tnodes = obj.nodes(globalToLocal, :);
+            nSelElems = sum(selected);
+            
+            % Generate tetrahedrons for each selected hexahedron
+            telems = zeros(nSelElems * size(Tetrahedra, 1), 4); % Each hexahedron creates 5 tetrahedrons
+            cnt = 1;
+            for i = find(selected)'
+                hexNodes = obj.elems(i, :); % Global node indices of current hexahedron
+                localHexNodes = localToGlobal(hexNodes); % Map to local indices
+                telems(cnt:cnt + 5, :) = localHexNodes(Tetrahedra);
+                cnt = cnt + 6;
+            end
         end
+
+        function exportMeshToFile(obj, selected, filenamebase)
+            %save([filenamebase '_mesh.mat'],"nodes","elems");
+            dlmwrite(filenamebase + '_hexamesh.txt',obj.nodes,'delimiter',',','precision','%7.3f');
+            dlmwrite(filenamebase + '_hexamesh.txt',obj.elems(selected,:),'delimiter','\t','precision',6,'-append');
+            
+            [~, telems] = obj.getTetrahedralMesh(selected);
+            
+            dlmwrite(filenamebase + '_tetramesh.txt',obj.nodes,'delimiter',',','precision','%7.3f');
+            dlmwrite(filenamebase + '_tetramesh.txt',telems,'delimiter',',','precision',6,'-append');
+        end
+        function exportToPLY(obj,filename)
+            % Open the file
+            fid = fopen(filename+".ply", 'w');
+            if fid == -1
+                error('Could not create file');
+            end
+            
+            % Write PLY header
+            fprintf(fid, 'ply\nformat ascii 1.0\n');
+            fprintf(fid, 'element vertex %d\n', size(obj.nodes, 1));
+            fprintf(fid, 'property float x\nproperty float y\nproperty float z\n');
+            fprintf(fid, 'element face %d\n', size(obj.elems, 1) * 4); % 4 faces per tetrahedron
+            fprintf(fid, 'property list uchar int vertex_indices\n');
+            fprintf(fid, 'end_header\n');
+            
+            % Write vertices
+            fprintf(fid, '%.6f %.6f %.6f\n', obj.nodes');
+            
+            % Write faces (export tetrahedrons as triangular faces)
+            for i = 1:size(obj.elems, 1)
+                fprintf(fid, '3 %d %d %d\n', obj.elems(i, [1, 2, 3]) - 1); % Face 1
+                fprintf(fid, '3 %d %d %d\n', obj.elems(i, [1, 3, 4]) - 1); % Face 2
+                fprintf(fid, '3 %d %d %d\n', obj.elems(i, [1, 4, 2]) - 1); % Face 3
+                fprintf(fid, '3 %d %d %d\n', obj.elems(i, [2, 3, 4]) - 1); % Face 4
+            end
+            
+            % Close the file
+            fclose(fid);
+            disp(['Mesh exported to ', filename]);
+        end
+        function exportTetraToSTL(obj,filename)
+            % Open the file for writing
+            fid = fopen(filename+".stl", 'w');
+            if fid == -1
+                error('Could not create file');
+            end
+            
+            % Write STL header
+            fprintf(fid, 'solid TetrahedralMesh\n');
+            
+            % Extract surface faces
+            % Each tetrahedron face: 4 faces per tetrahedron
+            tetraFaces = [
+                1 2 3;  % Face 1
+                1 3 4;  % Face 2
+                1 4 2;  % Face 3
+                2 3 4   % Face 4
+            ];
+            
+            % Store unique surface faces
+            faces = [];
+            for i = 1:size(obj.elems, 1)
+                tetra = obj.elems(i, :); % Extract tetrahedron nodes
+                faces = [faces; tetra(tetraFaces)]; % Append all faces
+            end
+            
+            % Remove duplicate faces (shared between neighboring tetrahedra)
+            faces = unique(sort(faces, 2), 'rows');
+            
+            % Write each triangular face in STL format
+            for i = 1:size(faces, 1)
+                v1 = obj.nodes(faces(i, 1), :);
+                v2 = obj.nodes(faces(i, 2), :);
+                v3 = obj.nodes(faces(i, 3), :);
+                
+                % Compute normal vector for the triangle
+                n = cross(v2 - v1, v3 - v1);
+                n = n / norm(n);
+                
+                % Write the face
+                fprintf(fid, '  facet normal %.6f %.6f %.6f\n', n);
+                fprintf(fid, '    outer loop\n');
+                fprintf(fid, '      vertex %.6f %.6f %.6f\n', v1);
+                fprintf(fid, '      vertex %.6f %.6f %.6f\n', v2);
+                fprintf(fid, '      vertex %.6f %.6f %.6f\n', v3);
+                fprintf(fid, '    endloop\n');
+                fprintf(fid, '  endfacet\n');
+            end
+            
+            % Write STL footer
+            fprintf(fid, 'endsolid TetrahedralMesh\n');
+            
+            % Close the file
+            fclose(fid);
+            disp(['Tetrahedral mesh surface exported to ', filename]);
+        end
+        function exportToStep(obj,filename)
+            % EXPORTTOSTEP Exports a 3D mesh to a basic STEP file.
+            % 
+            % INPUTS:
+            %   filename - Name of the STEP file to write (e.g., 'output.step').
+            %   nodes - Matrix of node coordinates (Nx3).
+            %   elems - Matrix of triangular elements (Mx3), referencing node indices.
+            %
+            % NOTE: This function generates a simplified STEP file with only B-Rep data.
+            
+            fid = fopen(filename+".step", 'w');
+            if fid == -1
+                error('Could not open file for writing.');
+            end
+        
+            % STEP Header
+            fprintf(fid, "ISO-10303-21;\n");
+            fprintf(fid, 'HEADER;\n');
+            fprintf(fid, "FILE_DESCRIPTION(('Basic Mesh Export'),'2;1');\n");
+            fprintf(fid, "FILE_NAME('%s','%s');\n', filename, datestr(now, 'yyyy-mm-ddTHH:MM:SS\n");
+            fprintf(fid, "FILE_SCHEMA(('AUTOMOTIVE_DESIGN_CC2'));\n");
+            fprintf(fid, 'ENDSEC;\n');
+            
+            % STEP Data Section
+            fprintf(fid, 'DATA;\n');
+            
+            % Write nodes as STEP vertices
+            for i = 1:size(obj.nodes, 1)
+                fprintf(fid, "#%d = CARTESIAN_POINT ( '' , ( %.6f, %.6f, %.6f ) );\n", ...
+                    i, obj.nodes(i, 1), obj.nodes(i, 2), obj.nodes(i, 3));
+            end
+            
+            % Write triangles as STEP faces
+            faceId = size(obj.nodes, 1) + 1;
+            for i = 1:size(obj.elems, 1)
+                fprintf(fid, "#%d = ADVANCED_FACE ( '' , ( ", faceId + i - 1);
+                for j = 1:3
+                    edgeId = faceId + size(obj.elems, 1) + ((i - 1) * 3) + j;
+                    fprintf(fid, '#%d ', edgeId);
+                    if j < 3
+                        fprintf(fid, ', ');
+                    else
+                        fprintf(fid, ')');
+                    end
+                end
+                fprintf(fid, ', #4) ;\n');
+            end
+            
+            % Close STEP file
+            fprintf(fid, 'ENDSEC;\n');
+            fprintf(fid, 'END-ISO-10303-21;\n');
+            fclose(fid);
+            
+            disp(['STEP file exported to ', filename]);
+        end
+
         function upward_facing_nodes = findUpwardFacingNodes(obj)
             % Preallocate for storing upward-facing node indices
             upward_facing_nodes = [];
@@ -1360,4 +1558,6 @@ classdef Mesh < handle
             end
         end
     end
+
+    
 end

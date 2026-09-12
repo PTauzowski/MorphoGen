@@ -39,7 +39,7 @@ codegen/
 # Cloud based storage dotfile
 .MATLABDriveTag
 
-# Image assets
+# Image files
 *.png
 *.jpg
 *.jpeg
@@ -49,3 +49,18 @@ codegen/
 *.tiff
 *.svg
 *.webp
+*.heic
+
+# Paper directory
+paper/
+
+# 3D geometry files
+*.stl
+*.obj
+*.mtl
+
+# OS-generated files
+.DS_Store
+
+# IDE files
+.idea/

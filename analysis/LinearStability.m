@@ -55,4 +55,3 @@ classdef LinearStability < FEAnalysis
        end
    end
 end
-

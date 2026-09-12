@@ -1,19 +1,8 @@
-classdef SIMP_MMA_TopologyOptimizationElasticCompliance < SIMP_MMA_TopologyOptimization
-    
-    properties
-        VolConstr;
-    end
-    
+classdef SIMP_MMA_TopologyOptimizationElasticCompliance < SIMP_MMA_TopologyOptimizationElasticComplianceBase
     methods
-
-        function obj = SIMP_MMA_TopologyOptimizationElasticCompliance(Rmin,problem,penal,VolConstr,is_const)
-            obj = obj@SIMP_MMA_TopologyOptimization(1,Rmin,problem,penal,is_const);
-            tne=obj.FEAnalysis.getTotalElemsNumber();
-            obj.gradConstrValues = zeros(1,1);
-            obj.V0=tne*VolConstr;
-            obj.VolConstr=VolConstr;
-            obj.x(1:obj.totalFENumber,1)=0.5;
-            obj.is_const=is_const;
+        function obj = SIMP_MMA_TopologyOptimizationElasticCompliance(Rmin, problem, penal, VolConstr, is_const)
+            obj = obj@SIMP_MMA_TopologyOptimizationElasticComplianceBase( ...
+                Rmin, problem, penal, VolConstr, is_const, "linear");
         end
 
         function resetAnalysis(obj)
@@ -66,4 +55,3 @@ classdef SIMP_MMA_TopologyOptimizationElasticCompliance < SIMP_MMA_TopologyOptim
         
     end
 end
-

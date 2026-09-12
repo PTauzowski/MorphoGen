@@ -20,7 +20,7 @@ th=0.05;
 % FE division along thickness
 nth=1;
 
-basename='TrussZ_superposition';
+basename='TrussZ_superposition_rev';
 
 
 
@@ -97,12 +97,12 @@ constBarSelector3 = Selector( @(x)( (x(:,1)>0.95*th) & ((l1-x(:,1))>0.95*th) &  
 constBarSelector4 = Selector( @(x)( (x(:,1)>0.95*th) & ((l1-x(:,1))>0.95*th) &  (x(:,2)<=1.01*th) & ((h-x(:,3))<1.01*th ) ) ) ;
 floorFacesSelector = Selector( @(x)( abs(x(:,3)-th)<0.001 ) );
 
-const_elems = [ mesh.findElems( constElemsSelectorGate1 ); ...
-                mesh.findElems( constElemsSelectorGate2 ); ...
-                mesh.findElems( constBarSelector1 ); ...
-                mesh.findElems( constBarSelector2 );...
-                mesh.findElems( constBarSelector3 );...
-                mesh.findElems( constBarSelector4 )];
+const_elems = [ mesh.findElems( constElemsSelectorGate1, true ); ...
+                mesh.findElems( constElemsSelectorGate2, true ); ...
+                mesh.findElems( constBarSelector1, true ); ...
+                mesh.findElems( constBarSelector2, true );...
+                mesh.findElems( constBarSelector3, true );...
+                mesh.findElems( constBarSelector4, true )];
 
 %fixing supported nodes
 analysis.fixNodes( fixedFacesSelector1, ["ux" "uy" "uz"] );
@@ -121,7 +121,7 @@ analysis.loadClosestNode([l1 0, h],["ux" "uy" "uz"],[N4,Ty4,Tz4+Tr]);
 mesh.transformNodesXY( @(x)( [ x(:,1)+(0.2*(l1-x(:,1))-0.2*x(:,1)).*x(:,2)/l2 x(:,2) x(:,3)+0.3*x(:,1)/l1 ] )  );
 
 %plotting of design space
-fe.plotSolid(mesh.nodes);
+fe.plot(mesh.nodes);
 analysis.plotCurrentLoad();
 analysis.plotSupport();
 analysis.printProblemInfo();

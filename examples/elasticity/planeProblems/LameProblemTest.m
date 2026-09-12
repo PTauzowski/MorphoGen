@@ -1,8 +1,8 @@
 clear;
 close all;
-r1=50;
-r2=100;
-div=10;
+r1=5;
+r2=10;
+div=20;
 sf = ShapeFunctionQ4;
 E=210000;
 nu=0.3;

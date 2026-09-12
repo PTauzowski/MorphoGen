@@ -193,10 +193,9 @@ while epsi > epsimin
   residumax = max(abs(residu));
   steg = 2*steg;
   end
-  if ittt > 198
-    epsi
-    ittt
-  end
+  % if ittt > 198
+  %   fprintf('subsolv max inner iterations: epsi=%g, ittt=%d\n', epsi, ittt);
+  % end
 epsi = 0.1*epsi;
 end
 %x(find(passive)) = 0.001; %(cantilever beam with a fixed round hole)

@@ -72,7 +72,7 @@ classdef ModelLinear < FEModel
 
         function plotModel( obj )
             obj.analysis.plotFiniteElements();
-            %obj.analysis.plotCurrentLoad();
+            %bj.analysis.plotCurrentLoad();
             %obj.analysis.plotSupport();
             % plot(obj.mesh.nodes(obj.result_node,1),obj.mesh.nodes(obj.result_node,2),"Marker","o");
         end

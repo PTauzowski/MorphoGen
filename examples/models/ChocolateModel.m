@@ -16,16 +16,18 @@ classdef ChocolateModel < ModelLinear
             obj.nTempVars=size(find((round((obj.zCoords-ganTh)*obj.zTol)/obj.zTol)>0),1)-3;
             obj.fe = SolidElasticElem( ShapeFunctionH27, obj.mesh.elems );
             obj.analysis = LinearElasticityWeighted( obj.fe, obj.mesh, false );
+            
 
             obj.allganElemsSelector = Selector( @(x)( x(:,3) > ganTh ) );
             obj.allganTopElemsSelector = Selector( @(x)( x(:,3) > ganTh+alGanTh*0.6 ) );
-            %fixedFaceSelector = Selector( @(x)( abs(x(:,3) - l)<0.001 ) );
+            %fixedFaceSelector = Selector( @(x)( abs(x(:,1) ) < 0.0001 ) );
             %loadedFaceSelector = Selector( @(x)( abs(x(:,1) - l)<0.001 ) );
 
             meshMax=max(obj.mesh.nodes);
             obj.analysis.fixClosestNode([0 0 0], ["ux" "uy" "uz"], [0 0 0] );
-            obj.analysis.fixClosestNode([meshMax(1) 0 0], ["uz"], 0);
-            obj.analysis.fixClosestNode([meshMax(1) meshMax(2) ganTh], ["ux" "uz"], [0 0] );
+            obj.analysis.fixClosestNode([meshMax(1) 0 0], ["uy" "uz"], [0 0]);
+            obj.analysis.fixClosestNode([meshMax(1) meshMax(2) ganTh], [ "ux" ], [0] );
+            %obj.analysis.fixNodes(fixedFaceSelector,["ux" "uy" "uz"], [0 0 0])
            
             obj.fe.props.h=1;
             obj.fe.props.ndT=zeros(1,size(obj.mesh.nodes,1));
@@ -34,7 +36,7 @@ classdef ChocolateModel < ModelLinear
             material.setElasticIzoGrad();
             obj.fe.setMaterial(material);
 
-            %obj.analysis.loadClosestNode([meshMax(1)/2 meshMax(2)/2 meshMax(2)], ["uz"], -1);
+            obj.analysis.loadClosestNode([meshMax(1)/2 meshMax(2)/2 meshMax(2)], ["uz"], -1);
             
             obj.x=ones(1,obj.analysis.getTotalElemsNumber());
             obj.result_number=13;
@@ -103,7 +105,7 @@ classdef ChocolateModel < ModelLinear
             zGt = ganTh;
             
             % top of interface layer
-            zIt = zGt; +obj.intTh;
+            zIt = zGt; + obj.intTh;
             
             % bottom of noth
             zNb = zIt+obj.alGanTh-notchDepth;
@@ -126,10 +128,10 @@ classdef ChocolateModel < ModelLinear
             ytiles=4; 
             
             % FE x - division of the tile
-            ncx=8;
+            ncx=4;
             
             % FE y - division of the tile
-            ncy=8;
+            ncy=4;
             
             % depth FE division of the GaN layer
             ngan=2;
@@ -206,8 +208,7 @@ classdef ChocolateModel < ModelLinear
                         x1   y2      zRt; x1    y3/2 zRt; x1  y1     zRt; ...
 
                 ];
-            
-            
+                       
             mesh.addShapedMesh3D( ShapeFn8, ganNotch1, [ncx,nnotch,ngan], ShapeFn27.localNodes );
             mesh.addShapedMesh3D( ShapeFn8, ganNotch2, [ncy,nnotch,ngan], ShapeFn27.localNodes );
             mesh.addShapedMesh3D( ShapeFn8, thNotch1, [ncx,nnotch,1], ShapeFn27.localNodes );
@@ -216,7 +217,7 @@ classdef ChocolateModel < ModelLinear
             mesh.addShapedMesh3D( ShapeFn27,rNotch2,  [ncy,nnotch,nround], ShapeFn27.localNodes );
             mesh.duplicateTransformedMeshDeg3D( [x3/2  y3/2 ], 180, [0 0 0] );
             mesh.addShapedMesh3D( ShapeFn8, ganTileGeom, [ncx,ncy,ngan], ShapeFn27.localNodes );
-            %mesh.addShapedMesh3D( ShapeFn8, thTileGeom,  [ncx,ncy,1], ShapeFn27.localNodes );
+            mesh.addShapedMesh3D( ShapeFn8, thTileGeom,  [ncx,ncy,1], ShapeFn27.localNodes );
             mesh.addShapedMesh3D( ShapeFn8, allGanRound, [ncx,ncy,nround], ShapeFn27.localNodes );
             mesh.addShapedMesh3D( ShapeFn8, allGanStright, [ncx,ncy,nstr], ShapeFn27.localNodes );
             
@@ -248,8 +249,10 @@ classdef ChocolateModel < ModelLinear
         function plotZCoordsPoints(obj)
             n=size(obj.zCornersCoords,1);
             x=zeros(n,1);
-            p=plot3(x,x,obj.zCornersCoords,'.');
+            p=plot3(x(obj.zCornersCoords>=obj.ganTh),x(obj.zCornersCoords>=obj.ganTh),obj.zCornersCoords(obj.zCornersCoords>=obj.ganTh),'.');
             p.Color = "red";
+            p=plot3(x(obj.zCornersCoords<obj.ganTh),x(obj.zCornersCoords<obj.ganTh),obj.zCornersCoords(obj.zCornersCoords<obj.ganTh),'.');
+            p.Color = "blue";
         end
 
         function [stressObj, sx1, sy1, sx2, sy2]=computeStressObjective(obj)

@@ -11,17 +11,6 @@ classdef LinearNaturalVibration < FEAnalysis
             obj.Mnodal = zeros( size(mesh.nodes,1), size(obj.ndofs,2) );
        end
 
-       function K = globalMatrixAggregationWeighted(obj, fname, x)
-            K = [];
-            ei = getElemIndices(obj);
-            for k=1:size(obj.felems,2)
-                if ismethod(obj.felems{k},fname)
-                    K = [ K; obj.felems{k}.(fname)(obj.mesh.nodes,x(ei{k})) ];
-                else
-                    error("Class " + class(obj.felems{k}) + " or its predecessors not implements function :"+fname);
-                end
-            end
-       end
 
        function massClosestNode(obj, x, dofnames, values )
            m_nodes = obj.mesh.findClosestNode(x);
@@ -136,4 +125,3 @@ classdef LinearNaturalVibration < FEAnalysis
 
    end
 end
-

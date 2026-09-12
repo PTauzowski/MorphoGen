@@ -74,24 +74,24 @@ classdef PlaneStressElem < PlaneElem
             stheta = 2 .* atan( sxy ./ (sxx - syy) );
             sHM = sqrt(  s1 .* s1 - s1 .* s2 + s2 .* s2 );
            
-            obj.results.gp.all(1,:,:) = exx(:,:);
-            obj.results.gp.all(2,:,:) = eyy(:,:);
-            obj.results.gp.all(3,:,:) = exy(:,:);
-            obj.results.gp.all(4,:,:) = sxx(:,:);
-            obj.results.gp.all(5,:,:) = syy(:,:);
-            obj.results.gp.all(6,:,:) = sxy(:,:);
-            obj.results.gp.all(7,:,:) = e1(:,:); 
-            obj.results.gp.all(8,:,:) = e2(:,:);
-            obj.results.gp.all(9,:,:) = maxt(:,:);
-            obj.results.gp.all(10,:,:) = etheta(:,:);
-            obj.results.gp.all(11,:,:) = etr(:,:);
-            obj.results.gp.all(12,:,:) = vol(:,:);
-            obj.results.gp.all(13,:,:) = s1(:,:);
-            obj.results.gp.all(14,:,:) = s2(:,:);
-            obj.results.gp.all(15,:,:) = maxs(:,:);
-            obj.results.gp.all(16,:,:) = stheta(:,:);
-            obj.results.gp.all(17,:,:) = sHM(:,:);
-            obj.results.gp.all(18,:,:) = repmat(x,xrows,nip);
+            obj.results.gp.all(1,:,:) = exx(1,:,:);
+            obj.results.gp.all(2,:,:) = eyy(1,:,:);
+            obj.results.gp.all(3,:,:) = exy(1,:,:);
+            obj.results.gp.all(4,:,:) = sxx(1,:,:);
+            obj.results.gp.all(5,:,:) = syy(1,:,:);
+            obj.results.gp.all(6,:,:) = sxy(1,:,:);
+            obj.results.gp.all(7,:,:) = e1(1,:,:); 
+            obj.results.gp.all(8,:,:) = e2(1,:,:);
+            obj.results.gp.all(9,:,:) = maxt(1,:,:);
+            obj.results.gp.all(10,:,:) = etheta(1,:,:);
+            obj.results.gp.all(11,:,:) = etr(1,:,:);
+            obj.results.gp.all(12,:,:) = vol(1,:,:);
+            obj.results.gp.all(13,:,:) = s1(1,:,:);
+            obj.results.gp.all(14,:,:) = s2(1,:,:);
+            obj.results.gp.all(15,:,:) = maxs(1,:,:);
+            obj.results.gp.all(16,:,:) = stheta(1,:,:);
+            obj.results.gp.all(17,:,:) = sHM(1,:,:);
+            obj.results.gp.all(18,:,:) = repmat(reshape(x(:)', 1, nelems, 1), 1, 1, nip);
         end
         
         
@@ -174,4 +174,3 @@ classdef PlaneStressElem < PlaneElem
         
     end
 end
-
