@@ -261,18 +261,17 @@ classdef (Abstract) FEAnalysis < handle
             cellfun(@(x) x.initializeResults(),obj.felems);
         end
         function computeElementResults(obj,varargin)
-            % x is optional, matching CAS_Arm and develop. Vibrations made it
-            % required, which broke every caller that omits it.
-            if numel(varargin) >= 1 && ~isempty(varargin{1}), x = varargin{1}; else, x = 1; end
             resnumber=0;
             nnodes=size(obj.mesh.nodes, 1);
             ei = obj.getElemIndices();
-            if (numel(x)>1)
+            
+            if ( nargin == 2 )
+                x=varargin{1};
                 for k=1:size(obj.felems,2)
-                    obj.felems{k}.computeResults( obj.mesh.nodes, obj.qnodal, x(ei{k}), []);
+                    obj.felems{k}.computeResults( obj.mesh.nodes, obj.qnodal,x(ei{k}));
                 end
             else
-                cellfun(@(x) x.computeResults( obj.mesh.nodes,obj.qnodal, 1, [] ),obj.felems);
+                cellfun(@(x) x.computeResults( obj.mesh.nodes,obj.qnodal ),obj.felems);
             end
             resnumber = max(cellfun( @(x) size(x.results.gp.all,1), obj.felems),1);
             nres = zeros( nnodes, resnumber(1) );
