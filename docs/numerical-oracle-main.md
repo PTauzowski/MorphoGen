@@ -241,3 +241,50 @@ closed-form results, so exact equality is the wrong bar. Compare:
 The iteration count is the least reliable of the three and the most sensitive: MMA stops on
 `max|x - x_old| < 0.001`, so a tiny perturbation near the threshold can move it. Treat a
 changed objective with an unchanged volume fraction as the signal that matters.
+
+---
+
+## Phase 5 parity — the merged tree vs develop's pre-merge baseline *(2026-09-12)*
+
+R7's gate, measured after `integration/features` landed on `develop` (`89219a3`).
+
+| Benchmark | Optimiser | baseline `objF` | merged `objF` | rel. diff | volfrac | iters |
+|---|---|---:|---:|---:|---|---|
+| `Cantilever` | ESO | 1270.06320313 | 1270.06320313 | **0** | match | 311 = 311 |
+| `Cantilever` | SIMP | 76.7366325352 | 76.7366325356 | 5.2e-12 | match | 113 = 113 |
+| `Beam99` | ESO | 1915.94611678 | 1915.94611678 | **0** | match | 422 = 422 |
+| `Beam99` | SIMP | 230.191384232 | 230.191384248 | 7.0e-11 | match | 1017 = 1017 |
+| `Lshape` | ESO | 2591.90024561 | 2591.90024561 | **0** | match | 985 = 985 |
+| `Lshape` | SIMP | 207.330342294 | 207.330342297 | 1.5e-11 | match | 333 = 333 |
+
+**All three ESO runs are bit-exact; all three SIMP runs agree to ~1e-11** against R7's 1e-6 bar,
+with volume fractions and iteration counts identical throughout. The residual is consistent with
+CAS_Arm's vectorised (`pagemtimes`) element bodies reordering floating-point summation — the same
+mathematics evaluated in a different order. Bit-identity with `main` is therefore no longer
+expected on the SIMP path; the bar is the stated tolerance.
+
+### The parameters each reference was captured under
+
+Recording these is the point of this section. **The Phase 5 merge silently changed benchmark
+parameters** — in every case because the feature side's value won an auto-merge that never
+conflicted, since `develop` had not touched those lines:
+
+| Benchmark | parameter | develop | feature | merged tree |
+|---|---|---:|---:|---:|
+| `Cantilever` | `res` | 40 | 80 | **80** |
+| `Cantilever` | `Rfilter` | `3*l/res` | `4*l/res` | **`4*l/res`** |
+| `Lshape` | `res` | 20 | 15 | **15** |
+| `Beam99` | — | *(unchanged)* | *(unchanged)* | *(unchanged)* |
+
+The table above was therefore measured on **resolution- and filter-matched variants**, not on the
+scripts as they now stand. Run as-shipped, `Cantilever` reports `objF = 75.92` on 12800 elements
+and `Lshape` `212.75` on 3660 — different problems, not regressions.
+
+Two consequences worth acting on:
+
+1. **A reference value is meaningless without the parameters that produced it.** A drifted
+   parameter is indistinguishable from a physics regression; that cost a full diagnostic cycle
+   here, including one wrong conclusion stated before the control was complete.
+2. **`Lshape`'s resolution went *down*** (20 → 15). `Cantilever`'s refinement is defensible;
+   a coarser L-shape looks like fidelity nobody chose. Both want a deliberate decision, and
+   whatever ships needs fresh references captured against it.
