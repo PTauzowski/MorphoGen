@@ -260,9 +260,19 @@ See decision **D3** in [integration-rules.md](integration-rules.md).
 working. Vibrations renamed the original and changed its arity, so its eight call sites cannot
 coexist with develop's four without a decision.
 
-The multi-RHS load API (`createNextRightHandSideVector`,
+~~The multi-RHS load API (`createNextRightHandSideVector`,
 `setCurrentLoadToRightHandSideVectors`, …) is present and compatible on all three — the
-multi-load arm work is not at risk.
+multi-load arm work is not at risk.~~
+
+> **Corrected 2026-09-12, measured during Phase 4.** It is **not** present on `Vibrations`.
+> All six methods — `createNextRightHandSideVector`, `setRightHandSideVectorAsCurrent`,
+> `setCurrentLoadToRightHandSideVectors`, `clearCurrentLoad`, `getCurrentNodalLoad`,
+> `getCurrentFEMlLoad` — are commented out there, while `prepareRHSVectors` still calls one of
+> them and `clearCurrentLoad` has 13 live callers. They are live on `CAS_Arm` and `develop`.
+>
+> The survey read the *method names* and found them on all three branches; it did not notice
+> that on one branch they were inside comments. Nothing textually conflicted, so the merge
+> looked clean and produced a tree that could not run. Restored from `CAS_Arm` in `c84b22f`.
 
 ---
 
