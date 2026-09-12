@@ -1,7 +1,7 @@
 classdef SolidMaterial < Material
    
     properties
-        E, nu, D, dD, M, at;
+        E, nu, D, dD, M, at, rho;
     end
     
     methods
@@ -45,8 +45,9 @@ classdef SolidMaterial < Material
             obj.dD = dD;
         end
 
-        function [ M ] = setMassIzo( m )
+        function [ M ] = setMassIzoMatrix(obj, m )
             M = [m 0 0; 0 m 0; 0 0 m];
+            obj.M=M;
         end
 
     end

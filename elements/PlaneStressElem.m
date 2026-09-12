@@ -185,4 +185,3 @@ classdef PlaneStressElem < PlaneElem
         
     end
 end
-

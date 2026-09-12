@@ -1,0 +1,121 @@
+% plotStep5('segment_model_N', 'segment model, configuration max N',   R, modelMaxN,  topOptEnvLinear, [-1 0 0 0 0 0] );
+% plotStep5('segment_model_Ty', 'segment model, configuration max Ty', R, modelMaxTy, topOptEnvLinear, [0 1 0 0 0 0] );
+% plotStep5('segment_model_Tz', 'segment model, configuration max Tz', R, modelMaxTz, topOptEnvLinear, [0 0 1 0 0 0] );
+% plotStep5('segment_model_Ms', 'segment model, configuration max Ms', R, modelMaxMs, topOptEnvLinear, [0 0 0 1 0 0] );
+% plotStep5('segment_model_My', 'segment model, configuration max My', R, modelMaxMy, topOptEnvLinear, [0 0 0 0 1 0] );
+% plotStep5('segment_model_Mz', 'segment model, configuration max Mz', R, modelMaxMz, topOptEnvLinear, [0 0 0 0 0 1] );
+
+ plotSegmentResultsStep6('segment_model_AvLin', 'Linear average model', topOptAvLinear, 0.4);
+% plotSegmentResultsStep6('segment_model_EnvLin', 'Linear envelope model', topOptEnvLinear, 0.4);
+% plotSegmentResultsStep6('segment_model_AvBuckling', 'Linear average model', topOptAvBuckling, 0.4);
+% plotSegmentResultsStep6('segment_model_EnvBuckling', 'Linear average model', topOptEnvBuckling, 0.4);
+
+ plotSegmentResultsStep7('segment_topology_AvLin', 'Average linear', topOptAvLinear, newLoadFactor, volFr);
+% plotSegmentResultsStep7('segment_topology_EnvLin', 'Envelope linear', topOptEnvLinear, newLoadFactor, volFr );
+% plotSegmentResultsStep7('segment_topology_AvBuck', 'Average buckling', topOptAvBuckling, newLoadFactor, volFr);
+% plotSegmentResultsStep7('segment_topology_EnvBuck', 'Envelope buckling', topOptEnvBuckling, newLoadFactor, volFr);
+
+plotSegmentResultsStep8('EnvelopeLinear_maxN',  'Envelope linear, conf. max N',  modelMaxN,  topOptEnvLinear, volFr);
+% plotSegmentResultsStep8('EnvelopeLinear_maxTy', 'Envelope linear, conf. max Ty', modelMaxTy, topOptEnvLinear, volFr);
+% plotSegmentResultsStep8('EnvelopeLinear_maxTy', 'Envelope linear, conf. max Ty', modelMaxTy, topOptEnvLinear, volFr);
+% plotSegmentResultsStep8('EnvelopeLinear_maxTz', 'Envelope linear, conf. max Ms', modelMaxTz, topOptEnvLinear, volFr);
+% plotSegmentResultsStep8('EnvelopeLinear_maxMs', 'Envelope linear, conf. max Ms', modelMaxMs, topOptEnvLinear, volFr);
+% plotSegmentResultsStep8('EnvelopeLinear_maxMy', 'Envelope linear, conf. max My', modelMaxMy, topOptEnvLinear, volFr);
+% plotSegmentResultsStep8('EnvelopeLinear_maxMz', 'Envelope linear, conf. max Mz', modelMaxMz, topOptEnvLinear, volFr);
+% 
+% plotSegmentResultsStep8('EnvelopeBuckling_maxN',  'Envelope buckling, conf. max N',  modelMaxN,  topOptEnvBuckling, volFr);
+% plotSegmentResultsStep8('EnvelopeBuckling_maxTy', 'Envelope buckling, conf. max Ty', modelMaxTy, topOptEnvBuckling, volFr);
+% plotSegmentResultsStep8('EnvelopeBuckling_maxTy', 'Envelope buckling, conf. max Ty', modelMaxTy, topOptEnvBuckling, volFr);
+% plotSegmentResultsStep8('EnvelopeBuckling_maxTz', 'Envelope buckling, conf. max Ms', modelMaxTz, topOptEnvBuckling, volFr);
+% plotSegmentResultsStep8('EnvelopeBuckling_maxMs', 'Envelope buckling, conf. max Ms', modelMaxMs, topOptEnvBuckling, volFr);
+% plotSegmentResultsStep8('EnvelopeBuckling_maxMy', 'Envelope buckling, conf. max My', modelMaxMy, topOptEnvBuckling, volFr);
+% plotSegmentResultsStep8('EnvelopeBuckling_maxMz', 'Envelope buckling, conf. max Mz', modelMaxMz, topOptEnvBuckling, volFr);
+
+
+
+
+
+Yhickness =1 
+
+ans =
+
+    'Linear analysis, average stress intensity'
+
+
+T1 =
+
+  6×5 table
+
+    Config name    max HM design domain    u_max design domain    max HM topology    u_max topology
+    ___________    ____________________    ___________________    _______________    ______________
+
+      {'N'  }           8.1581e+05              0.0044456           1.9547e+07          0.047147   
+      {'T_y'}           7.4583e+05              0.0038575           3.6431e+07          0.066461   
+      {'T_z'}            8.269e+05              0.0046804           2.1903e+07          0.056244   
+      {'M_s'}           6.5969e+05              0.0029832           4.2158e+07          0.070524   
+      {'M_y'}           8.1472e+05              0.0049349           9.5728e+06          0.040103   
+      {'M_z'}           6.0851e+05              0.0038064           2.7617e+07          0.047406   
+
+
+ans =
+
+    'Linear analysis, envelope stress intensity'
+
+
+T2 =
+
+  6×5 table
+
+    Config name    max HM design domain    u_max design domain    max HM topology    u_max topology
+    ___________    ____________________    ___________________    _______________    ______________
+
+      {'N'  }           8.1581e+05              0.0044456            1.495e+07          0.032922   
+      {'T_y'}           7.4583e+05              0.0038575             2.63e+07          0.042401   
+      {'T_z'}            8.269e+05              0.0046804           1.9197e+07           0.03818   
+      {'M_s'}           6.5969e+05              0.0029832            2.849e+07          0.042518   
+      {'M_y'}           8.1472e+05              0.0049349           9.4269e+06          0.028448   
+      {'M_z'}           6.0851e+05              0.0038064           1.7777e+07          0.032896   
+
+
+ans =
+
+    'Linear analysis with buckling, average stress intensity'
+
+
+T3 =
+
+  6×5 table
+
+    Config name    max HM design domain    u_max design domain    max HM topology    u_max topology
+    ___________    ____________________    ___________________    _______________    ______________
+
+      {'N'  }           8.1581e+05              0.0044456           1.5512e+07          0.040454   
+      {'T_y'}           7.4583e+05              0.0038575           1.3361e+07          0.038655   
+      {'T_z'}            8.269e+05              0.0046804           1.4372e+07          0.043184   
+      {'M_s'}           6.5969e+05              0.0029832           1.3528e+07          0.033922   
+      {'M_y'}           8.1472e+05              0.0049349           1.2407e+07          0.043448   
+      {'M_z'}           6.0851e+05              0.0038064           1.4211e+07          0.032776   
+
+
+ans =
+
+    'Linear analysis with buckling, envelope stress intensity'
+
+
+T4 =
+
+  6×5 table
+
+    Config name    max HM design domain    u_max design domain    max HM topology    u_max topology
+    ___________    ____________________    ___________________    _______________    ______________
+
+      {'N'  }           8.1581e+05              0.0044456           1.6924e+07          0.037921   
+      {'T_y'}           7.4583e+05              0.0038575           1.3821e+07          0.033934   
+      {'T_z'}            8.269e+05              0.0046804           1.5769e+07          0.039395   
+      {'M_s'}           6.5969e+05              0.0029832           1.2498e+07           0.02818   
+      {'M_y'}           8.1472e+05              0.0049349           1.2522e+07          0.041037   
+      {'M_z'}           6.0851e+05              0.0038064           1.0722e+07          0.030475   
+
+Execution finished
+
+It is worth noting that despite the increase in stress in the optimized structure, the stress values ​​are still an order of magnitude lower than the strength of the PLA material, which are: tensile strength 50–70 MPa compressive strength	60–100 MPa.

@@ -24,7 +24,7 @@ classdef ElastoPlasticity < NonlinearAnalysis
             NewtonRaphsonProcedure(obj);
             cellfun(@(x) x.computeResults( ),obj.felems);
             obj.qnodal = obj.fromFEMVector(obj.qfem);
-            obj.computeElementResults();
+            obj.computeElementResults(1);
         end 
 
     end

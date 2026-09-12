@@ -4,7 +4,7 @@ close all;
 % Cantilever topology optimization elastic task.
 
 % Resolution of shortest (vertical) edge
-res = 50;
+res = 80;
 
 % height of the cantilever
 h = 1;
@@ -42,6 +42,7 @@ fe.setMaterial( material );
 
 % Creating linear elastic finite element analysis object with weighted matrix feature, weighted by element density.
 analysis = LinearElasticityWeighted( fe, mesh, true );
+%analysis = SecondOrderElasticityWeighted(fe, mesh, true);
 
 % Creating node selector object to select fixed edge (left)
 fixedEdgeSelector = Selector( @(x)( abs(x(:,1)) < 0.001 ) );
@@ -57,10 +58,10 @@ topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold,
 [objF, xopt]  = topOpt.solve();
 toc
 
-figure;
-tic
-topOpt = SIMP_MMA_TopologyOptimizationElasticCompliance(Rfilter, analysis, penal, 0.4, true);
-[objF, xopt]  = topOpt.solve();
-toc
+% figure;
+% tic
+% topOpt = SIMP_MMA_TopologyOptimizationSecondOrderElasticCompliance(Rfilter, analysis, penal, 0.4, true);
+% [objF, xopt]  = topOpt.solve();
+% toc
 
 

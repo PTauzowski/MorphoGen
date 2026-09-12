@@ -108,7 +108,7 @@ classdef PlaneStressElastoPlasticElem < PlaneStressElem
             end            
          end
 
-          function computeResults(obj, nodes, qnodal)
+          function computeResults(obj, qnodal, x, el_idx)
             nelems = size(obj.elems,1);
             integrator = obj.shapeFn.createIntegrator();
             nip = size(integrator.points,1);

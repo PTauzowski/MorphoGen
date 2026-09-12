@@ -31,7 +31,7 @@ analysis = LinearElasticityWeighted( fe, mesh, false );
 %problem = LinearElasticity( fe, mesh );
 fixedEdgeSelector = Selector( @(x)( abs(x(:,3)) < 0.001 ) );
 loadedFaceSelector = Selector( @(x)( abs(x(:,3)- Length) < 0.001 ) );
-constElemsSelector = @(x)( (x(:,3) < 0.05 * Length ) ) & (x(:,3) > 0.96 * Length );
+constElemsSelector =  Selector( @(x)( (x(:,3) < 0.05 * Length ) ) & (x(:,3) > 0.96 * Length ) );
 
 analysis.elementLoadSurfaceIntegral( "global", loadedFaceSelector, ["ux" "uy" "uz"], @(x)( x*0 + [-x(:,2)./sqrt(x(:,1).^2+x(:,2).^2) x(:,1)./sqrt(x(:,1).^2+x(:,2).^2) -x(:,2)./x(:,2)] ));
 analysis.fixNodes( fixedEdgeSelector, ["ux" "uy" "uz"] );
@@ -56,7 +56,7 @@ toc
 
 figure;
 tic
-topOpt = SIMP_MMA_TopologyOptimizationElasticCompliance(Rfilter, analysis, penal, 0.4, true);
+topOpt = SIMP_MMA_TopologyOptimizationElasticCompliance(Rfilter, analysis, penal, 0.6, true);
 [objF, xopt]  = topOpt.solve();
 toc
 

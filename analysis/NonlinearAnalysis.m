@@ -25,7 +25,7 @@ classdef NonlinearAnalysis < FEAnalysis
             dP = obj.getCurrentFEMlLoad();
             P=obj.Pfem(:,1);
             while conv > obj.convEnd
-                Kt = obj.globalSolutionDependendMatrixAggregation( obj.tangentMatrixProcedureName );
+                Kt = obj.assemblyNonlinearGlobalMatix( obj.tangentMatrixProcedureName );
                 obj.dq_fem = solver.solveClassical( Kt, dP );
                 if obj.iteration==1
                     obj.qfem = obj.dq_fem;

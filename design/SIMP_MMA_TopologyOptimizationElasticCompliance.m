@@ -1,19 +1,8 @@
-classdef SIMP_MMA_TopologyOptimizationElasticCompliance < SIMP_MMA_TopologyOptimization
-    
-    properties
-        VolConstr;
-    end
-    
+classdef SIMP_MMA_TopologyOptimizationElasticCompliance < SIMP_MMA_TopologyOptimizationElasticComplianceBase
     methods
-
-        function obj = SIMP_MMA_TopologyOptimizationElasticCompliance(Rmin,problem,penal,VolConstr,is_const)
-            obj = obj@SIMP_MMA_TopologyOptimization(1,Rmin,problem,penal,is_const);
-            tne=obj.FEAnalysis.getTotalElemsNumber();
-            obj.gradConstrValues = zeros(1,1);
-            obj.V0=tne*VolConstr;
-            obj.VolConstr=VolConstr;
-            obj.x(1:obj.totalFENumber,1)=0.5;
-            obj.is_const=is_const;
+        function obj = SIMP_MMA_TopologyOptimizationElasticCompliance(Rmin, problem, penal, VolConstr, is_const)
+            obj = obj@SIMP_MMA_TopologyOptimizationElasticComplianceBase( ...
+                Rmin, problem, penal, VolConstr, is_const, "linear");
         end
 
         function resetAnalysis(obj)
@@ -37,7 +26,7 @@ classdef SIMP_MMA_TopologyOptimizationElasticCompliance < SIMP_MMA_TopologyOptim
                ndofs = size( obj.FEAnalysis.felems{i}.eDofs,2);
                dim = nnodes*ndofs;
                K = reshape(obj.FEAnalysis.felems{i}.(fsName)(obj.FEAnalysis.mesh.nodes,x_ones),dim,dim,nelems);
-               obj.qnodal = obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.solveWeighted((obj.x).^obj.penal));
+               obj.qnodal = obj.FEAnalysis.fromFEMVector( obj.FEAnalysis.solve((obj.x).^obj.penal));
                obj.FEAnalysis.computeElementResults((obj.x).^obj.penal);
                qelems = obj.FEAnalysis.felems{i}.createElemSolutionVectors(obj.qnodal);
                for j=1:nelems
@@ -48,6 +37,7 @@ classdef SIMP_MMA_TopologyOptimizationElasticCompliance < SIMP_MMA_TopologyOptim
             end
             obj.FobjValue = c;
             obj.gradFobjValue = dc;
+            obj.gradFobjValue(obj.const_elems) = 0;
         end
 
         function computeConstraintsAndGradient( obj, x)
@@ -65,4 +55,3 @@ classdef SIMP_MMA_TopologyOptimizationElasticCompliance < SIMP_MMA_TopologyOptim
         
     end
 end
-

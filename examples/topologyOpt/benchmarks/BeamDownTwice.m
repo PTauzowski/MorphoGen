@@ -34,10 +34,10 @@ fe.plot(mesh.nodes);
 analysis.plotCurrentLoad();
 analysis.plotSupport();
 
-tic
-topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.4, true );
-[objF, xopt]  = topOpt.solve();
-toc
+% tic
+% topOpt = StressIntensityTopologyOptimizationVol( Rfilter, analysis, cutTreshold, penal, 0.4, true );
+% [objF, xopt]  = topOpt.solve();
+% toc
 
 figure;
 tic

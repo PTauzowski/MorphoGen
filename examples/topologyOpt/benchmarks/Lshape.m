@@ -1,7 +1,7 @@
 clear;
 close all;
 
-res = 20;
+res = 15;
 l = 1;
 
 Rfilter = 1.2*l/res;

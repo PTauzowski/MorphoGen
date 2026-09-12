@@ -5,13 +5,13 @@ classdef  loadPerformanceFunctionDisp < Function
     end
 
     methods
-        function obj = loadPerformanceFunctionDisp(model)
-            obj=obj@Function(2,0.00001)
+        function obj = loadPerformanceFunctionDisp(model,dim)
+            obj=obj@Function(dim,0.0001)
             obj.model=model;   
         end
 
         function [g, fi] = computeValue(obj,points)
-            g=obj.model.computeLinearDisplacement(points)+0.015;
+            g=obj.model.computeLinearDisplacement(points);
             fi=[];
         end
 

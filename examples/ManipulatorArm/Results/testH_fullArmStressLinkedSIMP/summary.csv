@@ -1,0 +1,2 @@
+status,nElements,nIterations,stressCoeff,stressPNorm,stressRelaxationQ,finalVolumeFraction,finalChange,maxStressConstraint,constraintsSatisfied,topologyNonuniform,finalDensityStd,finalDensityRange,rhoGt05,rhoGt07,finalStressAggregateMax,finalMaxStress,topologyDiffersByArmLocation,locationMeanDensityRange,locationMeanDensityStd
+ok,2200,200,2,16,0.5,0.463551707385648,0.00150000000000006,0.00338696417366569,1,1,0.285199886343701,0.884337342772469,0.325,0.233636363636364,1270948.00819092,1750139.31545625,1,0.884337342772469,0.285199886343701

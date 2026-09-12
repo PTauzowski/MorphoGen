@@ -552,5 +552,890 @@ classdef Mesh < handle
         function plot(marker, color)
         end
     end
-end
 
+    % ---- carried from the feature branches (Phase 5 union) ----
+    methods
+
+        function stats = weldNodes(obj, tol, dropDuplicateElems)
+            % weldNodes  Global node weld on the current mesh.
+            %
+            % This is useful after assembling many blocks with transformed
+            % coordinates where seam nodes are numerically very close.
+            %
+            % Inputs:
+            %   tol               merge tolerance (defaults to obj.tolerance)
+            %   dropDuplicateElems remove duplicate connectivity rows (default true)
+            %
+            % Output:
+            %   stats struct with before/after counts.
+            if nargin < 2 || isempty(tol)
+                tol = obj.tolerance;
+            end
+            if nargin < 3 || isempty(dropDuplicateElems)
+                dropDuplicateElems = true;
+            end
+
+            nNodesBefore = size(obj.nodes, 1);
+            nElemsBefore = size(obj.elems, 1);
+
+            if nNodesBefore == 0
+                stats = struct( ...
+                    'tol', tol, ...
+                    'nodesBefore', 0, 'nodesAfter', 0, ...
+                    'elemsBefore', nElemsBefore, 'elemsAfter', nElemsBefore, ...
+                    'nodeMergedCount', 0, 'duplicateElemsRemoved', 0);
+                return;
+            end
+
+            [mergedNodes, oldToNew] = Mesh.deduplicateNodes(obj.nodes, tol);
+            obj.nodes = mergedNodes;
+
+            if ~isempty(obj.elems)
+                obj.elems = reshape(oldToNew(obj.elems(:)), size(obj.elems));
+                if dropDuplicateElems
+                    [obj.elems, ia] = unique(obj.elems, 'rows', 'stable');
+                    duplicateElemsRemoved = nElemsBefore - numel(ia);
+                else
+                    duplicateElemsRemoved = 0;
+                end
+            else
+                duplicateElemsRemoved = 0;
+            end
+
+            stats = struct( ...
+                'tol', tol, ...
+                'nodesBefore', nNodesBefore, 'nodesAfter', size(obj.nodes, 1), ...
+                'elemsBefore', nElemsBefore, 'elemsAfter', size(obj.elems, 1), ...
+                'nodeMergedCount', nNodesBefore - size(obj.nodes, 1), ...
+                'duplicateElemsRemoved', duplicateElemsRemoved);
+        end
+
+        function el2 = append( obj, newNodes, newElems )
+            nnodes=size(obj.nodes,1);
+            obj.nodes = [ obj.nodes; newNodes ];
+            obj.elems = [ obj.elems; newElems+nnodes ];
+            
+        end
+
+        function el2 = connect( obj, sel, newNodes, newElems )
+            % --- quantization helper (stable) ---
+            q = @(X) floor(X ./ obj.tolerance );
+        
+            % --- deduplicate new nodes internally ---
+            [~, si1, si2] = unique( q(newNodes), 'rows', 'stable' );
+            newNodes = newNodes( si1, : );
+            newElems = si2(newElems);
+           if size( obj.nodes, 1 ) == 0 
+                  obj.nodes = newNodes;
+                  obj.elems = newElems;
+                  el2 = newElems;
+           else
+                [~,i1,i2] = intersect( q(obj.nodes), q(newNodes), 'rows' );
+                sn1 = find(sel.select( obj.nodes ));
+                sn2 = find(sel.select( newNodes ));
+                [C,ia] = setdiff( i2, sn2 );
+                i1(ia) = [];
+                i2(ia) = [];
+                nidx  = 1:size(newNodes,1);
+                nidx( i2 ) = [];
+                noi   = 1:size(nidx,2);
+                noi = noi + size(obj.nodes,1);
+                obj.nodes = [ obj.nodes; newNodes(nidx,:) ];
+                ninds = zeros( size(newNodes,1), 1);
+                ninds(i2)=i1;
+                ninds(nidx)=noi;
+                el2 = newElems;
+                el2(:) = ninds( newElems(:) );
+                obj.elems = [ obj.elems; el2 ];
+           end
+            
+        end
+
+        function [newElems, zElems] = addRectMeshZlayer3D( obj, x1, y1, z1, dx, dy, dz, nx, ny, nz, zLayers, lnodes )
+            ddx=dx/nx;
+            ddy=dy/ny;
+            ddz=dz/nz;
+            nelems=nx*ny*nz;
+            nnodes=size(lnodes,1)*nelems;
+            newNodes=zeros(nnodes,size(lnodes,2));
+            newElems=zeros(size(lnodes,1),nelems);
+            newElems(:)=(1:nnodes);
+            newElems = newElems';
+            counter=1;
+            zCounter=1;
+            zElems=zeros(nx*ny,1);
+            for iz=1:nz
+                for iy=1:ny
+                    for ix=1:nx
+                        newNodes(newElems(counter,:),1) = (2*x1+ddx*lnodes(:,1)+2*ddx*ix-ddx)/2;
+                        newNodes(newElems(counter,:),2) = (2*y1+ddy*lnodes(:,2)+2*ddy*iy-ddy)/2;
+                        newNodes(newElems(counter,:),3) = (2*z1+ddz*lnodes(:,3)+2*ddz*iz-ddz)/2;
+                        counter=counter+1;
+                    end
+                end
+                if ( nz-iz < zLayers)
+                   zElems(zCounter) = counter; 
+                   zCounter=zCounter+1;
+                end
+            end
+            zElems = obj.merge(newNodes, newElems);
+        end
+
+        function obj = addQuarterCylinderOld( obj, x0 , R, h, nr, pattern )
+             mesh1 = Mesh();
+             shapeFn = ShapeFunctionH8();
+             mesh1.addShapedMesh3D( shapeFn, x0+[ 0 0 0; R/2 0 0; 0 R/2 0; R/2/1.41 R/2/1.41 0; 0 0 h; R/2 0 h; 0 R/2 h; R/2/1.41 R/2/1.41 h], [nr(1) nr(1) nr(2)], pattern );
+
+             sfL2 = ShapeFunctionQ4();
+             sl1 = ShapeObjectRectangular(sfL2,x0+[0 R/2 0; R/2/1.41 R/2/1.41 0; 0 R/2 h; R/2/1.41 R/2/1.41 h ]);
+             sl2 = ShapeObjectRectangular(sfL2,x0+[R/2/1.41 R/2/1.41 0; R/2 0 0; R/2/1.41 R/2/1.41 h; R/2 0 h]);
+             sc1 = CylinderObject(x0,R,90,45,0,h);
+             sc2 = CylinderObject(x0,R,45,0,0,h);
+
+             ms1 = MorphSpace(sl1,sc1);
+             ms2 = MorphSpace(sl2,sc2);
+                
+             mesh1.addObjectMesh3D( ms1, nr(1), nr(1), nr(2), pattern );
+             mesh1.addObjectMesh3D( ms2, nr(1), nr(1), nr(2), pattern );
+             obj.merge( mesh1.nodes, mesh1.elems );
+        end
+
+        function obj = addLayeredQuarterCylinderInt(obj, x0, R, h, nrZ, nrXY, add_interface, i_th, pattern)
+                zoff = 0;
+                for k = 1:numel(h)
+                    obj = obj.addQuarterCylinder( x0 + [0 0 zoff], R, h(k), [nrXY nrZ(k)], pattern );
+                    zoff = zoff + h(k);
+                end
+                %obj.merge(mesh1.nodes, mesh1.elems);
+        end
+
+        function addRing3D(obj,x0, sf, x, nr, nc, nz, localNodes)
+            mesh=Mesh();
+            mesh.addShapedMesh3D( sf, x, [nr, nc, nz], localNodes);
+            mesh.transformToCylindrical3D(x0);
+            obj.mergeMesh(mesh);
+        end
+
+        function addManipulatorHalfSegment3D(obj,r,R,h,alpha,nr,nc,nz,lnodes)
+            mesh=Mesh();
+            mesh.addRectMesh3D( r, 0, 0, R-r, 2*pi, h, nr, nc, nz, lnodes);
+            mesh.transformToCylindrical3D([0 0]);
+           [mesh.convex_hull_nodes, ~] = convhull(mesh.nodes(:,1), mesh.nodes(:,2), mesh.nodes(:,3));
+
+            xp=mesh.nodes;
+            xp(:,3)=h;
+            c=cos(alpha);
+            s=sin(alpha);
+            t=tan(alpha);
+            Ry=[c 0 s; 0 1 0; -s 0 c];
+            nnodes=[0 0 h]+(Ry*(xp-[0 0 h])')';
+            %x=(mesh.nodes(:,3)/h).*nnodes(:,1)+(1-mesh.nodes(:,3)/h).*mesh.nodes(:,1);
+            x=nnodes(:,1);
+            z=(mesh.nodes(:,3)/h).*(h-mesh.nodes(:,1)*t);
+            mesh.nodes=[x mesh.nodes(:,2) z];
+            obj.mergeMesh(mesh);
+            obj.convex_hull_nodes=mesh.convex_hull_nodes;
+        end
+
+        function cone_nodes = coneTransformationX(obj, l, r1, r2, nodes)
+            %CONETRANSFORMATIONX Taper (cone) transform around Z axis.
+            %
+            %   cone_nodes = coneTransformationX(l, r1, r2, nodes)
+            %
+            % Inputs:
+            %   l     - height of cone (z from 0 to l)
+            %   r1    - radius at z = 0
+            %   r2    - radius at z = l
+            %   nodes - Nx3 array of [x y z]
+            %
+            % Output:
+            %   cone_nodes - Nx3 transformed nodes
+            %
+            % Behavior:
+            %   - z is unchanged
+            %   - x,y are scaled by s(z) = 1 + (r2/r1 - 1) * (z/l)
+            %     so at z=0:  s=1
+            %        z=l:  s=r2/r1  (radius changes from r1 -> r2)
+            
+                cone_nodes = nodes;
+            
+                % Basic checks
+                if size(nodes,2) ~= 3
+                    error('nodes must be an Nx3 array.');
+                end
+                if l <= 0
+                    error('l must be > 0.');
+                end
+                if r1 == 0
+                    error('r1 must be non-zero (cannot scale by r2/r1).');
+                end
+            
+                z = nodes(:,3);
+            
+                % Clamp interpolation to [0, 1] in case some nodes are slightly outside
+                t = z ./ l;
+                t = max(0, min(1, t));
+            
+                % Linear scale from 1 at z=0 to (r2/r1) at z=l
+                s = 1 + (r2/r1 - 1) .* t;
+            
+                % Apply scaling in XY plane
+                cone_nodes(:,1) = nodes(:,1) .* s;
+                cone_nodes(:,2) = nodes(:,2) .* s;
+        end
+
+        function leaveElemsByNumbers( obj, elemsToLeave )
+            elemsToRemove=true(size(obj.elems,1),1);
+            elemsToRemove(elemsToLeave)=false;
+            obj.removeElemsByNumbers(elemsToRemove);
+        end
+
+        function [tnodes, telems] = getTetrahedralMesh(obj, selected)
+            % Tetrahedra mapping for a single hexahedron
+            Tetrahedra = [
+                5 2 1 4;  % Tetrahedron 1
+                8 5 2 6;  % Tetrahedron 2
+                4 5 2 8;  % Tetrahedron 3
+                7 5 4 8;  % Tetrahedron 4
+                4 7 1 5;  % Tetrahedron 5
+                1 7 4 3;  % Tetrahedron 5
+            ];
+            
+            % Identify selected nodes
+            snodes = false(size(obj.nodes, 1), 1);
+            snodes(obj.elems(selected, :)) = true;
+            
+            % Map global indices of selected nodes
+            globalToLocal = find(snodes);
+            localToGlobal = zeros(size(snodes));
+            localToGlobal(globalToLocal) = 1:length(globalToLocal);
+            
+            % Filter nodes and elements
+            tnodes = obj.nodes(globalToLocal, :);
+            nSelElems = sum(selected);
+            
+            % Generate tetrahedrons for each selected hexahedron
+            telems = zeros(nSelElems * size(Tetrahedra, 1), 4); % Each hexahedron creates 5 tetrahedrons
+            cnt = 1;
+            for i = find(selected)'
+                hexNodes = obj.elems(i, :); % Global node indices of current hexahedron
+                localHexNodes = localToGlobal(hexNodes); % Map to local indices
+                telems(cnt:cnt + 5, :) = localHexNodes(Tetrahedra);
+                cnt = cnt + 6;
+            end
+        end
+
+        function exportToPLY(obj,filename)
+            % Open the file
+            fid = fopen(filename+".ply", 'w');
+            if fid == -1
+                error('Could not create file');
+            end
+            
+            % Write PLY header
+            fprintf(fid, 'ply\nformat ascii 1.0\n');
+            fprintf(fid, 'element vertex %d\n', size(obj.nodes, 1));
+            fprintf(fid, 'property float x\nproperty float y\nproperty float z\n');
+            fprintf(fid, 'element face %d\n', size(obj.elems, 1) * 4); % 4 faces per tetrahedron
+            fprintf(fid, 'property list uchar int vertex_indices\n');
+            fprintf(fid, 'end_header\n');
+            
+            % Write vertices
+            fprintf(fid, '%.6f %.6f %.6f\n', obj.nodes');
+            
+            % Write faces (export tetrahedrons as triangular faces)
+            for i = 1:size(obj.elems, 1)
+                fprintf(fid, '3 %d %d %d\n', obj.elems(i, [1, 2, 3]) - 1); % Face 1
+                fprintf(fid, '3 %d %d %d\n', obj.elems(i, [1, 3, 4]) - 1); % Face 2
+                fprintf(fid, '3 %d %d %d\n', obj.elems(i, [1, 4, 2]) - 1); % Face 3
+                fprintf(fid, '3 %d %d %d\n', obj.elems(i, [2, 3, 4]) - 1); % Face 4
+            end
+            
+            % Close the file
+            fclose(fid);
+            disp(['Mesh exported to ', filename]);
+        end
+
+        function exportTetraToSTL(obj,filename)
+            % Open the file for writing
+            fid = fopen(filename+".stl", 'w');
+            if fid == -1
+                error('Could not create file');
+            end
+            
+            % Write STL header
+            fprintf(fid, 'solid TetrahedralMesh\n');
+            
+            % Extract surface faces
+            % Each tetrahedron face: 4 faces per tetrahedron
+            tetraFaces = [
+                1 2 3;  % Face 1
+                1 3 4;  % Face 2
+                1 4 2;  % Face 3
+                2 3 4   % Face 4
+            ];
+            
+            % Store unique surface faces
+            faces = [];
+            for i = 1:size(obj.elems, 1)
+                tetra = obj.elems(i, :); % Extract tetrahedron nodes
+                faces = [faces; tetra(tetraFaces)]; % Append all faces
+            end
+            
+            % Remove duplicate faces (shared between neighboring tetrahedra)
+            faces = unique(sort(faces, 2), 'rows');
+            
+            % Write each triangular face in STL format
+            for i = 1:size(faces, 1)
+                v1 = obj.nodes(faces(i, 1), :);
+                v2 = obj.nodes(faces(i, 2), :);
+                v3 = obj.nodes(faces(i, 3), :);
+                
+                % Compute normal vector for the triangle
+                n = cross(v2 - v1, v3 - v1);
+                n = n / norm(n);
+                
+                % Write the face
+                fprintf(fid, '  facet normal %.6f %.6f %.6f\n', n);
+                fprintf(fid, '    outer loop\n');
+                fprintf(fid, '      vertex %.6f %.6f %.6f\n', v1);
+                fprintf(fid, '      vertex %.6f %.6f %.6f\n', v2);
+                fprintf(fid, '      vertex %.6f %.6f %.6f\n', v3);
+                fprintf(fid, '    endloop\n');
+                fprintf(fid, '  endfacet\n');
+            end
+            
+            % Write STL footer
+            fprintf(fid, 'endsolid TetrahedralMesh\n');
+            
+            % Close the file
+            fclose(fid);
+            disp(['Tetrahedral mesh surface exported to ', filename]);
+        end
+
+        function exportToStep(obj,filename)
+            % EXPORTTOSTEP Exports a 3D mesh to a basic STEP file.
+            % 
+            % INPUTS:
+            %   filename - Name of the STEP file to write (e.g., 'output.step').
+            %   nodes - Matrix of node coordinates (Nx3).
+            %   elems - Matrix of triangular elements (Mx3), referencing node indices.
+            %
+            % NOTE: This function generates a simplified STEP file with only B-Rep data.
+            
+            fid = fopen(filename+".step", 'w');
+            if fid == -1
+                error('Could not open file for writing.');
+            end
+        
+            % STEP Header
+            fprintf(fid, "ISO-10303-21;\n");
+            fprintf(fid, 'HEADER;\n');
+            fprintf(fid, "FILE_DESCRIPTION(('Basic Mesh Export'),'2;1');\n");
+            fprintf(fid, "FILE_NAME('%s','%s');\n', filename, datestr(now, 'yyyy-mm-ddTHH:MM:SS\n");
+            fprintf(fid, "FILE_SCHEMA(('AUTOMOTIVE_DESIGN_CC2'));\n");
+            fprintf(fid, 'ENDSEC;\n');
+            
+            % STEP Data Section
+            fprintf(fid, 'DATA;\n');
+            
+            % Write nodes as STEP vertices
+            for i = 1:size(obj.nodes, 1)
+                fprintf(fid, "#%d = CARTESIAN_POINT ( '' , ( %.6f, %.6f, %.6f ) );\n", ...
+                    i, obj.nodes(i, 1), obj.nodes(i, 2), obj.nodes(i, 3));
+            end
+            
+            % Write triangles as STEP faces
+            faceId = size(obj.nodes, 1) + 1;
+            for i = 1:size(obj.elems, 1)
+                fprintf(fid, "#%d = ADVANCED_FACE ( '' , ( ", faceId + i - 1);
+                for j = 1:3
+                    edgeId = faceId + size(obj.elems, 1) + ((i - 1) * 3) + j;
+                    fprintf(fid, '#%d ', edgeId);
+                    if j < 3
+                        fprintf(fid, ', ');
+                    else
+                        fprintf(fid, ')');
+                    end
+                end
+                fprintf(fid, ', #4) ;\n');
+            end
+            
+            % Close STEP file
+            fprintf(fid, 'ENDSEC;\n');
+            fprintf(fid, 'END-ISO-10303-21;\n');
+            fclose(fid);
+            
+            disp(['STEP file exported to ', filename]);
+        end
+
+        function upward_facing_nodes = findUpwardFacingNodes(obj)
+            % Preallocate for storing upward-facing node indices
+            upward_facing_nodes = [];
+            
+            % Define a threshold for the Z-component of the normal
+            z_threshold = 0.1;  % Adjust this value as needed (e.g., 0.1 means the normal must be at least 10% upward)
+
+            % Compute the convex hull
+            k=obj.convex_hull_nodes;
+    
+            % Loop over each facet to calculate the normals and check if they are upward-facing
+            for i = 1:size(k,1)
+                % Get the indices of the vertices for the i-th facet
+                idx = k(i,:);
+                
+                % Get the vertices of the triangle
+                v1 = obj.nodes(idx(1),:);
+                v2 = obj.nodes(idx(2),:);
+                v3 = obj.nodes(idx(3),:);
+                
+                % Compute edge vectors
+                edge1 = v2 - v1;
+                edge2 = v3 - v1;
+                
+                % Compute the normal using the cross product
+                normal = cross(edge1, edge2);
+                
+                % Normalize the normal vector
+                normal = normal / norm(normal);
+                
+                % Check if the normal vector is pointing upwards (Z-component above threshold)
+                if normal(3) > z_threshold
+                    % Add the vertices of this facet to the upward-facing nodes list
+                    upward_facing_nodes = [upward_facing_nodes; idx'];
+                end
+            end
+            
+            % Remove duplicate nodes (since a node can belong to multiple upward-facing facets)
+            upward_facing_nodes = unique(upward_facing_nodes);
+        end
+
+        function downward_facing_nodes = findDownwardFacingNodes(obj)
+            % Preallocate for storing upward-facing node indices
+            downward_facing_nodes = [];
+            
+            % Define a threshold for the Z-component of the normal
+            z_threshold = 0.1;  % Adjust this value as needed (e.g., 0.1 means the normal must be at least 10% upward)
+
+            % Compute the convex hull
+            k=obj.convex_hull_nodes;
+    
+            % Loop over each facet to calculate the normals and check if they are upward-facing
+            for i = 1:size(k,1)
+                % Get the indices of the vertices for the i-th facet
+                idx = k(i,:);
+                
+                % Get the vertices of the triangle
+                v1 = obj.nodes(idx(1),:);
+                v2 = obj.nodes(idx(2),:);
+                v3 = obj.nodes(idx(3),:);
+                
+                % Compute edge vectors
+                edge1 = v2 - v1;
+                edge2 = v3 - v1;
+                
+                % Compute the normal using the cross product
+                normal = cross(edge1, edge2);
+                
+                % Normalize the normal vector
+                normal = normal / norm(normal);
+                
+                % Check if the normal vector is pointing upwards (Z-component above threshold)
+                if normal(3) < -z_threshold
+                    % Add the vertices of this facet to the upward-facing nodes list
+                    downward_facing_nodes = [downward_facing_nodes; idx'];
+                end
+            end
+            
+            % Remove duplicate nodes (since a node can belong to multiple upward-facing facets)
+            downward_facing_nodes = unique(downward_facing_nodes);
+        end
+
+         function [badE, minDetJ] = findNegativeJacobian(obj, sf, tol)
+             if nargin < 3 || isempty(tol), tol = 0; end
+
+                X = obj.nodes;
+                E = obj.elems;
+                
+                % --- connectivity sanity ---
+                if ~isnumeric(E)
+                error("Mesh.elems must be numeric, got %s", class(E));
+                end
+                E = double(E);
+                
+                nN = size(X,1);
+                
+                badRow = any(~isfinite(E),2) | any(E < 1,2) | any(E > nN,2) | any(abs(E - round(E)) > 0,2);
+                badConnE = find(badRow);
+                
+                if ~isempty(badConnE)
+                e0 = badConnE(1);
+                fprintf("Invalid connectivity in element %d\n", e0);
+                disp(E(e0,:));
+                badE = [];
+                minDetJ = [];
+                return;
+                end
+            % findNegativeJacobian  Detect elements with negative Jacobian determinant.
+            %
+            % Returns:
+            %   badE     : indices of elements with min(detJ) < -tol
+            %   minDetJ  : per-element minimum determinant over sampling points
+        
+            if nargin < 3 || isempty(tol), tol = 0; end
+        
+            % 2x2x2 Gauss points
+            a = 1/sqrt(3);
+            gp = [
+                -a -a -a;
+                 a -a -a;
+                 a  a -a;
+                -a  a -a;
+                -a -a  a;
+                 a -a  a;
+                 a  a  a;
+                -a  a  a
+            ];
+        
+            ne = size(obj.elems, 1);
+            minDetJ = inf(ne, 1);
+        
+            for e = 1:ne
+                en = obj.elems(e, :);
+                xe = obj.nodes(en, :);              % (nNodes x 3)
+        
+                md = inf;
+                for q = 1:size(gp,1)
+                    dN = sf.computeGradient(gp(q,:)); % expected: (nNodes x 3 x 1) or (nNodes x 3)
+                    if ndims(dN) == 3
+                        dN = dN(:,:,1);
+                    end
+                    % dN must be (nNodes x 3)
+                    if size(dN,1) ~= size(xe,1) || size(dN,2) ~= 3
+                        error("findNegativeJacobian: dN has wrong size: %dx%d, expected %dx3", ...
+                            size(dN,1), size(dN,2), size(xe,1));
+                    end
+        
+                    J = xe.' * dN;                  % (3x nNodes)*(nNodes x 3) = (3x3)
+                    dj = det(J);
+                    md = min(md, dj);
+                end
+        
+                minDetJ(e) = md;
+            end
+        
+            badE = find(minDetJ < -tol);
+         end
+
+         function r = fixNegativeJacobianByRenumbering(obj, sf, tol)
+            % fixNegativeJacobianByRenumbering
+            % Reorders node numbering inside elements to make det(J) positive.
+            %
+            % Strategy:
+            %   - compute min detJ for each element
+            %   - for elements with min detJ < -tol, try a set of parametric
+            %     permutations derived from sf.localNodes (flip/swap axes)
+            %   - accept the permutation that maximizes min detJ and makes it > 0
+        
+            if nargin < 3 || isempty(tol), tol = 0; end
+        
+            % candidate permutations (for H27 these are valid and consistent)
+            P = Mesh.buildH27Permutations(sf);
+        
+            % baseline
+            [badE0, minDet0] = obj.findNegativeJacobian(sf, tol);
+        
+            elems0 = obj.elems;
+            minDet = minDet0;
+            badE   = badE0;
+        
+            fixed = false(size(obj.elems,1),1);
+        
+            for ii = 1:numel(badE0)
+                e = badE0(ii);
+        
+                en0 = elems0(e,:);
+                bestEn   = en0;
+                bestMin  = minDet0(e);
+        
+                % try all candidate permutations
+                for k = 1:numel(P)
+                    en1 = en0(P{k});                 % reorder connectivity only
+                    % evaluate min detJ for this single element
+                    md = Mesh.minDetJ_singleElement(obj.nodes(en1,:), sf);
+                    if md > bestMin
+                        bestMin = md;
+                        bestEn  = en1;
+                    end
+                    if bestMin > tol
+                        break; % good enough
+                    end
+                end
+        
+                if bestMin > tol
+                    obj.elems(e,:) = bestEn;
+                    minDet(e) = bestMin;
+                    fixed(e) = true;
+                end
+            end
+        
+            % re-check after modification
+            [badE2, minDet2] = obj.findNegativeJacobian(sf, tol);
+        
+            r = struct();
+            r.tol = tol;
+            r.badE_before = badE0;
+            r.minDet_before = minDet0;
+            r.fixed_mask = fixed;
+            r.fixed_count = nnz(fixed);
+            r.badE_after = badE2;
+            r.minDet_after = minDet2;
+            r.ok = isempty(badE2);
+         end
+
+        function [uniqueNodes, oldToNew] = deduplicateNodes(nodes, tol)
+            n = size(nodes, 1);
+            if n == 0
+                uniqueNodes = [];
+                oldToNew = [];
+                return;
+            end
+            
+            bucketSize = tol;
+            tolSq = tol * tol;
+            
+            % Build hash map: bucket key -> list of UNIQUE node indices (representatives)
+            bucketMap = containers.Map('KeyType', 'char', 'ValueType', 'any');
+            
+            uniqueNodes = [];
+            oldToNew = zeros(n, 1);
+            
+            for i = 1:n
+                if oldToNew(i) > 0
+                    continue;  % Already assigned
+                end
+                
+                nodePos = nodes(i,:);
+                bucketKey = Mesh.getBucketKey(nodePos, bucketSize);
+                
+                % Search in this bucket and 26 neighbors
+                matched = false;
+                neighborKeys = Mesh.getNeighborBuckets(bucketKey);
+                for nk = 1:numel(neighborKeys)
+                    keyNk = neighborKeys{nk};
+                    if ~bucketMap.isKey(keyNk)
+                        continue;
+                    end
+                    
+                    % Candidates are unique-node indices
+                    candidates = bucketMap(keyNk);
+                    for uid = candidates
+                        distSq = sum((nodePos - uniqueNodes(uid,:)).^2);
+                        if distSq < tolSq
+                            oldToNew(i) = uid;
+                            matched = true;
+                            break;
+                        end
+                    end
+                    
+                    if matched
+                        break;
+                    end
+                end
+                
+                % No match - create new unique node
+                if ~matched
+                    uniqueNodes = [uniqueNodes; nodePos];
+                    uid = size(uniqueNodes, 1);
+                    oldToNew(i) = uid;
+                    
+                    % Add unique id to bucket
+                    if bucketMap.isKey(bucketKey)
+                        bucketMap(bucketKey) = [bucketMap(bucketKey), uid];
+                    else
+                        bucketMap(bucketKey) = uid;
+                    end
+                end
+            end
+        end
+
+        function [mergedNodes, newMap] = mergeNodeLists(oldNodes, newNodes, tol)
+            nOld = size(oldNodes, 1);
+            nNew = size(newNodes, 1);
+            
+            if nNew == 0
+                mergedNodes = oldNodes;
+                newMap = [];
+                return;
+            end
+            
+            bucketSize = tol;
+            tolSq = tol * tol;
+            
+            % Build hash map for old nodes: bucket key -> list of node indices
+            bucketMap = containers.Map('KeyType', 'char', 'ValueType', 'any');
+            for i = 1:nOld
+                bucketKey = Mesh.getBucketKey(oldNodes(i,:), bucketSize);
+                if bucketMap.isKey(bucketKey)
+                    bucketMap(bucketKey) = [bucketMap(bucketKey), i];
+                else
+                    bucketMap(bucketKey) = i;
+                end
+            end
+            
+            mergedNodes = oldNodes;
+            newMap = zeros(nNew, 1);
+            
+            for i = 1:nNew
+                nodePos = newNodes(i,:);
+                bucketKey = Mesh.getBucketKey(nodePos, bucketSize);
+                
+                % Search in neighboring buckets
+                matched = false;
+                neighborKeys = Mesh.getNeighborBuckets(bucketKey);
+                for nk = 1:numel(neighborKeys)
+                    keyNk = neighborKeys{nk};
+                    if ~bucketMap.isKey(keyNk)
+                        continue;
+                    end
+                    
+                    candidates = bucketMap(keyNk);
+                    for j = candidates
+                        % CRITICAL: compare against mergedNodes, not oldNodes
+                        distSq = sum((nodePos - mergedNodes(j,:)).^2);
+                        if distSq < tolSq
+                            newMap(i) = j;
+                            matched = true;
+                            break;
+                        end
+                    end
+                    
+                    if matched
+                        break;
+                    end
+                end
+                
+                % No match - add as new node
+                if ~matched
+                    mergedNodes = [mergedNodes; nodePos];
+                    newIdx = size(mergedNodes, 1);
+                    newMap(i) = newIdx;
+                    
+                    % Add to bucket map for future searches within this merge
+                    if bucketMap.isKey(bucketKey)
+                        bucketMap(bucketKey) = [bucketMap(bucketKey), newIdx];
+                    else
+                        bucketMap(bucketKey) = newIdx;
+                    end
+                end
+            end
+        end
+
+        function key = getBucketKey(pos, bucketSize)
+            % Convert 2D/3D position to 3D bucket indices.
+            if numel(pos) == 2
+                pos = [pos, 0];
+            elseif numel(pos) ~= 3
+                error('Mesh:getBucketKey', ...
+                    'Expected node position with 2 or 3 coordinates, got %d.', numel(pos));
+            end
+            bucket = floor(pos ./ bucketSize);
+            key = sprintf('%d_%d_%d', bucket(1), bucket(2), bucket(3));
+        end
+
+        function neighbors = getNeighborBuckets(centerKey)
+            % Parse center bucket coordinates
+            parts = strsplit(centerKey, '_');
+            cx = str2double(parts{1});
+            cy = str2double(parts{2});
+            cz = str2double(parts{3});
+            
+            % Generate all 27 neighbors (including center)
+            neighbors = cell(27, 1);
+            idx = 1;
+            for dx = -1:1
+                for dy = -1:1
+                    for dz = -1:1
+                        neighbors{idx} = sprintf('%d_%d_%d', cx+dx, cy+dy, cz+dz);
+                        idx = idx + 1;
+                    end
+                end
+            end
+        end
+
+        function P = buildH27Permutations(sf)
+            % buildH27Permutations
+            % Build consistent node permutations from sf.localNodes for H27.
+            %
+            % localNodes are expected at {-1,0,1}^3, ordered as in ShapeFunctionH27.
+        
+            LN = sf.localNodes;           % (27 x 3)
+        
+            % helper: find index of a transformed node
+            function perm = map(transformFn)
+                T = transformFn(LN);      % (27 x 3)
+                perm = zeros(1, size(LN,1));
+                for i = 1:size(LN,1)
+                    j = find( abs(LN(:,1)-T(i,1))<1e-12 & abs(LN(:,2)-T(i,2))<1e-12 & abs(LN(:,3)-T(i,3))<1e-12, 1 );
+                    perm(i) = j;
+                end
+            end
+        
+            % flips change orientation (det sign)
+            flipX = map(@(A) [-A(:,1),  A(:,2),  A(:,3)]);
+            flipY = map(@(A) [ A(:,1), -A(:,2),  A(:,3)]);
+            flipZ = map(@(A) [ A(:,1),  A(:,2), -A(:,3)]);
+        
+            % swaps also change orientation
+            swapXY = map(@(A) [A(:,2), A(:,1), A(:,3)]);
+            swapXZ = map(@(A) [A(:,3), A(:,2), A(:,1)]);
+            swapYZ = map(@(A) [A(:,1), A(:,3), A(:,2)]);
+        
+            % some composed permutations (often needed in practice)
+            flipXY = flipX(flipY);
+            flipXZ = flipX(flipZ);
+            flipYZ = flipY(flipZ);
+        
+            % store as cell array
+            P = {
+                flipX, flipY, flipZ, ...
+                swapXY, swapXZ, swapYZ, ...
+                flipXY, flipXZ, flipYZ
+            };
+        end
+
+            function perm = map(transformFn)
+                T = transformFn(LN);      % (27 x 3)
+                perm = zeros(1, size(LN,1));
+                for i = 1:size(LN,1)
+                    j = find( abs(LN(:,1)-T(i,1))<1e-12 & abs(LN(:,2)-T(i,2))<1e-12 & abs(LN(:,3)-T(i,3))<1e-12, 1 );
+                    perm(i) = j;
+                end
+            end
+
+        function md = minDetJ_singleElement(xe, sf)
+            % xe: (nNodes x 3)
+            a = 1/sqrt(3);
+            gp = [
+                -a -a -a;
+                 a -a -a;
+                 a  a -a;
+                -a  a -a;
+                -a -a  a;
+                 a -a  a;
+                 a  a  a;
+                -a  a  a
+            ];
+            md = inf;
+            for q = 1:size(gp,1)
+                dN = sf.computeGradient(gp(q,:));
+                if ndims(dN) == 3
+                    dN = dN(:,:,1);
+                end
+                J = xe.' * dN;
+                md = min(md, det(J));
+            end
+        end
+
+    end
+end

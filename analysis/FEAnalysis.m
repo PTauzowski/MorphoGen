@@ -3,6 +3,7 @@ classdef (Abstract) FEAnalysis < handle
     properties
         felems, mesh, ndofs, supports, rotations, Pnodal, qnodal, Pfem, qfem;
         selTolerance;
+        matrixIndexCache;
     end
   
     methods
@@ -18,26 +19,29 @@ classdef (Abstract) FEAnalysis < handle
             end
             obj.mesh = mesh;
             obj.ndofs = obj.felems{1}.eDofs;
-            for k=1:max(size(obj.felems))
-                obj.ndofs = union(obj.ndofs,obj.felems{k}.eDofs);
+            % Preserve element-declared DOF ordering when combining analyses.
+            for k = 2:numel(obj.felems)
+                [tf,~] = ismember(obj.felems{k}.eDofs, obj.ndofs);
+                obj.ndofs = [obj.ndofs obj.felems{k}.eDofs(~tf)];
             end
             obj.selTolerance=1.0E-05;
             obj.Pnodal = zeros( size(mesh.nodes,1), size(obj.ndofs,2) );
             obj.Pfem = []; %zeros( size(mesh.nodes,1) * size(obj.ndofs,2), 1 );
             obj.qnodal = zeros( size(mesh.nodes,1), size(obj.ndofs,2) );
             obj.supports = zeros( size(mesh.nodes,1), size(obj.ndofs,2) );
+            obj.matrixIndexCache = [];
         end
         function dim = getTaskDim(obj)
             dim = size(obj.mesh.nodes,1)*size(obj.ndofs,2);
         end
         function ne = getTotalElemsNumber(obj)
             ne=0;
-            for k=1:size(obj.felems,1)
+            for k=1:numel(obj.felems)
                 ne = ne + size( obj.felems{k}.elems, 1);
             end
         end
         function ei = getElemIndices(obj)
-             ne=size(obj.felems,1);
+             ne=numel(obj.felems);
              ei=cell(ne,1);
              offset=1;
              for k=1:ne  
@@ -46,7 +50,7 @@ classdef (Abstract) FEAnalysis < handle
              end
         end
         function selems = selectElems(obj,selector)
-             ne=size(obj.felems,1);
+             ne=numel(obj.felems);
              tne=obj.getTotalElemsNumber();
              selems=[];
              for k=1:ne  
@@ -56,11 +60,11 @@ classdef (Abstract) FEAnalysis < handle
                                     mean( ...
                                         reshape( ...
                                             obj.mesh.nodes( ...
-                                                obj.felems{1}.elems', ...
+                                                obj.felems{k}.elems', ...
                                                 : ...
                                                 ), ...
-                                            size(obj.felems{1}.elems,2), ...
-                                            size(obj.felems{1}.elems,1), ...
+                                            size(obj.felems{k}.elems,2), ...
+                                            size(obj.felems{k}.elems,1), ...
                                             size(obj.mesh.nodes,2) ...
                                          ) ...
                                      ), ...
@@ -83,21 +87,52 @@ classdef (Abstract) FEAnalysis < handle
                 Fe = reshape(F',obj.getTaskDim(),1);
         end
         function F = fromFEMVector( obj, Fe )
-            F=reshape(Fe,size(obj.ndofs,2),size(obj.mesh.nodes,1))';
+            F=reshape(Fe,size(obj.ndofs,2),size(Fe,1)/size(obj.ndofs,2))';
+        end
+        function K = assemblyGlobalMatrix(obj, fname, x, is_const)
+            % DEPRECATED transitional wrapper -- D1, removed in Phase 6.
+            %
+            % Vibrations' eight call sites keep working across the D6 API
+            % change. The delegation is not a straight rename: this branch
+            % multiplied the density in the assembler and guarded it on
+            % numel(x)==ne, which silently skips the weighting whenever x is
+            % the global density vector and ne is one group's element count.
+            % globalMatrixAggregationWeighted slices x(ei{k}) per group
+            % instead, which is correct by construction for several groups.
+            if is_const
+                fname = 'computeStifnessMatrixConst';
+            end
+            K = obj.globalMatrixAggregationWeighted(fname, x);
         end
         function K = globalMatrixAggregation(obj, fname)
-            K = [];
-            for k=1:max(size(obj.felems))
+            parts = cell(numel(obj.felems), 1);
+            for k=1:numel(obj.felems)
                 if ismethod(obj.felems{k},fname)
-                    K = [ K obj.felems{k}.(fname)(obj.mesh.nodes) ];
+                    parts{k} = obj.felems{k}.(fname)(obj.mesh.nodes);
                 else
-                    error("Class " + class(obj.felems{k}) + " or its predecessors not implements function :"+fname);
+                    error("Class " + class(obj.felems{k}) + " or its predecessors not implements function :" + fname);
                 end
             end
+            K = vertcat(parts{:});
         end
-        function K = globalSolutionDependendMatrixAggregation(obj, fname )
+        function K = globalMatrixAggregationWeighted(obj, fname, x)
+            parts = cell(numel(obj.felems), 1);
+            ei = obj.getElemIndices();
+            if numel(x) == 1
+                x = ones(obj.getTotalElemsNumber(), 1);
+            end
+            for k = 1:numel(obj.felems)
+                if ismethod(obj.felems{k}, fname)
+                    parts{k} = obj.felems{k}.(fname)(obj.mesh.nodes, x(ei{k}));
+                else
+                    error("Class " + class(obj.felems{k}) + " or its predecessors not implements function :" + fname);
+                end
+            end
+            K = vertcat(parts{:});
+        end
+        function K = assemblyNonlinearGlobalMatix(obj, fname, q )
             K = [];
-            for k=1:max(size(obj.felems))
+            for k=1:numel(obj.felems)
                 if ismethod(obj.felems{k},fname)
                     K = [ K obj.felems{k}.(fname)(obj.mesh.nodes, obj.qnodal ) ];
                 else
@@ -106,20 +141,30 @@ classdef (Abstract) FEAnalysis < handle
             end
         end
         function [I,J,V,Ksize] = globalMatrixIndices(obj)
+            if ~isempty(obj.matrixIndexCache)
+                I = obj.matrixIndexCache.I;
+                J = obj.matrixIndexCache.J;
+                V = obj.matrixIndexCache.V;
+                Ksize = obj.matrixIndexCache.Ksize;
+                return
+            end
             I=[];
             J=[];
             V=[];
             Ksize = 0;
-            for k=1:max(size(obj.felems))
+            for k=1:numel(obj.felems)
                 [Ie,Je,Ve,Kesize] = obj.felems{k}.sparseMatrixAllocDataUniform( obj.ndofs );
-                I = [ I reshape(Ie',[],1) ];
-                J = [ J reshape(Je',[],1) ];
-                V = [ V reshape(Ve',[],1) ];
+                I = [ I; reshape(Ie',[],1) ];
+                J = [ J; reshape(Je',[],1) ];
+                V = [ V; reshape(Ve',[],1) ];
                 Ksize = Ksize + Kesize;
             end
+            obj.matrixIndexCache = struct('I', I, 'J', J, 'V', V, 'Ksize', Ksize);
         end
         function id = findDOFsIndices(obj,dofnames)
-            [~,id,~] = intersect(obj.ndofs,dofnames);
+            % Resolve DOFs in the same order requested by the caller.
+            [tf,id] = ismember(dofnames, obj.ndofs);
+            assert(all(tf), 'Unknown DOF name');
         end
         
         function q = getSolution(obj,n)
@@ -155,15 +200,17 @@ classdef (Abstract) FEAnalysis < handle
                 obj.Pfem(:,n) =  obj.Pfem(:,n) + obj.toFEMVector( obj.Pnodal );
             end
         end
-        
+
         function prepareRHSVectors(obj)
-            setCurrentLoadToRightHandSideVectors(obj,size(obj.Pfem,2));
+            obj.setCurrentLoadToRightHandSideVectors(size(obj.Pfem,2));
             obj.Pnodal(:)=0;
         end
 
         function loadClosestNode(obj, x, dofnames, values )
            obj.Pnodal( obj.mesh.findClosestNode(x), obj.findDOFsIndices( dofnames ) ) = obj.Pnodal( obj.mesh.findClosestNode(x), obj.findDOFsIndices( dofnames ) ) + values;
+           %obj.Pnodal( obj.mesh.findClosestNode(x), obj.findDOFsIndices( dofnames ) ) =  values;
         end
+
         function loadNodes(obj, nodesel, dofnames, values )
            snodes = find( nodesel.select( obj.nodes) );
            obj.Pnodal( snodes, obj.findDOFsIndices( dofnames ) ) =  obj.Pnodal( snodes, obj.findDOFsIndices( dofnames ) ) + repmat(values, size(snodes,1),1 );
@@ -174,23 +221,31 @@ classdef (Abstract) FEAnalysis < handle
         end
         function elementLoadLineIntegral(obj, mode, edgesSel, dofnames, valueFn )
             di = obj.findDOFsIndices(dofnames);
-            for k=1:max(size(obj.felems))
+            for k=1:numel(obj.felems)
                 fedges = obj.felems{k}.findEdges(obj.mesh.findNodes(edgesSel)); 
                 Pelems = obj.felems{k}.loadLineIntegral(mode, obj.mesh.nodes, fedges, dofnames, di, obj.Pnodal, valueFn);
                 obj.Pnodal = Pelems;
             end
         end
-        function elementLoadSurfaceIntegral(obj, mode, faceSel, dofnames, valueFn )
+        function lnodes = elementLoadSurfaceIntegral(obj, mode, faceSel, dofnames, valueFn )
             di = obj.findDOFsIndices(dofnames);
-            for k=1:max(size(obj.felems))
-                ffaces = obj.felems{k}.findFaces(obj.mesh.findNodes(faceSel)); 
+            lnodes=[];
+            for k=1:numel(obj.felems)
+                lnd=obj.mesh.findNodes(faceSel);
+                ffaces = obj.felems{k}.findFaces(lnd); 
+                lnodes=[lnodes lnd];
                 obj.Pnodal = obj.felems{k}.loadSurfaceIntegral(mode, obj.mesh.nodes, ffaces, dofnames, di, obj.Pnodal, valueFn);
             end
         end
         function loadElementsThermal(obj,elemSel,alpha)
-            for k=1:max(size(obj.felems))
+            for k=1:numel(obj.felems)
                 selems = obj.selectElems(elemSel);
                 obj.Pnodal = obj.felems{k}.thermalLoad(obj.mesh.nodes, selems, obj.Pnodal, alpha);
+            end
+        end
+        function loadElementsSelfWeight(obj,x, load_factor)
+            for k=1:numel(obj.felems)
+                obj.Pnodal = load_factor * obj.felems{k}.selfWeightLoad(obj.mesh.nodes, [], x, obj.Pnodal );
             end
         end
         function fixClosestNode(obj, x, dofnames, values )
@@ -202,7 +257,7 @@ classdef (Abstract) FEAnalysis < handle
            inds = obj.findDOFsIndices( dofnames );
            snodes = find(selector.select(obj.mesh.nodes));
            if  nargin==4
-               obj.q(snodes, inds) = repmat(varargin{1}, size(snodes,1),1 );
+               obj.qnodal(snodes, inds) = repmat(varargin{1}, size(snodes,1),1 );
            end
            obj.supports(snodes, obj.findDOFsIndices( dofnames ) ) = ones( size(snodes,1), size(dofnames,2) );
         end
@@ -212,24 +267,31 @@ classdef (Abstract) FEAnalysis < handle
         function computeElementResults(obj,varargin)
             resnumber=0;
             nnodes=size(obj.mesh.nodes, 1);
+            ei = obj.getElemIndices();
+            
             if ( nargin == 2 )
-                cellfun(@(x) x.computeResults( obj.mesh.nodes, obj.qnodal, varargin{1}), obj.felems);
+                x=varargin{1};
+                for k=1:numel(obj.felems)
+                    obj.felems{k}.computeResults( obj.mesh.nodes, obj.qnodal,x(ei{k}));
+                end
             else
                 cellfun(@(x) x.computeResults( obj.mesh.nodes,obj.qnodal ),obj.felems);
             end
             resnumber = max(cellfun( @(x) size(x.results.gp.all,1), obj.felems),1);
-            nres = zeros( nnodes, resnumber );
-            ires = zeros( nnodes, resnumber );
-            for l=1:max(size(obj.felems))
+            nres = zeros( nnodes, resnumber(1) );
+            ires = zeros( nnodes, resnumber(1) );
+            for l=1:numel(obj.felems)
                 el = obj.felems{l}.elems;
                 sfv=obj.felems{l}.shapeFn.getRecoveryMatrix();
+                nElemResults = size(obj.felems{l}.results.gp.all, 1);
                 for k=1:size(el,1)
-                  neres=tensorprod(sfv, obj.felems{l}.results.gp.all(:,k,:),2,3);
+                  gpValues = reshape(obj.felems{l}.results.gp.all(:,k,:), nElemResults, []);
+                  neres = sfv * gpValues.';
                   nres( el( k, : ), : ) = nres( el( k, : ), : ) + neres;
                   ires( el( k, : ), : ) = ires( el( k, : ), : ) + 1;
                 end
             end
-            for l=1:max(size(obj.felems))
+            for l=1:numel(obj.felems)
               obj.felems{l}.results.nodal.all = nres ./ ires;
             end
         end
@@ -240,9 +302,9 @@ classdef (Abstract) FEAnalysis < handle
             disp("Problem type                    :"+class(obj));
             disp("Number of nodes                 :"+num2str(size(obj.mesh.nodes,1)));
             disp("Number of degrees of freedom    :"+num2str(obj.getTaskDim()));
-            disp("Number of element types         :"+num2str(max(size(obj.felems))));
+            disp("Number of element types         :"+num2str(numel(obj.felems)));
             ne=0;
-            for k=1:max(size(obj.felems))
+            for k=1:numel(obj.felems)
                 disp("     element "+class(obj.felems{k}));
                 disp("     number of instances :"+num2str(size(obj.felems{k}.elems,1)));
                 ne = ne + size(obj.felems{k}.elems,1);
@@ -275,7 +337,7 @@ classdef (Abstract) FEAnalysis < handle
               dim    = size(obj.mesh.nodes,2);
               dg     = norm( max(obj.mesh.nodes) - min(obj.mesh.nodes) );
               maxs = max( abs(min(min(obj.Pnodal))), abs(max(max(obj.Pnodal)) ) );
-              xp = obj.mesh.nodes - obj.Pnodal ./ maxs * dg * 0.02;
+              xp = obj.mesh.nodes - obj.Pnodal ./ maxs * dg * 0.05;
 
               if dim == 2
                 X = [xp(:,1) obj.mesh.nodes(:,1)]';
@@ -299,7 +361,7 @@ classdef (Abstract) FEAnalysis < handle
 
               xp = xps - obj.supports * dg * 0.02;
               
-              for k=1:max(size(irots))
+              for k=1:length(irots(:))
                   alpha = obj.rotations(irots(k));
                   xp(irots(k),1) = xps(irots(k),1) - cos(alpha*pi/180) * dg * 0.02; 
                   xp(irots(k),2) = xps(irots(k),2) - sin(alpha*pi/180) * dg * 0.02; 
@@ -316,13 +378,14 @@ classdef (Abstract) FEAnalysis < handle
                 plot3( X, Y, Z, 'b', 'LineWidth', 4 );
              end
         end
+        
         function plotMaps( obj, mapNames, scd )
             for mapName=mapNames(:)'
                 figure, hold on, axis off;
                 daspect([1 1 1]);
                 dg     = norm( max(obj.mesh.nodes) - min(obj.mesh.nodes) );
                 maxs = max( abs(min(min(obj.qfem))), abs(max(max(obj.qfem)) ) );
-                for k=1:max(size(obj.felems))
+                for k=1:numel(obj.felems)
                    valueIndex = find(obj.felems{k}.results.names == mapName);
                    if size(valueIndex,2)==0
                         valueIndex = find(obj.felems{k}.eDofs == mapName);
@@ -340,6 +403,7 @@ classdef (Abstract) FEAnalysis < handle
                 end
             end
         end
+        
         function plotAllNodeNumbers(obj)
             text(obj.nodes(:,1),obj.nodes(:,2),num2str(1:size(obj.nodes,1)));
         end
@@ -351,4 +415,3 @@ classdef (Abstract) FEAnalysis < handle
      end
         
 end
-

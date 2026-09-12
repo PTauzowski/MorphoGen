@@ -128,7 +128,7 @@ classdef TopologyOptimization < handle
             centroids = zeros( tne, size( problem.mesh.nodes, 2 ) );
             obj.neighbours = cell( tne, 1 );
             k=1;
-            for i=1:size( problem.felems, 1)
+            for i=1:size( problem.felems, 2)
                 for j=1:size( problem.felems{i}.elems, 1)
                     centroids(k, :) = mean( problem.mesh.nodes( problem.felems{i}.elems(j, :), :));
                     k=k+1;
@@ -158,37 +158,48 @@ classdef TopologyOptimization < handle
         end
         function plotCurrentFrame(obj)
                 obj.plotMeshTopology( obj.x, obj.elem_inds )
-                title(['Iteration :',num2str(obj.iteration), 'vol =' num2str(obj.computeVolumeFraction)]);
+                title("FSD, volume fraction = " + num2str(round(obj.computeVolumeFraction()*1000)/10) + "% (No. of iteration :" + num2str(obj.iteration + ")" ));
         end
         function plotMeshTopology( obj, x, elem_inds )
             clf;
             hold on;
-            colorbar();
+            %colorbar();
             daspect([1 1 1]);
-            %colormap(gray);
-            colormap("jet");
+            colormap(gray);
+            if exist('theme','file')
+                theme(gcf, "light");
+            else
+                set(gcf, 'Color', 'white');  % older alternative
+            end
+            %colormap("jet");
             if  size(obj.FEAnalysis.mesh.nodes,2) == 3
                 view(45, 45);
                 %view(135, 25);
                 %plotMeshTopology( nodes, multiObjectList( faces, elemClass.paths ), nres(:,elemClass.iHM), [ elemClass.rnames{elemClass.iHM} ',  volume '  num2str(V/V0*100,3) '%'], 1  );
                 
-                for i=1:size( obj.FEAnalysis.felems, 1)
+                for i=1:size( obj.FEAnalysis.felems, 2)
                     ip = ismember(elem_inds{i},obj.const_elems);
                     active_el = elem_inds{i};
                     active_el(ip) = [];
-                    obj.FEAnalysis.felems{i}.plotSolidSelected(obj.FEAnalysis.mesh.nodes,x(elem_inds{i})>0.5);
-                    %obj.FEproblem.felems{i}.plotSolidSelected([200-obj.FEproblem.mesh.nodes(:,1) obj.FEproblem.mesh.nodes(:,2:3)],x(elem_inds{i})>0.5);
-                    obj.FEAnalysis.felems{i}.plotSolidSelected(obj.FEAnalysis.mesh.nodes,obj.const_elems,[0.6,0.6,0.6]);
+
+                    %pnodes = [ obj.FEAnalysis.mesh.nodes(:,1) abs(obj.FEAnalysis.mesh.nodes(:,2)) obj.FEAnalysis.mesh.nodes(:,3)];
+                    pnodes = obj.FEAnalysis.mesh.nodes;
+                 obj.FEAnalysis.felems{i}.plotSolidSelected(pnodes,x(elem_inds{i})>0.5);
+                    %obj.FEAnalysis.felems{i}.plotSolidSelected([obj.FEAnalysis.mesh.nodes(:,1) obj.FEAnalysis.mesh.nodes(:,2) -obj.FEAnalysis.mesh.nodes(:,3)],x(elem_inds{i})>0.5);
+                    
+                 obj.FEAnalysis.felems{i}.plotSolidSelected(pnodes,obj.const_elems,[0.6,0.6,0.6]);
+                    %obj.FEAnalysis.felems{i}.plotSolidSelected([obj.FEAnalysis.mesh.nodes(:,1) obj.FEAnalysis.mesh.nodes(:,2) -obj.FEAnalysis.mesh.nodes(:,3)],obj.const_elems,[0.6,0.6,0.6]);
+                    
                 end
             else
-                for i=1:size( obj.FEAnalysis.felems, 1)
+                for i=1:size( obj.FEAnalysis.felems, 2)
                     faces = x(elem_inds{i})>0.5;
-                    %faces = elem_inds{i};
+                    %faces = 1:length(elem_inds{i});
                     %patch('Vertices', problem.nodes, 'Faces', problem.felems{i}.elems(faces,problem.felems{i}.shapeFn.contour),'FaceColor','none','EdgeColor','k');
                     %patch('Vertices', problem.nodes, 'Faces', problem.felems{i}.elems(faces,problem.felems{i}.shapeFn.contour),'FaceColor',[0.8 0.8 0.8],'EdgeColor','none');
-                    %C = 1-obj.FEAnalysis.felems{i}.results.nodal.all(:,18);
-                    C = obj.FEAnalysis.felems{i}.results.nodal.all(:,17);
-                    patch('Vertices', obj.FEAnalysis.mesh.nodes, 'Faces', obj.FEAnalysis.felems{i}.elems(faces,obj.FEAnalysis.felems{i}.shapeFn.contour), 'FaceVertexCData',C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
+                    C = 1-obj.FEAnalysis.felems{i}.results.nodal.all(:,18);
+                    %C = obj.FEAnalysis.felems{i}.results.nodal.all(:,17);
+                    patch('Vertices', obj.FEAnalysis.mesh.nodes, 'Faces', obj.FEAnalysis.felems{i}.elems(faces,obj.FEAnalysis.felems{i}.shapeFn.contour), 'FaceVertexCData',C , "FaceColor", "interp", "EdgeColor","k", "LineStyle", "none","FaceAlpha", 1 );
                    % patch('Vertices', [100-obj.FEproblem.mesh.nodes(:,1) obj.FEproblem.mesh.nodes(:,2:3)], 'Faces', obj.FEproblem.felems{i}.elems(faces,obj.FEproblem.felems{i}.shapeFn.contour), 'FaceVertexCData',C , "FaceColor", "interp", "EdgeColor","none", "FaceAlpha", 1 );
                 %title(obj.results.descriptions(valueIndex));
                 end
@@ -233,7 +244,7 @@ classdef TopologyOptimization < handle
         end
         
         function [volfr, activeVolFr, constVolFr] = computeVolumeFraction(obj)
-            volfr = sum(obj.x(:))/size(obj.x,1);
+            volfr = sum(obj.x)/numel(obj.x);
             constVolFr = sum(obj.x(obj.const_elems))/size(obj.x,1);
             activeVolFr = volfr - constVolFr;
         end

@@ -44,6 +44,16 @@ classdef ReliabilityAnalysis < handle
             scatter3(x(i), y(i), z(i), '.' );
             scatter3( x(not(i)), y(not(i)), z(not(i)), '.' );
         end
+
+        function printPoint(obj,mpp) 
+            if min(size(mpp))==0
+                 fprintf("null vector");
+            else
+                for k=1:size(mpp,2)
+                      fprintf("x(%1d)=%3.4f ",k,mpp(k));
+                end
+            end
+        end
       
     end                 
 end

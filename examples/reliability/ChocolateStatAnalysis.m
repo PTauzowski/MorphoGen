@@ -13,6 +13,8 @@ ubg=[0.8 0.9 8];
 x0g=(lbg+ubg)/2;
 
 g = chocolatePerformanceFunction(height,210000,0.3,alphaT,dT,x0g);
+g.model.plotModelMesh();
+g.model.plotZCoordsPoints();
 ntv=g.model.nTempVars;
 lbt=zeros(1,ntv);
 ubt=ones(1,ntv);

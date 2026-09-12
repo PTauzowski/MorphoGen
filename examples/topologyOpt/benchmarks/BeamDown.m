@@ -1,7 +1,7 @@
 clear;
 close all;
 
-res = 50;
+res = 30;
 l = 1;
 tic
 aspect=3;

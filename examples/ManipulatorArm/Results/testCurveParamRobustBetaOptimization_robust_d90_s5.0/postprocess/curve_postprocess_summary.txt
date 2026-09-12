@@ -1,0 +1,26 @@
+Curve-parametric postprocess summary
+Target volume fraction: 0.426816
+
+Best parameters:
+  phaseFrac            9.9999961e-09
+  spacingFactor        23.983312
+  widthFactor          1.8000324
+  helixPlusWeight      0.41987315
+  anglePlusDeg         27.785641
+  helixMinusWeight     0.24598195
+  angleMinusDeg        26.791101
+  axialWeight          0.27010375
+  bendingWeight        0.29050744
+  ringWeight           4e-09
+  ringSpacingFactor    12.000001
+  bevelRingWeight      0.91783346
+  bevelRingWidthFactor 0.90922527
+  flatRingWeight       1.4233753
+  flatRingWidthFactor  8.2010763
+  middleRingWeight     1.5e-08
+  baseDensity          0.045219146
+
+Metrics by variant/config:
+  full_pipe          nominal      maxHM= 7.598305e+05 stressAgg= 3.906557e+05 tipUz=-1.926365e-03 maxDisp= 2.576039e-03 vf=1.00000
+  threshold_05       nominal      maxHM= 1.450872e+07 stressAgg= 7.186338e+06 tipUz=-6.982746e+02 maxDisp= 9.936186e+02 vf=0.38350
+  threshold_volume   nominal      maxHM= 4.894043e+07 stressAgg= 2.531329e+07 tipUz=-5.072415e+02 maxDisp= 7.136957e+02 vf=0.43255

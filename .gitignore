@@ -7,6 +7,13 @@
 
 # Derived content-obscured files
 *.p
+*.mat
+*.ppm
+*.i
+*.fig
+*.pdf
+*.zip
+*.csv
 
 # Compiled MEX files
 *.mex*
@@ -31,3 +38,29 @@ codegen/
 
 # Cloud based storage dotfile
 .MATLABDriveTag
+
+# Image files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tif
+*.tiff
+*.svg
+*.webp
+*.heic
+
+# Paper directory
+paper/
+
+# 3D geometry files
+*.stl
+*.obj
+*.mtl
+
+# OS-generated files
+.DS_Store
+
+# IDE files
+.idea/

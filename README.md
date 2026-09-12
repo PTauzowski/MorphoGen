@@ -34,6 +34,13 @@ After cloning the repository, the 'MorphoGen' directory will appear. After addin
 ## Configuration
 The system is currently written and tested in MATLAB R2023a. So it is recommended to use this version. A regular adding MorphoGen directory to the path along with its subdirectories is needed for be able to use the system.
 
+## Tests
+Run the MATLAB unit tests from the repository root:
+
+```matlab
+runtests("tests")
+```
+
 ## Usage
 We will present here a file with the definition of an example topological optimization of a cantilever using two methods:
 

@@ -1,0 +1,509 @@
+\documentclass{article}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage[colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue]{hyperref}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\lstset{
+    language=Matlab,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red!60!black},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single,
+    breaklines=true,
+    captionpos=b
+}
+
+\newcommand{\exampleimage}[2]{%
+    \IfFileExists{#1}{%
+        \includegraphics[width=\linewidth]{#1}%
+    }{%
+        \fbox{\parbox[c][0.28\textheight][c]{0.92\linewidth}{\centering #2}}%
+    }%
+}
+
+\title{Frame-Based Solver for 3D Manipulator Arm:\\
+Static Condensation with Kinematic Constraints}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\bigskip
+
+%-----------------------------------------------------------------------------
+\section{Introduction}
+\label{sec:intro}
+
+The structural analysis of a multi-segment continuum manipulator arm involves
+two distinct spatial scales:
+\begin{itemize}
+    \item \textbf{Skeletal (frame) scale}: a 1D beam model capturing the global
+          deformation of each tubular segment via 6-DOF Timoshenko frame
+          elements (Cowper shear correction for hollow circular sections).
+    \item \textbf{Cross-sectional (solid) scale}: a full 3D hexahedral finite
+          element model resolving stress distributions within each segment,
+          including the inclined cut geometry at the segment joints.
+\end{itemize}
+
+Solving the full 3D solid model directly for every topology-optimisation
+iteration is computationally prohibitive.  The \emph{frame-based solver}
+exploits the separation of scales: the light-weight frame model is solved
+first to obtain joint displacements, which are then imposed as kinematic
+boundary conditions on the 3D solid model.  Static condensation eliminates
+the interior DOFs analytically, yielding an efficient solution of the solid
+model without iterative solvers on the full system.
+
+%-----------------------------------------------------------------------------
+\section{Frame Model}
+\label{sec:frame}
+
+\subsection{Degrees of Freedom}
+
+Each frame node $k$ carries six DOFs assembled into the displacement vector
+\begin{equation}
+    \bm{q}_k = \bigl[u_x,\; u_y,\; u_z,\; \theta_x,\; \theta_y,\; \theta_z\bigr]_k^{\mathsf{T}} \in \mathbb{R}^6.
+\end{equation}
+For a model with $n_f$ frame nodes the global frame displacement vector is
+$\bm{q}_{\text{frame}} \in \mathbb{R}^{6 n_f}$.
+
+\subsection{Stiffness and Solution}
+
+The Timoshenko element stiffness matrix $\bm{K}_e^{\text{frame}} \in \mathbb{R}^{12\times12}$
+is assembled for each beam element connecting nodes $I$ and $J$ (see the shear
+correction discussion in Section~\ref{sec:locking} for the shear parameter
+$\Phi$).  After applying displacement boundary conditions (fixed base node), the frame system
+\begin{equation}
+    \bm{K}_{\text{frame}}\,\bm{q}_{\text{frame}} = \bm{P}_{\text{frame}}
+\end{equation}
+is solved directly.  In the MATLAB implementation this is handled by
+\lstinline{frame_analysis.solveWeighted(ones(nFE_frame, 1))}, which assembles
+and factorises $\bm{K}_{\text{frame}}$ and stores the result in
+\lstinline{frame_analysis.qnodal} (shape: $n_f \times 6$).
+
+%-----------------------------------------------------------------------------
+\section{3D Solid Model}
+\label{sec:solid}
+
+\subsection{Degrees of Freedom}
+
+Each solid mesh node $i$ carries three translational DOFs
+\begin{equation}
+    \bm{u}_i = \bigl[u_x,\; u_y,\; u_z\bigr]_i^{\mathsf{T}} \in \mathbb{R}^3.
+\end{equation}
+For a mesh with $n_s$ solid nodes the global displacement vector is
+$\bm{u} \in \mathbb{R}^{3 n_s}$.
+
+\subsection{Hexahedral Elements}
+
+Each segment is discretised with 8-node serendipity hexahedral elements
+(\texttt{ShapeFunctionL8}).  The element stiffness matrix is
+\begin{equation}
+    \bm{K}_e^{\text{solid}} = \int_{\Omega_e} \bm{B}^{\mathsf{T}} \bm{D} \bm{B}\,\mathrm{d}V,
+\end{equation}
+where $\bm{B}$ is the strain--displacement matrix and $\bm{D}$ is the
+linear-elastic constitutive matrix for an isotropic material with Young's
+modulus $E$ and Poisson's ratio $\nu$.
+
+%-----------------------------------------------------------------------------
+\section{Inclined Cross-Section Geometry}
+\label{sec:geometry}
+
+\subsection{Cut Rotation}
+
+The joints between adjacent segments are \emph{inclined cuts}: the contact
+surface is not perpendicular to the beam axis but tilted by angle $\alpha$
+about the $y$-axis.  The rotation matrix that maps the beam-axis frame to the
+cut-surface frame is
+\begin{equation}
+    \bm{R}_{\text{cut}} = \bm{R}_y(\alpha)^{\mathsf{T}}
+    = \begin{bmatrix}
+         \cos\alpha & 0 &  \sin\alpha \\
+         0          & 1 &  0          \\
+        -\sin\alpha & 0 &  \cos\alpha
+      \end{bmatrix}^{\mathsf{T}}.
+\end{equation}
+Because the end-face normal is not aligned with the segment axis, a node at
+radial distance $\rho$ from the axis spans an axial range of
+$\rho\sin\alpha$ on the inclined face, reaching $R\sin\alpha$ at the outer
+wall.  For $R = 0.14\,\mathrm{m}$ and $\alpha = 22.5^\circ$ this equals
+approximately $54\,\mathrm{mm}$.
+
+\subsection{Exact Section-Node Tracking During Mesh Generation}
+
+Coupling node sets are registered \emph{during mesh generation} rather than
+recovered by a post-hoc geometric search.  This guarantees exactness
+regardless of the inclination angle and avoids tolerance tuning.
+
+Each segment generator (\texttt{generateSegment2a}, \texttt{generateSegment2b})
+works in a reference parameter space where the axial coordinate is $\zeta \in [0,1]$.
+Nodes at the start and end faces are identified by their extreme axial parameter
+values, before any cylindrical or rotation mapping is applied:
+\begin{equation}
+    \mathcal{S}_{\text{start}} = \bigl\{i : |\zeta_i - \zeta_{\min}| \leq \varepsilon_h\bigr\},
+    \qquad
+    \mathcal{S}_{\text{end}}   = \bigl\{i : |\zeta_i - \zeta_{\max}| \leq \varepsilon_h\bigr\},
+\end{equation}
+where $\varepsilon_h = 1/\texttt{mesh.tolerance}$ is the snapping granularity.
+Because $\zeta$ is an integer grid parameter in the reference mesh, the start
+nodes have $\zeta = 0$ and the end nodes have $\zeta = \texttt{resLen}$, so
+the selection is exact.
+
+\subsection{Coordinate Mapping After Mesh Merging}
+
+After each call to \texttt{Mesh.merge}, the global mesh accumulates nodes from
+multiple segments and duplicate nodes at shared faces are collapsed.  The
+section node lists (recorded in local mesh indices) are re-mapped to global
+indices by coordinate lookup:
+\begin{enumerate}
+    \item Round all node coordinates to the mesh snapping grid:
+          $\tilde{\bm{x}} = \mathrm{round}(\bm{x} \cdot \texttt{tolerance})$.
+    \item For each section node coordinate, find its row in the global
+          rounded-coordinate table via \texttt{ismember}.
+    \item The resulting global indices form the coupling section
+          $\mathcal{S}_k^{(\text{global})}$.
+\end{enumerate}
+This lookup is exact (no floating-point tolerance) because both the node
+coordinates and the snapping grid are identical up to rounding.
+
+\subsection{Coupling Section Registry}
+
+The method \texttt{registerCouplingSection} appends a record
+\begin{equation}
+    \bigl\{\,\texttt{frameNode}=k,\;\texttt{adjacentFrameNode}=\ell,\;
+    \texttt{nodes}=\mathcal{S}_k^{(\text{global})},\;\texttt{label}\bigr\}
+\end{equation}
+to \texttt{obj.couplingSections} for every section registered during arm
+assembly.  Interior joints accumulate two records (one from each incident
+segment) that share the same frame node index; after merging, their node
+sets are identical so the kinematic imposition is consistent.
+
+%-----------------------------------------------------------------------------
+\section{Rigid-Body Kinematic Constraint}
+\label{sec:kinematics}
+
+\subsection{Constraint Equation}
+
+At each frame node $k$ (centroid $\bm{c}_k$, displacement $\bm{u}_k$,
+rotation $\bm{\theta}_k$), the prescribed displacement for a solid node
+$\bm{p}$ on the associated cross-section is given by the linearised
+rigid-body formula:
+\begin{equation}
+    \boxed{\bm{u}(\bm{p}) = \bm{u}_k + \bm{\theta}_k \times (\bm{p} - \bm{c}_k)}
+    \label{eq:rigid_body}
+\end{equation}
+
+\subsection{Linearisation Assumption}
+
+Equation~\eqref{eq:rigid_body} is exact for rigid bodies undergoing
+small displacements and small rotations (infinitesimal rotation
+approximation).  This is the standard assumption in linear structural
+mechanics and is consistent with the underlying FEM formulation.  For a
+slender elastic tube the cross-section rotation is small (Euler--Bernoulli
+hypothesis), so the formula provides an accurate leading-order approximation.
+
+%-----------------------------------------------------------------------------
+\section{Static Condensation}
+\label{sec:condensation}
+
+\subsection{DOF Partition}
+
+After identifying all boundary DOFs $\mathcal{B}$ (prescribed by the frame
+solution via \eqref{eq:rigid_body}) and interior DOFs $\mathcal{I}$, the
+global stiffness system is partitioned as
+\begin{equation}
+    \begin{bmatrix} \bm{K}_{ii} & \bm{K}_{ib} \\ \bm{K}_{bi} & \bm{K}_{bb} \end{bmatrix}
+    \begin{bmatrix} \bm{q}_i \\ \bm{q}_b \end{bmatrix}
+    =
+    \begin{bmatrix} \bm{P}_i \\ \bm{P}_b \end{bmatrix}.
+\end{equation}
+
+\subsection{Condensed Interior System}
+
+Since the solid model is driven purely by kinematic loading ($\bm{P}_i = \bm{0}$,
+no body forces or surface tractions on the interior), the interior equilibrium
+reduces to
+\begin{equation}
+    \bm{K}_{ii}\,\bm{q}_i = -\bm{K}_{ib}\,\bm{q}_b.
+    \label{eq:condensed}
+\end{equation}
+Equation~\eqref{eq:condensed} is a square, non-singular system (provided
+$\mathcal{B}$ is a sufficient constraint set) and is solved by sparse direct
+factorisation.  The boundary values $\bm{q}_b$ are set to the prescribed
+values derived from \eqref{eq:rigid_body}.
+
+\subsection{Choice of Boundary Set $\mathcal{B}$: Avoiding Kinematic Locking}
+\label{sec:locking}
+
+A naive choice of $\mathcal{B}$ — prescribing rigid-body kinematics at
+\emph{every} cross-section ring in the arm (i.e., at each of the $n_f$
+frame joints) — over-constrains the solid model and produces
+\textbf{kinematic locking}.
+
+The mechanism is as follows.  Consider one segment between frame nodes $k$
+and $k+1$.  If both the start ring (at $k$) and the end ring (at $k+1$) are
+rigidly prescribed with independently computed frame displacements, the
+interior solid nodes must accommodate the mismatch between two rigid-body
+fields that are in general \emph{inconsistent} with the elastic equilibrium of
+the tube.  The resulting artificial compatibility stresses dominate the
+interior field, completely masking the physically meaningful stress distribution.
+
+\paragraph{Correct formulation: displacement control at root and tip only.}
+The correct boundary set contains only two groups:
+\begin{enumerate}
+    \item \textbf{Root cross-section} (frame node 1): prescribe $\bm{u}(\bm{p}) = \bm{0}$
+          (rigid clamp, consistent with the frame fixed-base condition).
+    \item \textbf{Tip cross-section} (last frame node $n_f$): prescribe
+          $\bm{u}(\bm{p}) = \bm{u}_{n_f} + \bm{\theta}_{n_f} \times (\bm{p} - \bm{c}_{n_f})$
+          from the frame tip displacement.
+\end{enumerate}
+All interior cross-section rings are left \emph{free}.  The arm deforms
+elastically between the two end constraints, producing smooth interior
+stresses.  This is a pure \emph{displacement-controlled} problem ($\bm{P} =
+\bm{0}$): no external forces are applied, and the load is transmitted entirely
+through the prescribed end displacements.
+
+\paragraph{Shear deformation and Timoshenko corrections.}
+For non-slender beams the Euler--Bernoulli assumption (plane sections remain
+plane, no shear deformation) over-stiffens the element.  The relevant
+dimensionless parameter is
+\begin{equation}
+    \Phi = \frac{12 E I}{\kappa G A l^2},
+\end{equation}
+where $\kappa$ is the cross-section shear correction factor.  Euler--Bernoulli
+overestimates the bending stiffness by a factor $(1+\Phi)$ relative to the
+Timoshenko beam.  For the hollow tubular arm studied here
+($E = 2\,\mathrm{GPa}$, $\nu = 0.35$, $R_o = 0.14\,\mathrm{m}$,
+$R_i = 0.13\,\mathrm{m}$, $l_s = 0.15\,\mathrm{m}$) one obtains
+$\Phi \approx 26$ for the end segments and $\Phi \approx 7$ for the interior
+segments.  Using Euler--Bernoulli would therefore underestimate the tip
+displacement by a factor of up to~27, leading to proportionally smaller
+prescribed BCs on the solid and a 2--3$\times$ underestimate of stress
+magnitudes.
+
+The implementation uses the \textbf{Timoshenko stiffness matrix}:
+\begin{align}
+    k_{2,2} &= \frac{12 E J_z}{l^3(1+\Phi_z)}, &
+    k_{6,6} &= \frac{(4+\Phi_z) E J_z}{l(1+\Phi_z)}, &
+    k_{6,2} &= \frac{6 E J_z}{l^2(1+\Phi_z)}, \\
+    k_{12,6} &= \frac{(2-\Phi_z) E J_z}{l(1+\Phi_z)}, &
+    \multispan2{\text{and symmetric counterparts in } x\text{-}z \text{ plane.}}
+\end{align}
+The shear correction factor for a hollow circular cross-section is given by
+the Cowper (1966) formula:
+\begin{equation}
+    \kappa = \frac{6(1+\nu)(1+m^2)^2}{(7+6\nu)(1+m^2)^2 + (20+12\nu)m^2},
+    \qquad m = R_i/R_o.
+\end{equation}
+For $\nu = 0.35$ and $m = 13/14 \approx 0.929$ this gives $\kappa \approx 0.53$.
+
+%-----------------------------------------------------------------------------
+\section{Algorithm Summary}
+\label{sec:algorithm}
+
+\begin{enumerate}
+    \item \textbf{Frame solve}: assemble and solve
+          $\bm{K}_{\text{frame}}\,\bm{q}_{\text{frame}} = \bm{P}_{\text{frame}}$
+          to obtain $\bm{q}_{\text{frame}}$ (joint translations and rotations).
+
+    \item \textbf{Coupling section retrieval}: call
+          \texttt{buildCouplingSections()} to retrieve the pre-registered
+          per-section node lists that were built exactly during arm mesh
+          assembly (Section~\ref{sec:geometry}).  No post-hoc geometric
+          search is performed at solve time.
+
+    \item \textbf{Kinematic imposition}: apply rigid-body kinematic BCs
+          \eqref{eq:rigid_body} only at the \textbf{root} (frame node 1,
+          $\bm{u}=\bm{0}$) and the \textbf{tip} (frame node $n_f$,
+          frame-computed displacement).  Interior joint cross-sections are
+          left free to avoid kinematic locking (Section~\ref{sec:locking}).
+
+    \item \textbf{Global stiffness assembly}: assemble
+          $\bm{K}_{\text{solid}}(x) = \sum_e x_e \bm{K}_e^{\text{solid}}$
+          for density field $x$ (used in topology optimisation).
+
+    \item \textbf{Static condensation solve}: use \texttt{LinearEquationsSystem.solvePq}
+          to solve \eqref{eq:condensed} with the combined support set.
+
+    \item \textbf{Result recovery}: restore prescribed DOF values, store
+          $\bm{u}$ in \texttt{qnodal\_solid}, and invoke
+          \texttt{computeElementResults} for stresses and derived quantities.
+
+    \item \textbf{Frame force recovery}: call \texttt{frameElem.computeResults}
+          to extract local internal forces from the frame solution.
+\end{enumerate}
+
+%-----------------------------------------------------------------------------
+\section{MATLAB Implementation Notes}
+\label{sec:matlab}
+
+\subsection{\texttt{solvePq} Interface}
+
+\texttt{LinearEquationsSystem.solvePq(K\_vals, P, q0)} solves the
+system $\bm{K}\bm{q} = \bm{P}$ subject to support constraints, where
+\texttt{q0} provides the prescribed values at supported DOFs.  The method
+internally partitions the system, solves the reduced system, and returns
+the full displacement vector.  After the call, the prescribed DOF values
+must be restored explicitly since \texttt{solvePq} returns zero at
+supported DOFs:
+\begin{lstlisting}[caption={Restoring prescribed boundary values after solvePq}]
+q_fem_sol = solver_sc.solvePq(K_vals, P_zero, q0_fem);
+q_fem_sol(solver_sc.supdofs) = q0_fem(solver_sc.supdofs);
+\end{lstlisting}
+
+\subsection{FEM Vector Ordering}
+
+The solid FEM uses DOF ordering interleaved by node: for node $i$ with 3 DOFs
+$(u_x, u_y, u_z)$, the global DOF indices are $3(i-1)+1$, $3(i-1)+2$,
+$3(i-1)+3$.  The helper \texttt{fromFEMVector} reshapes the flat FEM vector
+back to the $n_s \times 3$ nodal matrix stored in \texttt{qnodal}.
+
+\subsection{DOF Conventions}
+
+\begin{table}[h]
+\centering
+\caption{DOF convention summary}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Model       & DOFs per node & Ordering \\
+\midrule
+Frame       & 6             & $[u_x, u_y, u_z, \theta_x, \theta_y, \theta_z]$ \\
+3D Solid    & 3             & $[u_x, u_y, u_z]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Support Matrix Layout}
+
+The \texttt{analysis.supports} matrix has shape $n_s \times 3$ (one row per
+solid node, one column per translational DOF).  When merging kinematic
+constraints from the frame solution with existing boundary conditions, a
+logical OR is applied:
+\begin{lstlisting}[caption={Combining original and kinematic supports}]
+sup_combined = logical(obj.analysis.supports) | supports_new;
+sup_fem      = reshape(sup_combined', [], 1);
+\end{lstlisting}
+Note the transpose before reshape: MATLAB stores matrices column-major, so
+transposing ensures the DOF ordering matches the stiffness matrix assembly.
+
+%-----------------------------------------------------------------------------
+\section{Illustrative Coupled Examples}
+\label{sec:examples}
+
+The script \texttt{examples/ManipulatorArm/coupledExamples.m} generates four
+illustrative coupled frame-solid cases and exports their images directly to
+the \texttt{docs/} directory.  Each case uses the same tubular-arm template,
+solves the frame-constrained solid model with \texttt{frameBasedSolver(1)},
+solves the corresponding direct 3D solid model with \texttt{compute(1)}, and
+writes \emph{three} comparison figures per configuration:
+\begin{itemize}
+    \item a deformed-mesh view (coupled on the left, direct on the right),
+    \item a Huber--Mises stress comparison with a \textbf{shared} color scale
+          $[\sigma_{\min},\,\sigma_{\max}]$ computed from both models combined
+          — this reveals absolute magnitude differences but may suppress
+          distribution details in the lower-stress panel,
+    \item a Huber--Mises stress comparison with \textbf{independent} per-panel
+          color scales $[0, \mathrm{HM}_{\max}^{\text{coupled}}]$ and
+          $[0, \mathrm{HM}_{\max}^{\text{direct}}]$ — this normalises each
+          panel to its own maximum and directly compares the spatial
+          distribution patterns regardless of magnitude.
+\end{itemize}
+
+\paragraph{Interpretation.}
+A discrepancy in absolute stress magnitude between the coupled and direct
+models is expected: the frame model predicts a different (generally smaller)
+tip displacement than the true solid, because Euler--Bernoulli theory
+overestimates stiffness for the non-slender geometry used here
+($R/l_s \approx 0.93$, see Section~\ref{sec:locking}).  The independent-scale
+figures therefore provide the more informative comparison: if the normalised
+hot-spot patterns are spatially similar, the frame-based approach captures the
+correct stress topology even if it under- or over-estimates the magnitude.
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}{0.48\textwidth}
+\centering
+\exampleimage{coupledExample_sampleMinN_smooth_deformed.png}{Run \texttt{coupledExamples.m} to generate\\\texttt{coupledExample\_sampleMinN\_smooth\_deformed.png}}
+\end{minipage}\hfill
+\begin{minipage}{0.48\textwidth}
+\centering
+\exampleimage{coupledExample_sampleMinN_smooth_stress.png}{Run \texttt{coupledExamples.m} to generate\\\texttt{coupledExample\_sampleMinN\_smooth\_stress.png}}
+\end{minipage}
+\caption{Configuration \texttt{sampleMinN\_smooth} = $[0,180,180,180,180,180,180]$. Left: deformed mesh comparison. Right: Huber--Mises stress, \textbf{shared} color scale.}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\exampleimage{coupledExample_sampleMinN_smooth_stress_normalized.png}{Run \texttt{coupledExamples.m} to generate\\\texttt{coupledExample\_sampleMinN\_smooth\_stress\_normalized.png}}
+\caption{Configuration \texttt{sampleMinN\_smooth}: Huber--Mises stress with \textbf{independent} per-panel color scales.  Spatial hot-spot patterns can be compared directly regardless of magnitude.}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}{0.48\textwidth}
+\centering
+\exampleimage{coupledExample_sampleMaxMz_smooth_deformed.png}{Run \texttt{coupledExamples.m} to generate\\\texttt{coupledExample\_sampleMaxMz\_smooth\_deformed.png}}
+\end{minipage}\hfill
+\begin{minipage}{0.48\textwidth}
+\centering
+\exampleimage{coupledExample_sampleMaxMz_smooth_stress.png}{Run \texttt{coupledExamples.m} to generate\\\texttt{coupledExample\_sampleMaxMz\_smooth\_stress.png}}
+\end{minipage}
+\caption{Configuration \texttt{sampleMaxMz\_smooth} = $[0,0,0,180,180,180,180]$. Left: deformed mesh comparison. Right: Huber--Mises stress, \textbf{shared} color scale.}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\exampleimage{coupledExample_sampleMaxMz_smooth_stress_normalized.png}{Run \texttt{coupledExamples.m} to generate\\\texttt{coupledExample\_sampleMaxMz\_smooth\_stress\_normalized.png}}
+\caption{Configuration \texttt{sampleMaxMz\_smooth}: Huber--Mises stress with \textbf{independent} per-panel color scales.}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}{0.48\textwidth}
+\centering
+\exampleimage{coupledExample_sampleMaxTy_smooth_deformed.png}{Run \texttt{coupledExamples.m} to generate\\\texttt{coupledExample\_sampleMaxTy\_smooth\_deformed.png}}
+\end{minipage}\hfill
+\begin{minipage}{0.48\textwidth}
+\centering
+\exampleimage{coupledExample_sampleMaxTy_smooth_stress.png}{Run \texttt{coupledExamples.m} to generate\\\texttt{coupledExample\_sampleMaxTy\_smooth\_stress.png}}
+\end{minipage}
+\caption{Configuration \texttt{sampleMaxTy\_smooth} = $[0,0,180,0,180,180,180]$. Left: deformed mesh comparison. Right: Huber--Mises stress, \textbf{shared} color scale.}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\exampleimage{coupledExample_sampleMaxTy_smooth_stress_normalized.png}{Run \texttt{coupledExamples.m} to generate\\\texttt{coupledExample\_sampleMaxTy\_smooth\_stress\_normalized.png}}
+\caption{Configuration \texttt{sampleMaxTy\_smooth}: Huber--Mises stress with \textbf{independent} per-panel color scales.}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}{0.48\textwidth}
+\centering
+\exampleimage{coupledExample_sampleMaxMs_smooth_deformed.png}{Run \texttt{coupledExamples.m} to generate\\\texttt{coupledExample\_sampleMaxMs\_smooth\_deformed.png}}
+\end{minipage}\hfill
+\begin{minipage}{0.48\textwidth}
+\centering
+\exampleimage{coupledExample_sampleMaxMs_smooth_stress.png}{Run \texttt{coupledExamples.m} to generate\\\texttt{coupledExample\_sampleMaxMs\_smooth\_stress.png}}
+\end{minipage}
+\caption{Configuration \texttt{sampleMaxMs\_smooth} = $[0,45,45,45,270,180,180]$. Left: deformed mesh comparison. Right: Huber--Mises stress, \textbf{shared} color scale.}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\exampleimage{coupledExample_sampleMaxMs_smooth_stress_normalized.png}{Run \texttt{coupledExamples.m} to generate\\\texttt{coupledExample\_sampleMaxMs\_smooth\_stress\_normalized.png}}
+\caption{Configuration \texttt{sampleMaxMs\_smooth}: Huber--Mises stress with \textbf{independent} per-panel color scales.}
+\end{figure}
+
+\end{document}

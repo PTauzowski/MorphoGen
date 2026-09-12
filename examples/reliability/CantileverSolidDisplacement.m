@@ -4,7 +4,7 @@ w=0.5;
 l=8*w;
 h=4*w;
 c=0.4;
-res = 6;
+res = 10;
 E=210000;
 nu=0.3;
 
@@ -31,7 +31,7 @@ model.plotModel();
 
 randomVariables={RandomVariable("Normal",P(1),0.2) RandomVariable("Normal",P(2),0.1) RandomVariable("Normal",P(3),0.5)};
 transform=IndependentTransformation(randomVariables);
-g=loadCantileverSolidPerformanceFunctionDisp(model);
+g=performanceFunctionPlus( loadCantileverSolidPerformanceFunctionDisp(model) );
 
 %g.tabNCycles(0.1,500,10)
 
@@ -43,14 +43,16 @@ volFr=0.1;
 topOpt = StressIntensityTopologyOptimizationVol( Rfilter, model.analysis, cutTreshold, penal, volFr, true );
 topOpt.is_silent=true;
 
-% tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 1000000, 2);
-% tuner.tuneMC();
-% tuner.plotMCs(["Px" "Py" "Pz"],'Ux');
+g.threshold = 0;
+
+tuner = ReliabilityTaskTuner(model, topOpt, randomVariables, transform, g, 1000000, 2);
+tuner.tuneMC();
+tuner.plotMCs(["Px" "Py" "Pz"],'Ux');
 
 %tuner.tuneFORM();
 
- sora2 = SORA('CantileverSolidDispBeta_2', model,topOpt, randomVariables, g, transform, 2);
- sora3 = SORA('CantileverSolidDispBeta_3', model,topOpt, randomVariables, g, transform, 3);
+ sora2 = SORAold('CantileverSolidDispBeta_2', model,topOpt, randomVariables, g, transform, 2);
+ sora3 = SORAold('CantileverSolidDispBeta_3', model,topOpt, randomVariables, g, transform, 3);
  %sora.checkTuning();
 
  
@@ -61,11 +63,11 @@ topOpt.is_silent=true;
 % topOpt.solve();
 % sora2.tabReliability();
 
- sora2.checkTuning();
- sora3.checkTuning();
+ % sora2.checkTuning();
+ % sora3.checkTuning();
 
-% sora_results2 = sora2.solveX();
-% sora_results3 = sora3.solveX();
+ % sora_results2 = sora2.solveX();
+ % sora_results3 = sora3.solveX();
 
 % form_res = form.solve()
 

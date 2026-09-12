@@ -10,9 +10,9 @@ classdef HMV < GradientBasedReliabilityAnalysis
             obj.betat=betat;
         end
         
-        function results = solve(obj)
+        function results = solve(obj,x0)
             dim = obj.getDim();
-            u   = zeros( dim, 1 );
+            u   = obj.transform.toU(x0);
             n   = zeros( dim, 1 );
             n1  = zeros( dim, 1 );
             [g, dg] = computeGu( obj, u ); 
@@ -22,7 +22,7 @@ classdef HMV < GradientBasedReliabilityAnalysis
                      return;
             end
             g0=g;
-            for k=1:100
+            for k=1:1000
                 g1 = g;
                 n2 = n1; 
                 n1 = n;  
@@ -63,6 +63,17 @@ classdef HMV < GradientBasedReliabilityAnalysis
             end
             results.success = false;
             results.err_msg = ['HMV error: not convergent after ' num2str(k-1) ' iterations'];
+        end
+
+        function printResults(obj, tx, hmv_results)
+            fprintf("%s HMV results :",tx);
+            if hmv_results.success
+                fprintf("G0=%5.7f, G=%5.7f, beta_pred=%5.7f, mpp=",hmv_results.g0,hmv_results.g,hmv_results.beta_pred);
+                obj.printPoint(hmv_results.mpp);
+            else
+                fprintf("NOT succeed! %s",hmv_results.err_msg);
+            end
+            fprintf("\n");
         end
     end
 end

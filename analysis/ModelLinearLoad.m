@@ -19,7 +19,7 @@ classdef ModelLinearLoad < ModelLinear
                 obj.analysis.Pfem=obj.P0fem;
                 obj.analysis.Pnodal(:)=0;
             end
-            obj.u0fem = obj.analysis.solveWeighted(obj.x);
+            obj.u0fem = obj.analysis.solve(obj.x);
             dim=size(obj.u0fem,2);
             obj.ures=zeros(1,dim);
             for k=1:dim
@@ -39,6 +39,16 @@ classdef ModelLinearLoad < ModelLinear
                 obj.setDisplacement(pressure(k,:));
                 obj.analysis.computeElementResults(obj.x);
                 sHM(k)=obj.fe.results.nodal.all(obj.result_node,obj.result_number);
+            end
+        end 
+
+        function sp = computePenalizedStress(obj,penalty,pressure)
+            np=size(pressure,1);
+            sp=zeros(np,1);
+            for k=1:np
+                obj.setDisplacement(pressure(k,:));
+                obj.analysis.computeElementResults(obj.x);
+                sp(k)=sum(obj.fe.results.nodal.all(:,18).*obj.fe.results.nodal.all(:,obj.result_number))^(1/penalty);
             end
         end 
 

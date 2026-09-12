@@ -13,7 +13,7 @@ classdef CantileverSolidModel < ModelLinear
             material.setElasticIzoGrad();
             obj.fe.setMaterial(material)
             
-            obj.analysis = LinearElasticityWeighted( obj.fe, obj.mesh, true );
+            obj.analysis = LinearElasticityWeighted( obj.fe, obj.mesh, false );
             
             fixedFaceSelector = Selector( @(x)( abs(x(:,1) )<0.001 ) );
             obj.loadedFaceSelector = Selector( @(x)( abs(x(:,1) - l )<0.001 ) );
